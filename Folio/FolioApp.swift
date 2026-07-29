@@ -7,7 +7,8 @@ struct FolioApp: App {
     var body: some Scene {
         WindowGroup {
             MainView(viewModel: MainViewModel(
-                fetchUsersUseCase: diContainer.fetchUsersUseCase
+                fetchUsersUseCase: diContainer.fetchUsersUseCase,
+                localStorage: diContainer.localStorage
             ))
         }
     }

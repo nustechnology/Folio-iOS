@@ -1,72 +1,100 @@
 import SwiftUI
 
 struct MainView: View {
-    enum Action {
-        case onAppear
-        case refresh
-        case didTapUser(User)
-    }
-
     @StateObject var viewModel: MainViewModel
 
     var body: some View {
-        NavigationStack {
+        ZStack {
+            FolioBackdrop()
             content
-                .navigationTitle("Folio")
-                .task { viewModel.handle(.onAppear) }
         }
+        .task { viewModel.handle(.onAppear) }
     }
 
     @ViewBuilder
     private var content: some View {
-        switch viewModel.state {
-        case .idle:
-            Color.clear
-
-        case .loading:
-            LoadingView("Loading users...")
-
-        case .loaded(let users):
-            userList(users)
-
-        case .error(let message):
-            ErrorView(message: message) {
-                viewModel.handle(.refresh)
-            }
+        if viewModel.state.isAuthenticated {
+            appShellWithTab
+        } else {
+            FolioLoginView(
+                onSignIn: { credential in
+                    viewModel.handle(.signIn(credential))
+                },
+                onSignInWithApple: {
+                    viewModel.handle(.signInWithApple)
+                }
+            )
         }
     }
 
-    private func userList(_ users: [User]) -> some View {
-        List(users) { user in
-            HStack {
-                VStack(alignment: .leading) {
-                    Text(user.name)
-                        .font(.headline)
-                    Text(user.email)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+    private var appShellWithTab: some View {
+        appShell
+            .safeAreaInset(edge: .bottom) {
+                if viewModel.state.activeReader == nil {
+                    FolioBottomTabBar(selectedTab: viewModel.state.selectedTab) { tab in
+                        viewModel.handle(.selectTab(tab))
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 8)
                 }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                viewModel.handle(.didTapUser(user))
+    }
+
+    @ViewBuilder
+    private var appShell: some View {
+        switch viewModel.state.activeReader {
+        case .some(let source):
+            FolioSourceReaderView(source: source) {
+                viewModel.handle(.closeReader)
             }
-        }
-        .refreshable {
-            viewModel.handle(.refresh)
+        case .none:
+            switch viewModel.state.selectedTab {
+            case .sources:
+                if viewModel.state.sourcesMode == .spaces {
+                    FolioSpacesView(
+                        spaces: viewModel.state.spaces,
+                        onSelectSources: { viewModel.handle(.showLibrary) },
+                        onSelectAsk: { viewModel.handle(.selectTab(.ask)) },
+                        onSearch: {},
+                        onAdd: {}
+                    )
+                } else {
+                    FolioSourcesView(
+                        filters: viewModel.state.sourceFilters,
+                        selectedFilter: viewModel.state.selectedFilter,
+                        sources: viewModel.visibleSources,
+                        onSelectFilter: { viewModel.handle(.selectFilter($0)) },
+                        onSelectSource: { viewModel.handle(.openReader($0)) },
+                        onSearch: {},
+                        onMenu: {}
+                    )
+                }
+            case .ask:
+                FolioAskView()
+            case .notes:
+                FolioPlaceholderView(
+                    title: "Notes",
+                    subtitle: "Capture claims, quotes, and follow-up ideas in one private space.",
+                    iconName: "note.text"
+                )
+            case .notebook:
+                FolioPlaceholderView(
+                    title: "Notebook",
+                    subtitle: "Organize drafts, syntheses, and research threads here.",
+                    iconName: "book"
+                )
+            }
         }
     }
 }
 
 #Preview {
-    MainView(viewModel: MainViewModel(fetchUsersUseCase: FetchUsersUseCase(userRepository: UserRepository(
-        networkService: NetworkService(baseURL: URL(string: "https://jsonplaceholder.typicode.com")!),
+    MainView(viewModel: MainViewModel(
+        fetchUsersUseCase: PreviewFetchUsersUseCase(),
         localStorage: UserDefaultsStorage()
-    ))))
+    ))
+}
+
+private struct PreviewFetchUsersUseCase: FetchUsersUseCaseProtocol {
+    func execute() async throws -> [User] { [] }
 }
