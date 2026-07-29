@@ -35,7 +35,7 @@ Build configurations are managed via `.xcconfig` files:
 
 | Config | API Base URL | Bundle ID |
 |--------|-------------|-----------|
-| Debug | jsonplaceholder.typicode.com | `com.nustechnology.Folio.dev` |
+| Debug | jsonplaceholder.typicode.com | `com.nustechnology.Folio` |
 | Release | jsonplaceholder.typicode.com | `com.nustechnology.Folio` |
 
 ## Localization

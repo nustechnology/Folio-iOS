@@ -2,4 +2,3 @@
 
 INFOPLIST_KEY_API_BASE_URL = https:/$()/jsonplaceholder.typicode.com
 INFOPLIST_KEY_CFBundleDisplayName = Folio
-PRODUCT_BUNDLE_IDENTIFIER = com.nustechnology.Folio
