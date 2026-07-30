@@ -16,4 +16,24 @@ final class AppDIContainer {
     lazy var fetchUsersUseCase: any FetchUsersUseCaseProtocol = {
         FetchUsersUseCase(userRepository: userRepository)
     }()
+
+    lazy var authRepository: AuthRepositoryProtocol = {
+        AuthRepository(networkService: networkService, localStorage: localStorage)
+    }()
+
+    lazy var signUpUseCase: any SignUpUseCaseProtocol = {
+        SignUpUseCase(authRepository: authRepository)
+    }()
+
+    lazy var signInUseCase: any SignInUseCaseProtocol = {
+        SignInUseCase(authRepository: authRepository)
+    }()
+
+    lazy var refreshTokenUseCase: any RefreshTokenUseCaseProtocol = {
+        RefreshTokenUseCase(authRepository: authRepository)
+    }()
+
+    lazy var signOutUseCase: any SignOutUseCaseProtocol = {
+        SignOutUseCase(authRepository: authRepository)
+    }()
 }

@@ -8,6 +8,8 @@ struct FolioSourcesView: View {
     let onSelectSource: (FolioSource) -> Void
     let onSearch: () -> Void
     let onMenu: () -> Void
+    let onOpenAccountSettings: () -> Void
+    let userInitial: String
 
     @State private var query = ""
 
@@ -27,7 +29,8 @@ struct FolioSourcesView: View {
                     subtitle: "Evidence library",
                     trailing: [
                         AnyView(Button(action: onSearch) { buttonIcon("magnifyingglass") }.buttonStyle(.plain)),
-                        AnyView(Button(action: onMenu) { buttonIcon("ellipsis") }.buttonStyle(.plain))
+                        AnyView(Button(action: onMenu) { buttonIcon("ellipsis") }.buttonStyle(.plain)),
+                        AnyView(FolioAccountAvatarButton(initial: userInitial, size: 36, action: onOpenAccountSettings))
                     ]
                 )
                 .padding(.top, 4)
@@ -127,6 +130,8 @@ private struct FolioSourceCard: View {
         onSelectFilter: { _ in },
         onSelectSource: { _ in },
         onSearch: {},
-        onMenu: {}
+        onMenu: {},
+        onOpenAccountSettings: {},
+        userInitial: "A"
     )
 }

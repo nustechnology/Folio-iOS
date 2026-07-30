@@ -12,11 +12,17 @@ final class MainViewModel: ViewModelProtocol {
         var spaces: [FolioSpace] = []
         var sourceFilters: [FolioSourceFilter] = []
         var sources: [FolioSource] = []
+        var authLoading = false
+        var userDisplayName: String?
+        var userEmail: String?
     }
+
+    @Published var toastMessage: String? = nil
 
     enum Action {
         case onAppear
-        case signIn(FolioCredential)
+        case signIn(email: String, password: String)
+        case signUp(name: String, email: String, password: String)
         case signInWithApple
         case signOut
         case selectTab(FolioTab)
@@ -24,14 +30,30 @@ final class MainViewModel: ViewModelProtocol {
         case selectFilter(FolioSourceFilter)
         case openReader(FolioSource)
         case closeReader
+        case dismissToast
     }
 
     private let fetchUsersUseCase: any FetchUsersUseCaseProtocol
     private let localStorage: LocalStorageProtocol
+    private let signUpUseCase: any SignUpUseCaseProtocol
+    private let signInUseCase: any SignInUseCaseProtocol
+    private let signOutUseCase: any SignOutUseCaseProtocol
+    private let refreshTokenUseCase: any RefreshTokenUseCaseProtocol
 
-    init(fetchUsersUseCase: any FetchUsersUseCaseProtocol, localStorage: LocalStorageProtocol) {
+    init(
+        fetchUsersUseCase: any FetchUsersUseCaseProtocol,
+        localStorage: LocalStorageProtocol,
+        signUpUseCase: any SignUpUseCaseProtocol,
+        signInUseCase: any SignInUseCaseProtocol,
+        signOutUseCase: any SignOutUseCaseProtocol,
+        refreshTokenUseCase: any RefreshTokenUseCaseProtocol
+    ) {
         self.fetchUsersUseCase = fetchUsersUseCase
         self.localStorage = localStorage
+        self.signUpUseCase = signUpUseCase
+        self.signInUseCase = signInUseCase
+        self.signOutUseCase = signOutUseCase
+        self.refreshTokenUseCase = refreshTokenUseCase
 #if DEBUG
         state.spaces = FolioDesignFixtures.spaces
         state.sourceFilters = FolioDesignFixtures.filters
@@ -65,26 +87,22 @@ final class MainViewModel: ViewModelProtocol {
                 state.sourceFilters = [.all, .papers, .books, .web]
                 Task { await loadUsers() }
             }
-        case .signIn(let credential):
-#if DEBUG
-            guard !credential.email.isEmpty, !credential.password.isEmpty else { return }
-            saveSession()
-            state.isAuthenticated = true
-            state.selectedTab = .sources
-            state.sourcesMode = .spaces
-            state.activeReader = nil
-#endif
+        case .signIn(let email, let password):
+            Task { await performSignIn(email: email, password: password) }
+        case .signUp(let name, let email, let password):
+            Task { await performSignUp(name: name, email: email, password: password) }
         case .signInWithApple:
 #if DEBUG
-            saveSession()
             state.isAuthenticated = true
             state.selectedTab = .sources
             state.sourcesMode = .spaces
             state.activeReader = nil
 #endif
         case .signOut:
-            localStorage.remove(forKey: "auth_session")
+            signOutUseCase.execute()
             state.isAuthenticated = false
+            state.userDisplayName = nil
+            state.userEmail = nil
             state.selectedTab = .sources
             state.sourcesMode = .spaces
             state.activeReader = nil
@@ -104,7 +122,46 @@ final class MainViewModel: ViewModelProtocol {
             state.sourcesMode = .library
         case .closeReader:
             state.activeReader = nil
+        case .dismissToast:
+            toastMessage = nil
         }
+    }
+
+    private func performSignIn(email: String, password: String) async {
+        state.authLoading = true
+        do {
+            let token = try await signInUseCase.execute(email: email, password: password)
+            applySession(token)
+        } catch let error as AuthError {
+            toastMessage = error.errorDescription
+        } catch {
+            Logger.error("Sign-in failed: \(error)")
+            toastMessage = String(localized: "Unable to connect. Please check your internet and try again.")
+        }
+        state.authLoading = false
+    }
+
+    private func performSignUp(name: String, email: String, password: String) async {
+        state.authLoading = true
+        do {
+            let token = try await signUpUseCase.execute(name: name, email: email, password: password)
+            applySession(token)
+        } catch let error as AuthError {
+            toastMessage = error.errorDescription
+        } catch {
+            Logger.error("Sign-up failed: \(error)")
+            toastMessage = String(localized: "Unable to connect. Please check your internet and try again.")
+        }
+        state.authLoading = false
+    }
+
+    private func applySession(_ token: AuthToken) {
+        state.isAuthenticated = true
+        state.userDisplayName = token.userName
+        state.userEmail = token.userEmail
+        state.selectedTab = .sources
+        state.sourcesMode = .spaces
+        state.activeReader = nil
     }
 
     private func loadUsers() async {
@@ -134,16 +191,27 @@ final class MainViewModel: ViewModelProtocol {
     }
 
     private func checkSession() {
-        guard let session: AuthSession = try? localStorage.load(forKey: "auth_session"),
-              session.isValid else { return }
-        state.isAuthenticated = true
+        guard let dto: AuthTokenDTO = try? localStorage.load(forKey: "auth_session") else { return }
+        let token = dto.toDomain()
+        if token.isValid {
+            state.isAuthenticated = true
+            state.userDisplayName = token.userName
+            state.userEmail = token.userEmail
+            return
+        }
+        Task { await attemptTokenRefresh(token) }
     }
 
-    private func saveSession() {
-        let session = AuthSession(
-            token: UUID().uuidString,
-            expiresAt: Date().addingTimeInterval(86400)
-        )
-        try? localStorage.save(session, forKey: "auth_session")
+    private func attemptTokenRefresh(_ token: AuthToken) async {
+        guard !token.refreshToken.isEmpty else { return }
+        do {
+            let newToken = try await refreshTokenUseCase.execute(refreshToken: token.refreshToken)
+            applySession(newToken)
+        } catch {
+            signOutUseCase.execute()
+            state.isAuthenticated = false
+            state.userDisplayName = nil
+            state.userEmail = nil
+        }
     }
 }

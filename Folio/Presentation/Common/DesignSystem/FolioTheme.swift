@@ -22,6 +22,8 @@ enum FolioTheme {
     static let olive = Color(hex: 0x13332A)
     static let oliveDark = Color(hex: 0x051B16)
     static let line = Color(hex: 0xD6C29C)
+    static let rowBorder = Color(hex: 0xD8CCB8)
+    static let fieldBorder = Color(hex: 0xC4A87D)
     static let gold = Color(hex: 0xC28D3E)
     static let goldSoft = Color(hex: 0xEBD6A8)
     static let success = Color(hex: 0xC6D2AC)
@@ -66,6 +68,8 @@ extension Color {
     static let folioOlive = FolioTheme.olive
     static let folioOliveDark = FolioTheme.oliveDark
     static let folioLine = FolioTheme.line
+    static let folioRowBorder = FolioTheme.rowBorder
+    static let folioFieldBorder = FolioTheme.fieldBorder
     static let folioGold = FolioTheme.gold
     static let folioGoldSoft = FolioTheme.goldSoft
     static let folioSuccess = FolioTheme.success

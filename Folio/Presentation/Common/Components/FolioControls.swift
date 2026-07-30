@@ -38,24 +38,34 @@ struct FolioPill: View {
 
 struct FolioPrimaryButton: View {
     let title: String
+    var isLoading: Bool = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(.system(size: 15, weight: .semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 15)
-                .foregroundStyle(.white)
-                .background(Color.folioOliveDark)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.folioGold.opacity(0.35), lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .shadow(color: Color.black.opacity(0.08), radius: 12, y: 4)
+            HStack(spacing: 8) {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(.white)
+                        .scaleEffect(0.8)
+                }
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 15)
+            .foregroundStyle(.white)
+            .background(Color.folioOliveDark)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(Color.folioGold.opacity(0.35), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .shadow(color: Color.black.opacity(0.08), radius: 12, y: 4)
         }
         .buttonStyle(.plain)
+        .disabled(isLoading)
     }
 }
 
@@ -78,7 +88,7 @@ struct FolioSecondaryButton: View {
             .background(Color.folioSurfaceStrong)
             .overlay(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(Color.folioLine, lineWidth: 1)
+                    .stroke(Color.folioFieldBorder, lineWidth: 2)
             )
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
@@ -87,38 +97,65 @@ struct FolioSecondaryButton: View {
 }
 
 struct FolioTextField: View {
-    let placeholder: String
+    var label: String? = nil
+    var placeholder: String = ""
     @Binding var text: String
     var isSecure: Bool = false
+    var error: String? = nil
+    var keyboardType: UIKeyboardType = .default
+
+    @State private var isPasswordVisible = false
 
     var body: some View {
-        HStack(spacing: 0) {
-            Group {
+        VStack(alignment: .leading, spacing: 6) {
+            if let label = label {
+                Text(label)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.folioInkSoft)
+            }
+
+            HStack {
+                Group {
+                    if isSecure && !isPasswordVisible {
+                        SecureField(placeholder, text: $text)
+                    } else {
+                        TextField(placeholder, text: $text)
+                    }
+                }
+                .font(.system(size: 14, weight: .regular))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .foregroundStyle(Color.folioInk)
+                .keyboardType(keyboardType)
+
                 if isSecure {
-                    SecureField(placeholder, text: $text)
-                } else {
-                    TextField(placeholder, text: $text)
+                    Button {
+                        isPasswordVisible.toggle()
+                    } label: {
+                        Image(systemName: isPasswordVisible ? "eye" : "eye.slash")
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundStyle(Color.folioInkSoft)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(isPasswordVisible ? "Hide password" : "Show password")
                 }
             }
-            .font(.system(size: 14, weight: .regular))
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
+            .padding(.horizontal, 16)
+            .frame(height: 52)
+            .background(Color.folioSurfaceStrong)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(error != nil ? Color.folioDanger : Color.folioFieldBorder, lineWidth: 2)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
-            if isSecure {
-                Image("Eye")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 10, height: 10)
+            if let error = error {
+                Text(error)
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(Color.red)
+                    .padding(.leading, 4)
             }
         }
-        .padding(.horizontal, 14)
-        .frame(height: 42)
-        .background(Color.folioSurfaceStrong)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.folioLine, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 
@@ -226,7 +263,7 @@ struct FolioEmptyStateView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.folioLine, lineWidth: 1)
+                    .stroke(Color.folioLine, lineWidth: 1)
                 )
 
             VStack(spacing: 8) {
@@ -247,5 +284,39 @@ struct FolioEmptyStateView: View {
                 .stroke(Color.folioLine, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+struct FolioBackButton: View {
+    let title: String
+    var subtitle: String? = nil
+    var action: (() -> Void)? = nil
+
+    var body: some View {
+        Button {
+            action?()
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    if action != nil {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.folioInk)
+                    }
+
+                    Text(title)
+                        .font(.custom("CormorantGaramond-Medium", size: 32))
+                        .foregroundStyle(Color.folioGold)
+                }
+
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(Color.folioInkMuted)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(action == nil)
     }
 }

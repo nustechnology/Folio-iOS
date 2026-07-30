@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainView: View {
     @StateObject var viewModel: MainViewModel
+    @State private var showAccountSettings = false
 
     var body: some View {
         ZStack {
@@ -9,6 +10,21 @@ struct MainView: View {
             content
         }
         .task { viewModel.handle(.onAppear) }
+        .fullScreenCover(isPresented: $showAccountSettings) {
+            FolioBackdrop()
+                .overlay {
+                    FolioAccountSettingsView(
+                        displayName: viewModel.state.userDisplayName ?? "User",
+                        emailAddress: viewModel.state.userEmail ?? "",
+                        onSignOut: {
+                            showAccountSettings = false
+                            viewModel.handle(.signOut)
+                        }
+                    )
+                }
+                .folioToast(message: $viewModel.toastMessage)
+        }
+        .folioToast(message: $viewModel.toastMessage)
     }
 
     @ViewBuilder
@@ -16,14 +32,7 @@ struct MainView: View {
         if viewModel.state.isAuthenticated {
             appShellWithTab
         } else {
-            FolioLoginView(
-                onSignIn: { credential in
-                    viewModel.handle(.signIn(credential))
-                },
-                onSignInWithApple: {
-                    viewModel.handle(.signInWithApple)
-                }
-            )
+            FolioLoginView(viewModel: viewModel)
         }
     }
 
@@ -42,11 +51,12 @@ struct MainView: View {
 
     @ViewBuilder
     private var appShell: some View {
+        let userInitial = viewModel.state.userDisplayName?.first.map(String.init).map { $0.uppercased() } ?? "?"
         switch viewModel.state.activeReader {
         case .some(let source):
-            FolioSourceReaderView(source: source) {
+            FolioSourceReaderView(source: source, onBack: {
                 viewModel.handle(.closeReader)
-            }
+            }, onOpenAccountSettings: { showAccountSettings = true }, userInitial: userInitial)
         case .none:
             switch viewModel.state.selectedTab {
             case .sources:
@@ -56,7 +66,8 @@ struct MainView: View {
                         onSelectSources: { viewModel.handle(.showLibrary) },
                         onSelectAsk: { viewModel.handle(.selectTab(.ask)) },
                         onSearch: {},
-                        onAdd: {}
+                        onOpenAccountSettings: { showAccountSettings = true },
+                        userInitial: userInitial
                     )
                 } else {
                     FolioSourcesView(
@@ -66,22 +77,28 @@ struct MainView: View {
                         onSelectFilter: { viewModel.handle(.selectFilter($0)) },
                         onSelectSource: { viewModel.handle(.openReader($0)) },
                         onSearch: {},
-                        onMenu: {}
+                        onMenu: {},
+                        onOpenAccountSettings: { showAccountSettings = true },
+                        userInitial: userInitial
                     )
                 }
             case .ask:
-                FolioAskView()
+                FolioAskView(onOpenAccountSettings: { showAccountSettings = true }, userInitial: userInitial)
             case .notes:
                 FolioPlaceholderView(
                     title: "Notes",
                     subtitle: "Capture claims, quotes, and follow-up ideas in one private space.",
-                    iconName: "note.text"
+                    iconName: "note.text",
+                    onOpenAccountSettings: { showAccountSettings = true },
+                    userInitial: userInitial
                 )
             case .notebook:
                 FolioPlaceholderView(
                     title: "Notebook",
                     subtitle: "Organize drafts, syntheses, and research threads here.",
-                    iconName: "book"
+                    iconName: "book",
+                    onOpenAccountSettings: { showAccountSettings = true },
+                    userInitial: userInitial
                 )
             }
         }
@@ -91,10 +108,36 @@ struct MainView: View {
 #Preview {
     MainView(viewModel: MainViewModel(
         fetchUsersUseCase: PreviewFetchUsersUseCase(),
-        localStorage: UserDefaultsStorage()
+        localStorage: UserDefaultsStorage(),
+        signUpUseCase: PreviewSignUpUseCase(),
+        signInUseCase: PreviewSignInUseCase(),
+        signOutUseCase: PreviewSignOutUseCase(),
+        refreshTokenUseCase: PreviewRefreshTokenUseCase()
     ))
 }
 
 private struct PreviewFetchUsersUseCase: FetchUsersUseCaseProtocol {
     func execute() async throws -> [User] { [] }
+}
+
+private struct PreviewSignUpUseCase: SignUpUseCaseProtocol {
+    func execute(name: String, email: String, password: String) async throws -> AuthToken {
+        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date(), userName: nil, userEmail: nil)
+    }
+}
+
+private struct PreviewSignInUseCase: SignInUseCaseProtocol {
+    func execute(email: String, password: String) async throws -> AuthToken {
+        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date(), userName: nil, userEmail: nil)
+    }
+}
+
+private struct PreviewSignOutUseCase: SignOutUseCaseProtocol {
+    func execute() {}
+}
+
+private struct PreviewRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
+    func execute(refreshToken: String) async throws -> AuthToken {
+        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date(), userName: nil, userEmail: nil)
+    }
 }
