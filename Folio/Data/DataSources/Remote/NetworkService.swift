@@ -22,14 +22,18 @@ final class NetworkService: NetworkServiceProtocol {
         request.httpBody = endpoint.body
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
+        Logger.debug("→ \(endpoint.method.rawValue) \(url.absoluteString)")
+
         let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
         }
 
+        Logger.debug("← \(httpResponse.statusCode)")
+
         guard (200...299).contains(httpResponse.statusCode) else {
-            throw NetworkError.httpError(statusCode: httpResponse.statusCode)
+            throw NetworkError.httpError(statusCode: httpResponse.statusCode, data: data)
         }
 
         let decoder = JSONDecoder()
@@ -38,6 +42,7 @@ final class NetworkService: NetworkServiceProtocol {
         do {
             return try decoder.decode(T.self, from: data)
         } catch {
+            Logger.error("Decoding error: \(error)")
             throw NetworkError.decodingError(error)
         }
     }
@@ -46,7 +51,7 @@ final class NetworkService: NetworkServiceProtocol {
 enum NetworkError: LocalizedError {
     case invalidURL
     case invalidResponse
-    case httpError(statusCode: Int)
+    case httpError(statusCode: Int, data: Data? = nil)
     case decodingError(Error)
 
     var errorDescription: String? {
@@ -55,10 +60,15 @@ enum NetworkError: LocalizedError {
             return "Invalid URL"
         case .invalidResponse:
             return "Invalid response from server"
-        case .httpError(let statusCode):
+        case .httpError(let statusCode, _):
             return "HTTP error with status code \(statusCode)"
         case .decodingError(let error):
             return "Failed to decode response: \(error.localizedDescription)"
         }
+    }
+
+    var errorData: Data? {
+        if case .httpError(_, let data) = self { return data }
+        return nil
     }
 }

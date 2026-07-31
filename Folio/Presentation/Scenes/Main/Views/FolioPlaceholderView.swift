@@ -4,6 +4,8 @@ struct FolioPlaceholderView: View {
     let title: String
     let subtitle: String
     let iconName: String
+    let onOpenAccountSettings: () -> Void
+    let userInitial: String
 
     var body: some View {
         VStack {
@@ -12,7 +14,7 @@ struct FolioPlaceholderView: View {
             FolioTopBar(
                 title: title,
                 subtitle: subtitle,
-                trailing: [AnyView(buttonIcon("ellipsis"))]
+                trailing: [AnyView(buttonIcon("ellipsis")), AnyView(FolioAccountAvatarButton(initial: userInitial, size: 36, action: onOpenAccountSettings))]
             )
 
             Spacer()
@@ -33,5 +35,5 @@ struct FolioPlaceholderView: View {
 }
 
 #Preview {
-    FolioPlaceholderView(title: "Notes", subtitle: "Capture and review", iconName: "note.text")
+    FolioPlaceholderView(title: "Notes", subtitle: "Capture and review", iconName: "note.text", onOpenAccountSettings: {}, userInitial: "A")
 }

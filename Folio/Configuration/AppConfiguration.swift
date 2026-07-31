@@ -6,7 +6,7 @@ enum AppConfiguration {
               let url = URL(string: urlString) else {
 #if DEBUG
             Logger.error("Missing or invalid API_BASE_URL in Info.plist, falling back to default")
-            return URL(string: "https://jsonplaceholder.typicode.com")!
+            return URL(string: "https://shale-crowd-satin.ngrok-free.dev")!
 #else
             fatalError("Missing or invalid API_BASE_URL in Info.plist")
 #endif

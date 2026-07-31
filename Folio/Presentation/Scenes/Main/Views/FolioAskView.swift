@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct FolioAskView: View {
+    let onOpenAccountSettings: () -> Void
+    let userInitial: String
+
     @State private var prompt = ""
     @State private var isLoading = false
     @State private var resultText: String?
@@ -12,7 +15,7 @@ struct FolioAskView: View {
                 FolioTopBar(
                     title: "Ask",
                     subtitle: "Private research assistant",
-                    trailing: [AnyView(buttonIcon("ellipsis"))]
+                    trailing: [AnyView(buttonIcon("ellipsis")), AnyView(FolioAccountAvatarButton(initial: userInitial, size: 36, action: onOpenAccountSettings))]
                 )
                 .padding(.top, 4)
 
@@ -101,5 +104,5 @@ struct FolioAskView: View {
 }
 
 #Preview {
-    FolioAskView()
+    FolioAskView(onOpenAccountSettings: {}, userInitial: "A")
 }

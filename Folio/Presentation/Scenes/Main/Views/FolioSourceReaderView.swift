@@ -3,6 +3,8 @@ import SwiftUI
 struct FolioSourceReaderView: View {
     let source: FolioSource
     let onBack: () -> Void
+    let onOpenAccountSettings: () -> Void
+    let userInitial: String
 
     var body: some View {
         ScrollView {
@@ -10,7 +12,8 @@ struct FolioSourceReaderView: View {
                 FolioTopBar(
                     title: source.title,
                     subtitle: source.subtitle,
-                    leading: AnyView(backButton)
+                    leading: AnyView(backButton),
+                    trailing: [AnyView(FolioAccountAvatarButton(initial: userInitial, size: 36, action: onOpenAccountSettings))]
                 )
 
                 VStack(alignment: .leading, spacing: 10) {
@@ -86,5 +89,5 @@ struct FolioSourceReaderView: View {
 }
 
 #Preview {
-    FolioSourceReaderView(source: FolioDesignFixtures.sources[0], onBack: {})
+    FolioSourceReaderView(source: FolioDesignFixtures.sources[0], onBack: {}, onOpenAccountSettings: {}, userInitial: "A")
 }

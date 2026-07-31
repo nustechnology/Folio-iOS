@@ -5,7 +5,8 @@ struct FolioSpacesView: View {
     let onSelectSources: () -> Void
     let onSelectAsk: () -> Void
     let onSearch: () -> Void
-    let onAdd: () -> Void
+    let onOpenAccountSettings: () -> Void
+    let userInitial: String
 
     var body: some View {
         ScrollView {
@@ -15,7 +16,7 @@ struct FolioSpacesView: View {
                     subtitle: "My Spaces",
                     trailing: [
                         AnyView(Button(action: onSearch) { buttonIcon("magnifyingglass") }.buttonStyle(.plain).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle()).accessibilityLabel("Search")),
-                        AnyView(Button(action: onAdd) { buttonIcon("plus", border: true) }.buttonStyle(.plain).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle()).accessibilityLabel("Add"))
+                        AnyView(FolioAccountAvatarButton(initial: userInitial, size: 36, action: onOpenAccountSettings))
                     ]
                 )
                 .padding(.top, 4)
@@ -118,5 +119,5 @@ private struct FolioSpaceCard: View {
 }
 
 #Preview {
-    FolioSpacesView(spaces: FolioDesignFixtures.spaces, onSelectSources: {}, onSelectAsk: {}, onSearch: {}, onAdd: {})
+    FolioSpacesView(spaces: FolioDesignFixtures.spaces, onSelectSources: {}, onSelectAsk: {}, onSearch: {}, onOpenAccountSettings: {}, userInitial: "A")
 }
