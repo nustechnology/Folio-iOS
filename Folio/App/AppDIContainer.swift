@@ -2,7 +2,14 @@ import Foundation
 
 final class AppDIContainer {
     lazy var networkService: NetworkServiceProtocol = {
-        NetworkService(baseURL: AppConfiguration.apiBaseURL)
+        NetworkService(
+            baseURL: AppConfiguration.apiBaseURL,
+            accessTokenProvider: accessTokenProvider
+        )
+    }()
+
+    lazy var accessTokenProvider: AccessTokenProvider = {
+        SessionAccessTokenProvider(localStorage: localStorage)
     }()
 
     lazy var localStorage: LocalStorageProtocol = {
@@ -35,5 +42,9 @@ final class AppDIContainer {
 
     lazy var signOutUseCase: any SignOutUseCaseProtocol = {
         SignOutUseCase(authRepository: authRepository)
+    }()
+
+    lazy var workspaceRepository: WorkspaceRepositoryProtocol = {
+        RemoteWorkspaceRepository(networkService: networkService)
     }()
 }

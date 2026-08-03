@@ -40,7 +40,7 @@ struct FolioTopBar: View {
         .padding(.horizontal, 18)
         .padding(.top, 14)
         .padding(.bottom, 14)
-        .background(dark ? Color.folioOliveDark : Color.clear)
+        .background(dark ? Color.folioOlive : Color.clear)
     }
 }
 

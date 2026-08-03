@@ -26,6 +26,7 @@ final class MainViewModel: ViewModelProtocol {
         case signInWithApple
         case signOut
         case selectTab(FolioTab)
+        case showSpaces
         case showLibrary
         case selectFilter(FolioSourceFilter)
         case openReader(FolioSource)
@@ -39,6 +40,7 @@ final class MainViewModel: ViewModelProtocol {
     private let signInUseCase: any SignInUseCaseProtocol
     private let signOutUseCase: any SignOutUseCaseProtocol
     private let refreshTokenUseCase: any RefreshTokenUseCaseProtocol
+    let workspaceRepository: WorkspaceRepositoryProtocol
 
     init(
         fetchUsersUseCase: any FetchUsersUseCaseProtocol,
@@ -46,7 +48,8 @@ final class MainViewModel: ViewModelProtocol {
         signUpUseCase: any SignUpUseCaseProtocol,
         signInUseCase: any SignInUseCaseProtocol,
         signOutUseCase: any SignOutUseCaseProtocol,
-        refreshTokenUseCase: any RefreshTokenUseCaseProtocol
+        refreshTokenUseCase: any RefreshTokenUseCaseProtocol,
+        workspaceRepository: WorkspaceRepositoryProtocol
     ) {
         self.fetchUsersUseCase = fetchUsersUseCase
         self.localStorage = localStorage
@@ -54,6 +57,7 @@ final class MainViewModel: ViewModelProtocol {
         self.signInUseCase = signInUseCase
         self.signOutUseCase = signOutUseCase
         self.refreshTokenUseCase = refreshTokenUseCase
+        self.workspaceRepository = workspaceRepository
 #if DEBUG
         state.spaces = FolioDesignFixtures.spaces
         state.sourceFilters = FolioDesignFixtures.filters
@@ -64,7 +68,12 @@ final class MainViewModel: ViewModelProtocol {
     @Published private(set) var state: State = .init()
 
     var visibleSources: [FolioSource] {
+        visibleSources(inWorkspaceID: nil)
+    }
+
+    func visibleSources(inWorkspaceID workspaceID: String?) -> [FolioSource] {
         state.sources.filter { source in
+            guard workspaceID == nil || source.workspaceID == workspaceID else { return false }
             switch state.selectedFilter {
             case .all:
                 return true
@@ -109,7 +118,11 @@ final class MainViewModel: ViewModelProtocol {
         case .selectTab(let tab):
             state.selectedTab = tab
             state.activeReader = nil
+            state.sourcesMode = tab == .sources ? .library : .spaces
+        case .showSpaces:
+            state.selectedTab = .sources
             state.sourcesMode = .spaces
+            state.activeReader = nil
         case .showLibrary:
             state.selectedTab = .sources
             state.sourcesMode = .library
@@ -170,6 +183,7 @@ final class MainViewModel: ViewModelProtocol {
             state.sources = users.map { user in
                 FolioSource(
                     id: "\(user.id)",
+                    workspaceID: nil,
                     kind: .web,
                     title: user.name,
                     subtitle: user.email,
@@ -191,7 +205,7 @@ final class MainViewModel: ViewModelProtocol {
     }
 
     private func checkSession() {
-        guard let dto: AuthTokenDTO = try? localStorage.load(forKey: "auth_session") else { return }
+        guard let dto: AuthTokenDTO = try? localStorage.load(forKey: StorageKey.authSession) else { return }
         let token = dto.toDomain()
         if token.isValid {
             state.isAuthenticated = true

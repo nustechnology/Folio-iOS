@@ -3,6 +3,7 @@ import SwiftUI
 struct MainView: View {
     @StateObject var viewModel: MainViewModel
     @State private var showAccountSettings = false
+    @State private var selectedWorkspace: Workspace?
 
     var body: some View {
         ZStack {
@@ -39,8 +40,12 @@ struct MainView: View {
     private var appShellWithTab: some View {
         appShell
             .safeAreaInset(edge: .bottom) {
-                if viewModel.state.activeReader == nil {
+                let isMySpaces = viewModel.state.selectedTab == .sources
+                    && viewModel.state.sourcesMode == .spaces
+                    && selectedWorkspace == nil
+                if viewModel.state.activeReader == nil && !isMySpaces {
                     FolioBottomTabBar(selectedTab: viewModel.state.selectedTab) { tab in
+                        selectedWorkspace = nil
                         viewModel.handle(.selectTab(tab))
                     }
                     .padding(.horizontal, 20)
@@ -58,50 +63,80 @@ struct MainView: View {
                 viewModel.handle(.closeReader)
             }, onOpenAccountSettings: { showAccountSettings = true }, userInitial: userInitial)
         case .none:
-            switch viewModel.state.selectedTab {
-            case .sources:
-                if viewModel.state.sourcesMode == .spaces {
-                    FolioSpacesView(
-                        spaces: viewModel.state.spaces,
-                        onSelectSources: { viewModel.handle(.showLibrary) },
-                        onSelectAsk: { viewModel.handle(.selectTab(.ask)) },
-                        onSearch: {},
+            if selectedWorkspace != nil {
+                FolioSourcesView(
+                    workspaceID: selectedWorkspace?.id,
+                    workspaceTitle: selectedWorkspace?.name,
+                    filters: viewModel.state.sourceFilters,
+                    selectedFilter: viewModel.state.selectedFilter,
+                    sources: viewModel.visibleSources(inWorkspaceID: selectedWorkspace?.id),
+                    onSelectFilter: { viewModel.handle(.selectFilter($0)) },
+                    onSelectSource: { viewModel.handle(.openReader($0)) },
+                    onSearch: {},
+                    onMenu: {},
+                    onOpenAccountSettings: { showAccountSettings = true },
+                    onBackToSpaces: { showMySpaces() },
+                    userInitial: currentUserInitial
+                )
+            } else {
+                switch viewModel.state.selectedTab {
+                case .sources:
+                    if viewModel.state.sourcesMode == .spaces {
+                        WorkspaceListView(
+                            viewModel: WorkspaceListViewModel(repository: viewModel.workspaceRepository),
+                            onSelectWorkspace: { selectedWorkspace = $0 },
+                            onWorkspaceDeleted: { deletedID in
+                                if selectedWorkspace?.id == deletedID { selectedWorkspace = nil }
+                            },
+                            onOpenAccountSettings: { showAccountSettings = true },
+                            userInitial: userInitial
+                        )
+                    } else {
+                        FolioSourcesView(
+                            filters: viewModel.state.sourceFilters,
+                            selectedFilter: viewModel.state.selectedFilter,
+                            sources: viewModel.visibleSources,
+                            onSelectFilter: { viewModel.handle(.selectFilter($0)) },
+                            onSelectSource: { viewModel.handle(.openReader($0)) },
+                            onSearch: {},
+                            onMenu: {},
+                            onOpenAccountSettings: { showAccountSettings = true },
+                            onBackToSpaces: { showMySpaces() },
+                            userInitial: userInitial
+                        )
+                    }
+                case .ask:
+                    FolioAskView(onOpenAccountSettings: { showAccountSettings = true }, onBackToSpaces: { showMySpaces() }, userInitial: userInitial)
+                case .notes:
+                    FolioPlaceholderView(
+                        title: "Notes",
+                        subtitle: "Capture claims, quotes, and follow-up ideas in one private space.",
+                        iconName: "note.text",
                         onOpenAccountSettings: { showAccountSettings = true },
+                        onBackToSpaces: { showMySpaces() },
                         userInitial: userInitial
                     )
-                } else {
-                    FolioSourcesView(
-                        filters: viewModel.state.sourceFilters,
-                        selectedFilter: viewModel.state.selectedFilter,
-                        sources: viewModel.visibleSources,
-                        onSelectFilter: { viewModel.handle(.selectFilter($0)) },
-                        onSelectSource: { viewModel.handle(.openReader($0)) },
-                        onSearch: {},
-                        onMenu: {},
+                case .notebook:
+                    FolioPlaceholderView(
+                        title: "Notebook",
+                        subtitle: "Organize drafts, syntheses, and research threads here.",
+                        iconName: "book",
                         onOpenAccountSettings: { showAccountSettings = true },
+                        onBackToSpaces: { showMySpaces() },
                         userInitial: userInitial
                     )
                 }
-            case .ask:
-                FolioAskView(onOpenAccountSettings: { showAccountSettings = true }, userInitial: userInitial)
-            case .notes:
-                FolioPlaceholderView(
-                    title: "Notes",
-                    subtitle: "Capture claims, quotes, and follow-up ideas in one private space.",
-                    iconName: "note.text",
-                    onOpenAccountSettings: { showAccountSettings = true },
-                    userInitial: userInitial
-                )
-            case .notebook:
-                FolioPlaceholderView(
-                    title: "Notebook",
-                    subtitle: "Organize drafts, syntheses, and research threads here.",
-                    iconName: "book",
-                    onOpenAccountSettings: { showAccountSettings = true },
-                    userInitial: userInitial
-                )
             }
         }
+    }
+
+    private var currentUserInitial: String {
+        viewModel.state.userDisplayName?.first.map(String.init).map { $0.uppercased() } ?? "?"
+    }
+
+    private func showMySpaces() {
+        selectedWorkspace = nil
+        viewModel.handle(.showSpaces)
     }
 }
 
@@ -112,8 +147,16 @@ struct MainView: View {
         signUpUseCase: PreviewSignUpUseCase(),
         signInUseCase: PreviewSignInUseCase(),
         signOutUseCase: PreviewSignOutUseCase(),
-        refreshTokenUseCase: PreviewRefreshTokenUseCase()
+        refreshTokenUseCase: PreviewRefreshTokenUseCase(),
+        workspaceRepository: PreviewWorkspaceRepository()
     ))
+}
+
+final class PreviewWorkspaceRepository: WorkspaceRepositoryProtocol {
+    func fetchWorkspaces() async throws -> [Workspace] { [] }
+    func createWorkspace(name: String, objective: String) async throws -> Workspace { fatalError("Preview only") }
+    func updateWorkspace(id: String, name: String, objective: String) async throws -> Workspace { fatalError("Preview only") }
+    func deleteWorkspace(id: String) async throws { }
 }
 
 private struct PreviewFetchUsersUseCase: FetchUsersUseCaseProtocol {
