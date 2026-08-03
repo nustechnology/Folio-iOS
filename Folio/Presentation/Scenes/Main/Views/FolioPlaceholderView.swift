@@ -5,6 +5,7 @@ struct FolioPlaceholderView: View {
     let subtitle: String
     let iconName: String
     let onOpenAccountSettings: () -> Void
+    let onBackToSpaces: () -> Void
     let userInitial: String
 
     var body: some View {
@@ -14,6 +15,7 @@ struct FolioPlaceholderView: View {
             FolioTopBar(
                 title: title,
                 subtitle: subtitle,
+                leading: AnyView(Button(action: onBackToSpaces) { buttonIcon("chevron.left") }.buttonStyle(.plain).accessibilityLabel("Back to My Spaces")),
                 trailing: [AnyView(buttonIcon("ellipsis")), AnyView(FolioAccountAvatarButton(initial: userInitial, size: 36, action: onOpenAccountSettings))]
             )
 
@@ -35,5 +37,5 @@ struct FolioPlaceholderView: View {
 }
 
 #Preview {
-    FolioPlaceholderView(title: "Notes", subtitle: "Capture and review", iconName: "note.text", onOpenAccountSettings: {}, userInitial: "A")
+    FolioPlaceholderView(title: "Notes", subtitle: "Capture and review", iconName: "note.text", onOpenAccountSettings: {}, onBackToSpaces: {}, userInitial: "A")
 }

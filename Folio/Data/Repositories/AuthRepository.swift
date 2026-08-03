@@ -59,7 +59,7 @@ final class AuthRepository: AuthRepositoryProtocol {
     }
 
     func signOut() {
-        localStorage.remove(forKey: "auth_session")
+        localStorage.remove(forKey: StorageKey.authSession)
     }
 
     func getCurrentSession() -> AuthToken? {
@@ -70,11 +70,11 @@ final class AuthRepository: AuthRepositoryProtocol {
     }
 
     private func saveSession(_ token: AuthToken) {
-        try? localStorage.save(token.toDTO(), forKey: "auth_session")
+        try? localStorage.save(token.toDTO(), forKey: StorageKey.authSession)
     }
 
     private func loadSession() -> AuthToken? {
-        guard let dto: AuthTokenDTO = try? localStorage.load(forKey: "auth_session") else {
+        guard let dto: AuthTokenDTO = try? localStorage.load(forKey: StorageKey.authSession) else {
             return nil
         }
         return dto.toDomain()

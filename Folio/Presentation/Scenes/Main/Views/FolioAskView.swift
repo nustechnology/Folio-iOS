@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FolioAskView: View {
     let onOpenAccountSettings: () -> Void
+    let onBackToSpaces: () -> Void
     let userInitial: String
 
     @State private var prompt = ""
@@ -15,6 +16,7 @@ struct FolioAskView: View {
                 FolioTopBar(
                     title: "Ask",
                     subtitle: "Private research assistant",
+                    leading: AnyView(Button(action: onBackToSpaces) { buttonIcon("chevron.left") }.buttonStyle(.plain).accessibilityLabel("Back to My Spaces")),
                     trailing: [AnyView(buttonIcon("ellipsis")), AnyView(FolioAccountAvatarButton(initial: userInitial, size: 36, action: onOpenAccountSettings))]
                 )
                 .padding(.top, 4)
@@ -104,5 +106,5 @@ struct FolioAskView: View {
 }
 
 #Preview {
-    FolioAskView(onOpenAccountSettings: {}, userInitial: "A")
+    FolioAskView(onOpenAccountSettings: {}, onBackToSpaces: {}, userInitial: "A")
 }

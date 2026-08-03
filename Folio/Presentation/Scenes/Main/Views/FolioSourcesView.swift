@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct FolioSourcesView: View {
+    let workspaceID: String?
+    let workspaceTitle: String?
     let filters: [FolioSourceFilter]
     let selectedFilter: FolioSourceFilter
     let sources: [FolioSource]
@@ -9,7 +11,36 @@ struct FolioSourcesView: View {
     let onSearch: () -> Void
     let onMenu: () -> Void
     let onOpenAccountSettings: () -> Void
+    let onBackToSpaces: () -> Void
     let userInitial: String
+
+    init(
+        workspaceID: String? = nil,
+        workspaceTitle: String? = nil,
+        filters: [FolioSourceFilter],
+        selectedFilter: FolioSourceFilter,
+        sources: [FolioSource],
+        onSelectFilter: @escaping (FolioSourceFilter) -> Void,
+        onSelectSource: @escaping (FolioSource) -> Void,
+        onSearch: @escaping () -> Void,
+        onMenu: @escaping () -> Void,
+        onOpenAccountSettings: @escaping () -> Void,
+        onBackToSpaces: @escaping () -> Void,
+        userInitial: String
+    ) {
+        self.workspaceID = workspaceID
+        self.workspaceTitle = workspaceTitle
+        self.filters = filters
+        self.selectedFilter = selectedFilter
+        self.sources = sources
+        self.onSelectFilter = onSelectFilter
+        self.onSelectSource = onSelectSource
+        self.onSearch = onSearch
+        self.onMenu = onMenu
+        self.onOpenAccountSettings = onOpenAccountSettings
+        self.onBackToSpaces = onBackToSpaces
+        self.userInitial = userInitial
+    }
 
     @State private var query = ""
 
@@ -26,7 +57,8 @@ struct FolioSourcesView: View {
             VStack(spacing: 16) {
                 FolioTopBar(
                     title: "Sources",
-                    subtitle: "Evidence library",
+                    subtitle: workspaceTitle ?? "Evidence library",
+                    leading: AnyView(Button(action: onBackToSpaces) { buttonIcon("chevron.left") }.buttonStyle(.plain).accessibilityLabel("Back to My Spaces")),
                     trailing: [
                         AnyView(Button(action: onSearch) { buttonIcon("magnifyingglass") }.buttonStyle(.plain)),
                         AnyView(Button(action: onMenu) { buttonIcon("ellipsis") }.buttonStyle(.plain)),
@@ -132,6 +164,7 @@ private struct FolioSourceCard: View {
         onSearch: {},
         onMenu: {},
         onOpenAccountSettings: {},
+        onBackToSpaces: {},
         userInitial: "A"
     )
 }

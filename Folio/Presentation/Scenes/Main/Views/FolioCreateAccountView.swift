@@ -163,7 +163,8 @@ struct FolioCreateAccountView: View {
                 signUpUseCase: PreviewAuthSignUpUseCase(),
                 signInUseCase: PreviewAuthSignInUseCase(),
                 signOutUseCase: PreviewAuthSignOutUseCase(),
-                refreshTokenUseCase: PreviewAuthRefreshTokenUseCase()
+                refreshTokenUseCase: PreviewAuthRefreshTokenUseCase(),
+                workspaceRepository: PreviewWorkspaceRepository()
             ))
         }
 }

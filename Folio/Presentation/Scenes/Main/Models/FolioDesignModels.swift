@@ -108,6 +108,7 @@ struct AuthSession: Codable, Equatable {
 
 struct FolioSource: Identifiable, Equatable {
     let id: String
+    let workspaceID: String?
     let kind: FolioSourceKind
     let title: String
     let subtitle: String
@@ -135,6 +136,7 @@ enum FolioDesignFixtures {
     static let sources: [FolioSource] = [
         .init(
             id: "alan-turing",
+            workspaceID: "dissertation-research",
             kind: .paper,
             title: "Alan Turing: Computing Machinery",
             subtitle: "The Origins of Computation",
@@ -150,6 +152,7 @@ enum FolioDesignFixtures {
         ),
         .init(
             id: "totalitarianism",
+            workspaceID: "dissertation-research",
             kind: .paper,
             title: "The Origins of Totalitarianism",
             subtitle: "Political systems and control",
@@ -165,6 +168,7 @@ enum FolioDesignFixtures {
         ),
         .init(
             id: "weapons-of-math-destruction",
+            workspaceID: "public-policy-insights",
             kind: .book,
             title: "Weapons of Math Destruction",
             subtitle: "How algorithms shape society",
@@ -180,6 +184,7 @@ enum FolioDesignFixtures {
         ),
         .init(
             id: "surveillance-capitalism",
+            workspaceID: "history-of-science",
             kind: .paper,
             title: "The Age of Surveillance Capitalism",
             subtitle: "Data extraction and behavior",
@@ -195,6 +200,7 @@ enum FolioDesignFixtures {
         ),
         .init(
             id: "attention-is-all-you-need",
+            workspaceID: "teaching-prep",
             kind: .web,
             title: "Attention Is All You Need",
             subtitle: "Transformer architectures",

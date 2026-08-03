@@ -148,7 +148,8 @@ struct FolioLoginView: View {
                 signUpUseCase: PreviewSignUpUseCase(),
                 signInUseCase: PreviewSignInUseCase(),
                 signOutUseCase: PreviewSignOutUseCase(),
-                refreshTokenUseCase: PreviewRefreshTokenUseCase()
+                refreshTokenUseCase: PreviewRefreshTokenUseCase(),
+                workspaceRepository: PreviewWorkspaceRepository()
             ))
         }
 }
