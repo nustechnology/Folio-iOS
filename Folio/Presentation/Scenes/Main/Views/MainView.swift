@@ -76,7 +76,10 @@ struct MainView: View {
                     onMenu: {},
                     onOpenAccountSettings: { showAccountSettings = true },
                     onBackToSpaces: { showMySpaces() },
-                    userInitial: currentUserInitial
+                    userInitial: currentUserInitial,
+                    onSourceAdded: { source in viewModel.handle(.addNewSource(source: source, kind: kindForSourceType(source.sourceType), workspaceID: selectedWorkspace?.id)) },
+                    onSourceAsk: { source in viewModel.handle(.openAskForSource(source: source, kind: kindForSourceType(source.sourceType))) },
+                    uploadSourceUseCase: viewModel.uploadSourceUseCase
                 )
             } else {
                 switch viewModel.state.selectedTab {
@@ -104,7 +107,10 @@ struct MainView: View {
                             onMenu: {},
                             onOpenAccountSettings: { showAccountSettings = true },
                             onBackToSpaces: { showMySpaces() },
-                            userInitial: userInitial
+                            userInitial: userInitial,
+                            onSourceAdded: { source in viewModel.handle(.addNewSource(source: source, kind: kindForSourceType(source.sourceType), workspaceID: nil)) },
+                            onSourceAsk: { source in viewModel.handle(.openAskForSource(source: source, kind: kindForSourceType(source.sourceType))) },
+                            uploadSourceUseCase: viewModel.uploadSourceUseCase
                         )
                     }
                 case .ask:
@@ -140,6 +146,13 @@ struct MainView: View {
         selectedWorkspace = nil
         viewModel.handle(.showSpaces)
     }
+
+    private func kindForSourceType(_ type: SourceType) -> FolioSourceKind {
+        switch type {
+        case .file, .manual: return .paper
+        case .web: return .web
+        }
+    }
 }
 
 #Preview {
@@ -150,7 +163,8 @@ struct MainView: View {
         signInUseCase: PreviewSignInUseCase(),
         signOutUseCase: PreviewSignOutUseCase(),
         refreshTokenUseCase: PreviewRefreshTokenUseCase(),
-        workspaceRepository: PreviewWorkspaceRepository()
+        workspaceRepository: PreviewWorkspaceRepository(),
+        uploadSourceUseCase: PreviewUploadSourceUseCase()
     ))
 }
 
@@ -186,5 +200,24 @@ private struct PreviewSignOutUseCase: SignOutUseCaseProtocol {
 private struct PreviewRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
     func execute(refreshToken: String) async throws -> AuthToken {
         AuthToken(accessToken: "", refreshToken: "", expiresAt: Date(), userName: nil, userEmail: nil)
+    }
+}
+
+private struct PreviewUploadSourceUseCase: UploadSourceUseCaseProtocol {
+    func uploadFile(spaceId: String, fileURL: URL, title: String?, author: String?) async throws -> Source {
+        Source(id: "preview", researchSpaceId: spaceId, sourceType: .file, title: title ?? "", author: author ?? "", sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
+    }
+    func uploadWeb(spaceId: String, url: String, title: String?, author: String?) async throws -> Source {
+        Source(id: "preview", researchSpaceId: spaceId, sourceType: .web, title: title ?? "", author: author ?? "", sourceUrl: url, fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
+    }
+    func uploadManual(spaceId: String, content: String, title: String?, author: String?) async throws -> Source {
+        Source(id: "preview", researchSpaceId: spaceId, sourceType: .manual, title: title ?? "", author: author ?? "", sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: content, processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
+    }
+    func deleteSource(id: String) async throws {}
+    func retrySource(id: String) async throws -> Source {
+        Source(id: id, researchSpaceId: "", sourceType: .file, title: "", author: "", sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", processingState: .added, processingError: "", createdAt: Date(), updatedAt: Date())
+    }
+    func sourceStatusStream() -> AsyncThrowingStream<SourceStatusEvent, Error> {
+        AsyncThrowingStream { $0.finish() }
     }
 }

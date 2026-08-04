@@ -121,6 +121,53 @@ struct FolioSource: Identifiable, Equatable {
     let citationDetail: String
     let citationText: String
     let pageLabel: String
+
+    init(
+        id: String, workspaceID: String?, kind: FolioSourceKind, title: String,
+        subtitle: String, addedText: String, status: FolioSourceStatus,
+        chapterTitle: String, chapterText: String, calloutText: String,
+        citationTitle: String, citationDetail: String, citationText: String, pageLabel: String
+    ) {
+        self.id = id
+        self.workspaceID = workspaceID
+        self.kind = kind
+        self.title = title
+        self.subtitle = subtitle
+        self.addedText = addedText
+        self.status = status
+        self.chapterTitle = chapterTitle
+        self.chapterText = chapterText
+        self.calloutText = calloutText
+        self.citationTitle = citationTitle
+        self.citationDetail = citationDetail
+        self.citationText = citationText
+        self.pageLabel = pageLabel
+    }
+}
+
+extension FolioSource {
+    init(from source: Source, workspaceID: String?, kind: FolioSourceKind) {
+        self.id = source.id
+        self.workspaceID = workspaceID
+        self.kind = kind
+        self.title = source.title
+        self.subtitle = source.author
+        self.addedText = String(localized: "Added just now")
+        self.status = {
+            switch source.processingState {
+            case .ready: return .ready
+            case .failed: return .failed
+            default: return .processing
+            }
+        }()
+        self.chapterTitle = source.title
+        self.chapterText = ""
+        self.calloutText = ""
+        self.citationTitle = ""
+        self.citationDetail = ""
+        self.citationText = ""
+        self.pageLabel = "1 of 1"
+    }
 }
 
 enum FolioDesignFixtures {

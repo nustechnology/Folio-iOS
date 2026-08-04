@@ -27,8 +27,9 @@ enum FolioTheme {
     static let gold = Color(hex: 0xC28D3E)
     static let goldSoft = Color(hex: 0xEBD6A8)
     static let success = Color(hex: 0xC6D2AC)
+    static let successStrong = Color(hex: 0x2E7D32)
     static let warning = Color(hex: 0xEAD8A3)
-    static let danger = Color(hex: 0xE8BDC1)
+    static let danger = Color(hex: 0xC0392B)
 }
 
 struct FolioBackdrop: View {
@@ -73,6 +74,7 @@ extension Color {
     static let folioGold = FolioTheme.gold
     static let folioGoldSoft = FolioTheme.goldSoft
     static let folioSuccess = FolioTheme.success
+    static let folioSuccessStrong = FolioTheme.successStrong
     static let folioWarning = FolioTheme.warning
     static let folioDanger = FolioTheme.danger
 }

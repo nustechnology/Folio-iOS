@@ -12,11 +12,13 @@ protocol APIEndpoint {
     var body: Data? { get }
     var headers: [String: String]? { get }
     var requiresAuthentication: Bool { get }
+    var contentType: String { get }
 }
 
 extension APIEndpoint {
     var headers: [String: String]? { nil }
     var requiresAuthentication: Bool { false }
+    var contentType: String { "application/json" }
 }
 
 enum HTTPMethod: String {
