@@ -85,9 +85,11 @@ struct MainView: View {
                         WorkspaceListView(
                             viewModel: WorkspaceListViewModel(repository: viewModel.workspaceRepository),
                             onSelectWorkspace: { selectedWorkspace = $0 },
+                            onWorkspaceCreated: { selectedWorkspace = $0 },
                             onWorkspaceDeleted: { deletedID in
                                 if selectedWorkspace?.id == deletedID { selectedWorkspace = nil }
                             },
+                            onToast: { viewModel.toastMessage = .success($0) },
                             onOpenAccountSettings: { showAccountSettings = true },
                             userInitial: userInitial
                         )
@@ -153,7 +155,9 @@ struct MainView: View {
 }
 
 final class PreviewWorkspaceRepository: WorkspaceRepositoryProtocol {
-    func fetchWorkspaces() async throws -> [Workspace] { [] }
+    func fetchWorkspaces(query: WorkspaceListQuery) async throws -> WorkspaceListResult {
+        WorkspaceListResult(workspaces: [], pagination: nil)
+    }
     func createWorkspace(name: String, objective: String) async throws -> Workspace { fatalError("Preview only") }
     func updateWorkspace(id: String, name: String, objective: String) async throws -> Workspace { fatalError("Preview only") }
     func deleteWorkspace(id: String) async throws { }

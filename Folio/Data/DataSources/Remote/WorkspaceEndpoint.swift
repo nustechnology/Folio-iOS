@@ -1,15 +1,16 @@
 import Foundation
 
 enum WorkspaceEndpoint: APIEndpoint {
-    case list
+    case list(query: WorkspaceListQuery)
     case create(name: String, objective: String)
     case update(id: String, name: String, objective: String)
     case delete(id: String)
 
     var path: String {
         switch self {
-        case .list, .create: return "/api/v1/workspaces"
-        case .update(let id, _, _), .delete(let id): return "/api/v1/workspaces/\(id)"
+        case .list: return "/api/v1/spaces"
+        case .create: return "/api/v1/spaces"
+        case .update(let id, _, _), .delete(let id): return "/api/v1/spaces/\(id)"
         }
     }
 
@@ -22,15 +23,23 @@ enum WorkspaceEndpoint: APIEndpoint {
         }
     }
 
-    var queryItems: [URLQueryItem]? { nil }
+    var queryItems: [URLQueryItem]? {
+        guard case .list(let query) = self else { return nil }
+        return [
+            query.sort.map { URLQueryItem(name: "sort", value: $0) },
+            query.search.flatMap { $0.isEmpty ? nil : URLQueryItem(name: "search", value: $0) },
+            query.page.map { URLQueryItem(name: "page", value: String($0)) },
+            query.limit.map { URLQueryItem(name: "limit", value: String($0)) }
+        ].compactMap { $0 }
+    }
 
     var body: Data? {
         let encoder = JSONEncoder()
         switch self {
         case .create(let name, let objective):
-            return try? encoder.encode(WorkspaceMutationDTO(name: name, objective: objective))
+            return try? encoder.encode(WorkspaceMutationDTO(name: name, researchObjective: objective))
         case .update(_, let name, let objective):
-            return try? encoder.encode(WorkspaceMutationDTO(name: name, objective: objective))
+            return try? encoder.encode(WorkspaceMutationDTO(name: name, researchObjective: objective))
         case .list, .delete:
             return nil
         }
@@ -41,5 +50,5 @@ enum WorkspaceEndpoint: APIEndpoint {
 
 private struct WorkspaceMutationDTO: Encodable {
     let name: String
-    let objective: String
+    let researchObjective: String
 }

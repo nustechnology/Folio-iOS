@@ -5,17 +5,23 @@ import Combine
 final class WorkspaceListViewModel: ObservableObject {
     struct State: Equatable {
         var isLoading = false
+        var isLoadingNextPage = false
+        var paginationErrorMessage: String?
         var errorMessage: String?
         var allWorkspaces: [Workspace] = []
         var visibleWorkspaces: [Workspace] = []
         var searchQuery = ""
-        var isSearchVisible = false
         var presentedSheet: Sheet?
         var confirmationWorkspace: Workspace?
         var isMutating = false
         var mutationError: String?
-        var toastMessage: String?
+        var toastMessage: ToastMessage?
         var deletedWorkspaceID: String?
+        var createdWorkspaceID: String?
+        var pagination: WorkspacePagination?
+        var currentPage = 0
+        var totalPages = 0
+        var totalCount = 0
 
         enum Sheet: Identifiable, Equatable {
             case create
@@ -41,7 +47,8 @@ final class WorkspaceListViewModel: ObservableObject {
     enum Intent {
         case appeared
         case retry
-        case toggleSearch
+        case refresh
+        case loadMore
         case searchQueryChanged(String)
         case clearSearch
         case createTapped
@@ -65,6 +72,9 @@ final class WorkspaceListViewModel: ObservableObject {
             return .error(error)
         }
         if state.allWorkspaces.isEmpty {
+            if !state.searchQuery.isEmpty {
+                return .noSearchResults(searchQuery: state.searchQuery)
+            }
             return .empty
         }
         if state.visibleWorkspaces.isEmpty {
@@ -78,6 +88,8 @@ final class WorkspaceListViewModel: ObservableObject {
     private let updateWorkspace: UpdateWorkspaceUseCaseProtocol
     private let deleteWorkspace: DeleteWorkspaceUseCaseProtocol
     private var hasAppeared = false
+    private var requestGeneration = 0
+    private var searchTask: Task<Void, Never>?
 
     init(
         repository: WorkspaceRepositoryProtocol
@@ -105,19 +117,25 @@ final class WorkspaceListViewModel: ObservableObject {
         case .appeared:
             guard !hasAppeared else { return }
             hasAppeared = true
-            Task { await load() }
+            Task { await loadFirstPage() }
         case .retry:
-            Task { await load() }
-        case .toggleSearch:
-            state.isSearchVisible.toggle()
-            if !state.isSearchVisible { state.searchQuery = "" }
-            applyFilter()
+            Task { await loadFirstPage() }
+        case .refresh:
+            Task { await loadFirstPage() }
+        case .loadMore:
+            Task { await loadNextPage() }
         case .searchQueryChanged(let query):
+            guard query != state.searchQuery else { return }
             state.searchQuery = query
-            applyFilter()
+            searchTask?.cancel()
+            searchTask = Task {
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                if !Task.isCancelled { await loadFirstPage() }
+            }
         case .clearSearch:
             state.searchQuery = ""
-            applyFilter()
+            searchTask?.cancel()
+            Task { await loadFirstPage() }
         case .createTapped:
             state.mutationError = nil
             state.presentedSheet = .create
@@ -129,6 +147,7 @@ final class WorkspaceListViewModel: ObservableObject {
         case .dismissSheet:
             state.presentedSheet = nil
             state.mutationError = nil
+            state.createdWorkspaceID = nil
         case .dismissConfirmation:
             state.confirmationWorkspace = nil
         case .create(let name, let objective):
@@ -143,66 +162,155 @@ final class WorkspaceListViewModel: ObservableObject {
         }
     }
 
-    private func load() async {
+    func refresh() async {
+        await loadFirstPage()
+    }
+
+    private func loadFirstPage() async {
+        requestGeneration += 1
+        let generation = requestGeneration
         state.isLoading = true
+        state.isLoadingNextPage = false
         state.errorMessage = nil
-        defer { state.isLoading = false }
+        state.paginationErrorMessage = nil
+        defer {
+            if generation == requestGeneration {
+                state.isLoading = false
+            }
+        }
         do {
-            state.allWorkspaces = try await fetchWorkspaces.execute()
-            applyFilter()
+            let searchTerm = state.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+            let query = WorkspaceListQuery(
+                sort: WorkspaceListQuery.initial.sort,
+                search: searchTerm.isEmpty ? nil : searchTerm,
+                page: nil,
+                limit: nil
+            )
+            let result = try await fetchWorkspaces.execute(query: query)
+            guard generation == requestGeneration else { return }
+            replace(with: result)
         } catch is CancellationError {
             return
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            return
         } catch {
+            guard generation == requestGeneration else { return }
             state.errorMessage = error.localizedDescription
-            state.toastMessage = error.localizedDescription
+            state.toastMessage = .error(error.localizedDescription)
         }
+    }
+
+    private func loadNextPage() async {
+        guard let pagination = state.pagination,
+              !state.isLoading,
+               !state.isLoadingNextPage,
+               pagination.page < pagination.totalPages else { return }
+
+        state.isLoadingNextPage = true
+        state.paginationErrorMessage = nil
+        let generation = requestGeneration
+        defer {
+            if generation == requestGeneration {
+                state.isLoadingNextPage = false
+            }
+        }
+        do {
+            let searchTerm = state.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+            let query = WorkspaceListQuery(
+                sort: WorkspaceListQuery.initial.sort,
+                search: searchTerm.isEmpty ? nil : searchTerm,
+                page: pagination.page + 1,
+                limit: pagination.limit
+            )
+            let result = try await fetchWorkspaces.execute(query: query)
+            guard generation == requestGeneration else { return }
+            append(result)
+        } catch is CancellationError {
+            return
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            return
+        } catch {
+            guard generation == requestGeneration else { return }
+            state.paginationErrorMessage = error.localizedDescription
+            state.toastMessage = .error(error.localizedDescription)
+        }
+    }
+
+    private func append(_ result: WorkspaceListResult) {
+        var existingIDs = Set(state.allWorkspaces.map(\.id))
+        let newWorkspaces = result.workspaces.filter { workspace in
+            guard existingIDs.insert(workspace.id).inserted else { return false }
+            return true
+        }
+        state.allWorkspaces.append(contentsOf: newWorkspaces)
+        state.pagination = result.pagination
+        state.currentPage = result.pagination?.page ?? 0
+        state.totalPages = result.pagination?.totalPages ?? 0
+        state.totalCount = result.pagination?.totalCount ?? state.allWorkspaces.count
+        applyFilter()
+    }
+
+    private func replace(with result: WorkspaceListResult) {
+        state.allWorkspaces = result.workspaces
+        state.pagination = result.pagination
+        state.currentPage = result.pagination?.page ?? 0
+        state.totalPages = result.pagination?.totalPages ?? 0
+        state.totalCount = result.pagination?.totalCount ?? state.allWorkspaces.count
+        applyFilter()
     }
 
     private func create(name: String, objective: String) async {
         guard !state.isMutating else { return }
-        await runMutation {
+        state.createdWorkspaceID = nil
+        await runMutation(fallbackMessage: "Failed to create space. Please try again.") {
             let workspace = try await self.createWorkspace.execute(name: name, objective: objective)
             self.state.allWorkspaces.insert(workspace, at: 0)
             self.applyFilter()
             self.state.presentedSheet = nil
-            self.state.toastMessage = String(localized: "Space created")
+            self.state.createdWorkspaceID = workspace.id
         }
     }
 
     private func update(id: String, name: String, objective: String) async {
         guard !state.isMutating else { return }
-        await runMutation {
+        await runMutation(fallbackMessage: "Failed to update space. Please try again.") {
             let workspace = try await self.updateWorkspace.execute(id: id, name: name, objective: objective)
             if let index = self.state.allWorkspaces.firstIndex(where: { $0.id == id }) {
                 self.state.allWorkspaces[index] = workspace
                 self.applyFilter()
             }
             self.state.presentedSheet = nil
-            self.state.toastMessage = String(localized: "Space updated")
+            self.state.toastMessage = .success(String(localized: "Space updated"))
         }
     }
 
     private func delete(workspace: Workspace) async {
         guard !state.isMutating else { return }
-        await runMutation {
+        var didDelete = false
+        await runMutation(fallbackMessage: "Failed to delete space. Please try again.") {
             try await self.deleteWorkspace.execute(id: workspace.id)
             self.state.allWorkspaces.removeAll { $0.id == workspace.id }
             self.applyFilter()
             self.state.deletedWorkspaceID = workspace.id
-            self.state.toastMessage = String(localized: "Space deleted")
+            self.state.toastMessage = .success(String(localized: "Space deleted"))
+            didDelete = true
         }
+        if didDelete { await loadFirstPage() }
     }
 
-    private func runMutation(_ operation: @escaping () async throws -> Void) async {
+    private func runMutation(fallbackMessage: String.LocalizationValue, _ operation: @escaping () async throws -> Void) async {
         state.isMutating = true
         state.mutationError = nil
         do {
             try await operation()
         } catch is CancellationError {
-            // Preserve the draft and let the caller retry.
+        } catch let error as WorkspaceRepositoryError {
+            state.mutationError = error.errorDescription
+            state.toastMessage = .error(error.errorDescription ?? error.localizedDescription)
         } catch {
-            state.mutationError = error.localizedDescription
-            state.toastMessage = error.localizedDescription
+            let message = String(localized: fallbackMessage)
+            state.mutationError = message
+            state.toastMessage = .error(message)
         }
         state.isMutating = false
     }
