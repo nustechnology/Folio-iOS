@@ -3,20 +3,26 @@ import SwiftUI
 struct WorkspaceListView: View {
     @StateObject private var viewModel: WorkspaceListViewModel
     let onSelectWorkspace: (Workspace) -> Void
+    let onWorkspaceCreated: (Workspace) -> Void
     let onWorkspaceDeleted: (String) -> Void
+    let onToast: (String) -> Void
     let onOpenAccountSettings: () -> Void
     let userInitial: String
 
     init(
         viewModel: WorkspaceListViewModel,
         onSelectWorkspace: @escaping (Workspace) -> Void,
+        onWorkspaceCreated: @escaping (Workspace) -> Void = { _ in },
         onWorkspaceDeleted: @escaping (String) -> Void = { _ in },
+        onToast: @escaping (String) -> Void = { _ in },
         onOpenAccountSettings: @escaping () -> Void,
         userInitial: String
     ) {
         _viewModel = StateObject(wrappedValue: viewModel)
         self.onSelectWorkspace = onSelectWorkspace
+        self.onWorkspaceCreated = onWorkspaceCreated
         self.onWorkspaceDeleted = onWorkspaceDeleted
+        self.onToast = onToast
         self.onOpenAccountSettings = onOpenAccountSettings
         self.userInitial = userInitial
     }
@@ -34,15 +40,20 @@ struct WorkspaceListView: View {
             guard let workspaceID else { return }
             onWorkspaceDeleted(workspaceID)
         }
+        .onChange(of: viewModel.state.createdWorkspaceID) { _, workspaceID in
+            guard let workspaceID else { return }
+            if let workspace = viewModel.state.allWorkspaces.first(where: { $0.id == workspaceID }) {
+                onToast(String(localized: "Space created"))
+                onWorkspaceCreated(workspace)
+            }
+        }
         .sheet(item: Binding(
             get: { viewModel.state.presentedSheet },
             set: { _ in viewModel.send(.dismissSheet) }
         )) { sheet in
             switch sheet {
             case .create:
-                WorkspaceEditorSheet(
-                    title: String(localized: "Create Space"),
-                    submitTitle: String(localized: "Create"),
+                CreateSpaceSheetView(
                     isMutating: viewModel.state.isMutating,
                     errorMessage: viewModel.state.mutationError,
                     onCancel: { viewModel.send(.dismissSheet) },
@@ -104,11 +115,11 @@ struct WorkspaceListView: View {
         case .empty:
             WorkspaceMessageState(title: String(localized: "No research spaces yet"), subtitle: String(localized: "Create your first space to start collecting sources and making notes."), actionTitle: String(localized: "Create Space"), action: { viewModel.send(.createTapped) })
         case .noSearchResults(let searchQuery):
-            WorkspaceMessageState(title: String(localized: "No spaces found matching \"\(searchQuery)\""), actionTitle: String(localized: "Clear search"), action: { viewModel.send(.clearSearch) })
+            WorkspaceMessageState(title: String(localized: "No spaces found matching \"\(searchQuery)\""), systemImage: "magnifyingglass", actionTitle: String(localized: "Clear search"), action: { viewModel.send(.clearSearch) })
         case .loaded(let workspaces):
             ScrollView {
                 LazyVStack(spacing: 12) {
-                    ForEach(workspaces) { workspace in
+                    ForEach(Array(workspaces.enumerated()), id: \.element.id) { index, workspace in
                         WorkspaceCard(workspace: workspace, onSelect: {
                             onSelectWorkspace(workspace)
                         }, onEdit: {
@@ -116,10 +127,33 @@ struct WorkspaceListView: View {
                         }, onDelete: {
                             viewModel.send(.deleteTapped(workspace))
                         })
+                        .onAppear {
+                            if index == workspaces.index(before: workspaces.endIndex) {
+                                viewModel.send(.loadMore)
+                            }
+                        }
+                    }
+                    if viewModel.state.isLoadingNextPage {
+                        ProgressView()
+                            .tint(Color.folioOlive)
+                            .padding(.vertical, 12)
+                    } else if let error = viewModel.state.paginationErrorMessage {
+                        VStack(spacing: 6) {
+                            Text(error)
+                                .font(.footnote)
+                                .foregroundStyle(.red)
+                                .multilineTextAlignment(.center)
+                            Button(String(localized: "Retry")) {
+                                viewModel.send(.loadMore)
+                            }
+                            .tint(Color.folioOlive)
+                        }
+                        .padding(.vertical, 12)
                     }
                 }
                 .padding(18)
             }
+            .refreshable { await viewModel.refresh() }
         }
     }
 
@@ -129,36 +163,29 @@ struct WorkspaceListView: View {
                 title: "Folio",
                 subtitle: "My Spaces",
                 trailing: [
-                    AnyView(Button { viewModel.send(.toggleSearch) } label: {
-                        Image(systemName: viewModel.state.isSearchVisible ? "xmark" : "magnifyingglass")
-                            .foregroundStyle(Color.white)
-                            .frame(width: 44, height: 44)
-                    }.accessibilityLabel(String(localized: "Search spaces"))),
-
                     AnyView(FolioAccountAvatarButton(initial: userInitial, size: 36, action: onOpenAccountSettings))
                 ]
             )
-            if viewModel.state.isSearchVisible {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass").foregroundStyle(Color.folioInkSoft)
-                    TextField(String(localized: "Search spaces"), text: Binding(
-                        get: { viewModel.state.searchQuery },
-                        set: { viewModel.send(.searchQueryChanged($0)) }
-                    ))
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    if !viewModel.state.searchQuery.isEmpty {
-                        Button { viewModel.send(.clearSearch) } label: {
-                            Image(systemName: "xmark.circle.fill").foregroundStyle(Color.folioInkSoft)
-                        }
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass").foregroundStyle(Color.folioInkSoft)
+                TextField(String(localized: "Search spaces"), text: Binding(
+                    get: { viewModel.state.searchQuery },
+                    set: { viewModel.send(.searchQueryChanged($0)) }
+                ))
+                .font(.system(size: 14))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                if !viewModel.state.searchQuery.isEmpty {
+                    Button { viewModel.send(.clearSearch) } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(Color.folioInkSoft)
                     }
                 }
-                .padding(.horizontal, 14)
-                .frame(height: 46)
-                .background(Color.folioSurface)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .padding(.horizontal, 18)
             }
+            .padding(.horizontal, 14)
+            .frame(height: 46)
+            .background(Color.folioSurface)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(.horizontal, 18)
         }
         .padding(.top, 4)
         .padding(.bottom, 16)
@@ -184,45 +211,70 @@ private struct WorkspaceCard: View {
                                 .frame(width: 40, height: 40)
                                 .background(Color.folioGold.opacity(0.25))
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
+
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(workspace.name)
                                     .font(.system(size: 17, weight: .semibold))
                                     .foregroundStyle(Color.folioInk)
                                     .lineLimit(2)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+
                                 Text(workspace.updatedAt.workspaceRelativeLabel)
                                     .font(.system(size: 11))
                                     .foregroundStyle(Color.folioInkSoft)
                             }
-                            Spacer()
                         }
+
                         if !workspace.objective.isEmpty {
                             Text(workspace.objective)
                                 .font(.system(size: 14))
                                 .foregroundStyle(Color.folioInkMuted)
                                 .lineLimit(3)
                         }
+
                         Divider()
-                        Text(String(format: String(localized: "%lld sources · %lld notes"), locale: .current, workspace.sourceCount, workspace.noteCount))
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.folioInkSoft)
+
+                        Text(
+                            String(
+                                format: String(localized: "%lld sources · %lld notes"),
+                                locale: .current,
+                                workspace.sourceCount,
+                                workspace.noteCount
+                            )
+                        )
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.folioInkSoft)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint(String(localized: "Double tap to open"))
+
                 Menu {
                     Button(String(localized: "Edit"), action: onEdit)
-                    Button(String(localized: "Delete"), role: .destructive, action: onDelete)
+                    Button(
+                        String(localized: "Delete"),
+                        role: .destructive,
+                        action: onDelete
+                    )
                 } label: {
-                    Image(systemName: "ellipsis").foregroundStyle(Color.folioInkMuted).frame(width: 44, height: 44)
+                    Image(systemName: "ellipsis")
+                        .foregroundStyle(Color.folioInkMuted)
+                        .frame(width: 24, height: 24)
                 }
-                .accessibilityLabel(String(localized: "More options for \(workspace.name)"))
+                .accessibilityLabel(
+                    String(localized: "More options for \(workspace.name)")
+                )
             }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.folioSurfaceStrong)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.folioLine, lineWidth: 1))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.folioLine, lineWidth: 1)
+        )
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .contentShape(Rectangle())
     }
@@ -231,11 +283,17 @@ private struct WorkspaceCard: View {
 private struct WorkspaceMessageState: View {
     let title: String
     var subtitle: String?
+    var systemImage: String?
     let actionTitle: String
     let action: () -> Void
 
     var body: some View {
         VStack(spacing: 12) {
+            if let systemImage {
+                Image(systemName: systemImage)
+                    .font(.system(size: 32))
+                    .foregroundStyle(Color.folioInkSoft)
+            }
             Text(title).font(.system(size: 18, weight: .semibold)).foregroundStyle(Color.folioInk).multilineTextAlignment(.center)
             if let subtitle { Text(subtitle).font(.system(size: 14)).foregroundStyle(Color.folioInkMuted).multilineTextAlignment(.center) }
             Button(action: action) {

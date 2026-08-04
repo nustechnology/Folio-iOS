@@ -20,7 +20,31 @@ final class MainViewModelTests: XCTestCase {
             signInUseCase: EmptySignInUseCase(),
             signOutUseCase: EmptySignOutUseCase(),
             refreshTokenUseCase: EmptyRefreshTokenUseCase(),
-            workspaceRepository: EmptyWorkspaceRepository()
+            workspaceRepository: EmptyWorkspaceRepository(),
+            initialSources: [
+                source(id: "turing", workspaceID: "dissertation-research"),
+                source(id: "arendt", workspaceID: "dissertation-research"),
+                source(id: "weapons", workspaceID: "public-policy-insights")
+            ]
+        )
+    }
+
+    private func source(id: String, workspaceID: String) -> FolioSource {
+        FolioSource(
+            id: id,
+            workspaceID: workspaceID,
+            kind: .paper,
+            title: id,
+            subtitle: "",
+            addedText: "Added just now",
+            status: .ready,
+            chapterTitle: "",
+            chapterText: "",
+            calloutText: "",
+            citationTitle: "",
+            citationDetail: "",
+            citationText: "",
+            pageLabel: "1 of 1"
         )
     }
 }
@@ -53,8 +77,10 @@ private struct EmptyRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
 }
 
 private final class EmptyWorkspaceRepository: WorkspaceRepositoryProtocol {
-    func fetchWorkspaces() async throws -> [Workspace] { [] }
     func createWorkspace(name: String, objective: String) async throws -> Workspace { throw CancellationError() }
     func updateWorkspace(id: String, name: String, objective: String) async throws -> Workspace { throw CancellationError() }
     func deleteWorkspace(id: String) async throws {}
+        func fetchWorkspaces(query: WorkspaceListQuery) async throws -> WorkspaceListResult {
+        WorkspaceListResult(workspaces: [], pagination: nil)
+    }
 }

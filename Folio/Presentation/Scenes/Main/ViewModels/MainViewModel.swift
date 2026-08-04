@@ -17,7 +17,7 @@ final class MainViewModel: ViewModelProtocol {
         var userEmail: String?
     }
 
-    @Published var toastMessage: String? = nil
+    @Published var toastMessage: ToastMessage? = nil
 
     enum Action {
         case onAppear
@@ -49,7 +49,8 @@ final class MainViewModel: ViewModelProtocol {
         signInUseCase: any SignInUseCaseProtocol,
         signOutUseCase: any SignOutUseCaseProtocol,
         refreshTokenUseCase: any RefreshTokenUseCaseProtocol,
-        workspaceRepository: WorkspaceRepositoryProtocol
+        workspaceRepository: WorkspaceRepositoryProtocol,
+        initialSources: [FolioSource] = []
     ) {
         self.fetchUsersUseCase = fetchUsersUseCase
         self.localStorage = localStorage
@@ -58,10 +59,13 @@ final class MainViewModel: ViewModelProtocol {
         self.signOutUseCase = signOutUseCase
         self.refreshTokenUseCase = refreshTokenUseCase
         self.workspaceRepository = workspaceRepository
+        state.sources = initialSources
 #if DEBUG
-        state.spaces = FolioDesignFixtures.spaces
-        state.sourceFilters = FolioDesignFixtures.filters
-        state.sources = FolioDesignFixtures.sources
+        if initialSources.isEmpty {
+            state.spaces = FolioDesignFixtures.spaces
+            state.sourceFilters = FolioDesignFixtures.filters
+            state.sources = FolioDesignFixtures.sources
+        }
 #endif
     }
 
@@ -146,10 +150,10 @@ final class MainViewModel: ViewModelProtocol {
             let token = try await signInUseCase.execute(email: email, password: password)
             applySession(token)
         } catch let error as AuthError {
-            toastMessage = error.errorDescription
+            toastMessage = .error(error.errorDescription ?? error.localizedDescription)
         } catch {
             Logger.error("Sign-in failed: \(error)")
-            toastMessage = String(localized: "Unable to connect. Please check your internet and try again.")
+            toastMessage = .error(String(localized: "Unable to connect. Please check your internet and try again."))
         }
         state.authLoading = false
     }
@@ -160,10 +164,10 @@ final class MainViewModel: ViewModelProtocol {
             let token = try await signUpUseCase.execute(name: name, email: email, password: password)
             applySession(token)
         } catch let error as AuthError {
-            toastMessage = error.errorDescription
+            toastMessage = .error(error.errorDescription ?? error.localizedDescription)
         } catch {
             Logger.error("Sign-up failed: \(error)")
-            toastMessage = String(localized: "Unable to connect. Please check your internet and try again.")
+            toastMessage = .error(String(localized: "Unable to connect. Please check your internet and try again."))
         }
         state.authLoading = false
     }

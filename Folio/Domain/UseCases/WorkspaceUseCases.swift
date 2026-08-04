@@ -1,7 +1,7 @@
 import Foundation
 
 protocol FetchWorkspacesUseCaseProtocol {
-    func execute() async throws -> [Workspace]
+    func execute(query: WorkspaceListQuery) async throws -> WorkspaceListResult
 }
 
 final class FetchWorkspacesUseCase: FetchWorkspacesUseCaseProtocol {
@@ -11,8 +11,8 @@ final class FetchWorkspacesUseCase: FetchWorkspacesUseCaseProtocol {
         self.repository = repository
     }
 
-    func execute() async throws -> [Workspace] {
-        try await repository.fetchWorkspaces()
+    func execute(query: WorkspaceListQuery) async throws -> WorkspaceListResult {
+        try await repository.fetchWorkspaces(query: query)
     }
 }
 

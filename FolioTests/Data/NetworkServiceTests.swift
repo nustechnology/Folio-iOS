@@ -11,7 +11,7 @@ final class NetworkServiceTests: XCTestCase {
     func testAuthenticatedRequestAddsBearerToken() async throws {
         let service = makeNetworkService(accessToken: "token-123")
 
-        let _: [WorkspaceDTO] = try await service.request(WorkspaceEndpoint.list)
+        let _: WorkspaceResponseDTO = try await service.request(WorkspaceEndpoint.list(query: .initial))
 
         XCTAssertEqual(URLProtocolStub.lastRequest?.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
     }
@@ -22,6 +22,25 @@ final class NetworkServiceTests: XCTestCase {
         try await service.requestVoid(AuthEndpoint.signIn(email: "test@example.com", password: "password"))
 
         XCTAssertNil(URLProtocolStub.lastRequest?.value(forHTTPHeaderField: "Authorization"))
+    }
+
+    func testSpaceListRequestOmitsUnsupportedPaginationQueryItems() async throws {
+        let service = makeNetworkService(accessToken: nil)
+
+        let _: WorkspaceResponseDTO = try await service.request(WorkspaceEndpoint.list(query: .initial))
+
+        XCTAssertEqual(URLProtocolStub.lastRequest?.url?.path, "/api/v1/spaces")
+        XCTAssertEqual(URLProtocolStub.lastRequest?.url?.query, "sort=recently-updated")
+    }
+
+    func testSpaceListRequestEncodesPaginationWhenExplicitlySupplied() async throws {
+        let service = makeNetworkService(accessToken: nil)
+        let query = WorkspaceListQuery(sort: "recently-updated", page: 3, limit: 25)
+
+        let _: WorkspaceResponseDTO = try await service.request(WorkspaceEndpoint.list(query: query))
+
+        XCTAssertEqual(URLProtocolStub.lastRequest?.url?.path, "/api/v1/spaces")
+        XCTAssertEqual(URLProtocolStub.lastRequest?.url?.query, "sort=recently-updated&page=3&limit=25")
     }
 
     private func makeNetworkService(accessToken: String?) -> NetworkService {

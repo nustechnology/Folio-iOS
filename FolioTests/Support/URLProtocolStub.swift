@@ -25,7 +25,7 @@ final class URLProtocolStub: URLProtocol {
             headerFields: ["Content-Type": "application/json"]
         )!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: Data("[]".utf8))
+        client?.urlProtocol(self, didLoad: Data("{\"status\":\"success\",\"data\":{\"spaces\":[],\"pagination\":{\"page\":1,\"limit\":10,\"totalCount\":0,\"totalPages\":0}}}".utf8))
         client?.urlProtocolDidFinishLoading(self)
     }
 

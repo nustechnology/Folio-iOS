@@ -9,6 +9,39 @@ struct Workspace: Identifiable, Equatable, Hashable, Sendable {
     var updatedAt: Date
 }
 
+struct WorkspaceListQuery: Equatable, Sendable {
+    let sort: String?
+    let search: String?
+    let page: Int?
+    let limit: Int?
+
+    init(sort: String? = nil, search: String? = nil, page: Int? = nil, limit: Int? = nil) {
+        self.sort = sort
+        self.search = search
+        self.page = page
+        self.limit = limit
+    }
+
+    static let initial = WorkspaceListQuery(sort: "recently-updated")
+}
+
+struct WorkspacePagination: Equatable, Sendable {
+    let page: Int
+    let limit: Int
+    let totalCount: Int
+    let totalPages: Int
+}
+
+struct WorkspaceListResult: Equatable, Sendable {
+    let workspaces: [Workspace]
+    let pagination: WorkspacePagination?
+
+    var hasNextPage: Bool {
+        guard let pagination else { return false }
+        return pagination.page < pagination.totalPages && workspaces.count < pagination.totalCount
+    }
+}
+
 enum WorkspaceRepositoryError: LocalizedError, Equatable {
     case notFound
     case validation(String)

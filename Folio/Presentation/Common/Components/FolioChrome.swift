@@ -24,10 +24,11 @@ struct FolioTopBar: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 20, weight: .regular, design: .serif))
+                    .font(.system(size: 30, weight: .regular, design: .serif))
+                    .italic()
                     .foregroundStyle(dark ? Color.white : Color.folioInk)
                 Text(subtitle)
-                    .font(.system(size: 11, weight: .regular, design: .serif))
+                    .font(.system(size: 14, weight: .regular, design: .serif))
                     .foregroundStyle(dark ? Color.white.opacity(0.76) : Color.folioInkMuted)
             }
 
