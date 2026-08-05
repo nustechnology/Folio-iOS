@@ -32,6 +32,8 @@ final class MainViewModel: ViewModelProtocol {
         case openReader(FolioSource)
         case closeReader
         case dismissToast
+        case addNewSource(source: Source, kind: FolioSourceKind, workspaceID: String?)
+        case openAskForSource(source: Source, kind: FolioSourceKind)
     }
 
     private let fetchUsersUseCase: any FetchUsersUseCaseProtocol
@@ -41,6 +43,7 @@ final class MainViewModel: ViewModelProtocol {
     private let signOutUseCase: any SignOutUseCaseProtocol
     private let refreshTokenUseCase: any RefreshTokenUseCaseProtocol
     let workspaceRepository: WorkspaceRepositoryProtocol
+    let uploadSourceUseCase: any UploadSourceUseCaseProtocol
 
     init(
         fetchUsersUseCase: any FetchUsersUseCaseProtocol,
@@ -50,6 +53,7 @@ final class MainViewModel: ViewModelProtocol {
         signOutUseCase: any SignOutUseCaseProtocol,
         refreshTokenUseCase: any RefreshTokenUseCaseProtocol,
         workspaceRepository: WorkspaceRepositoryProtocol,
+        uploadSourceUseCase: any UploadSourceUseCaseProtocol,
         initialSources: [FolioSource] = []
     ) {
         self.fetchUsersUseCase = fetchUsersUseCase
@@ -59,6 +63,7 @@ final class MainViewModel: ViewModelProtocol {
         self.signOutUseCase = signOutUseCase
         self.refreshTokenUseCase = refreshTokenUseCase
         self.workspaceRepository = workspaceRepository
+        self.uploadSourceUseCase = uploadSourceUseCase
         state.sources = initialSources
 #if DEBUG
         if initialSources.isEmpty {
@@ -141,6 +146,24 @@ final class MainViewModel: ViewModelProtocol {
             state.activeReader = nil
         case .dismissToast:
             toastMessage = nil
+        case .addNewSource(let source, let kind, let workspaceID):
+            let folioSource = FolioSource(from: source, workspaceID: workspaceID, kind: kind)
+            if let index = state.sources.firstIndex(where: { $0.id == source.id }) {
+                state.sources[index] = folioSource
+            } else {
+                state.sources.append(folioSource)
+            }
+            state.activeReader = folioSource
+        case .openAskForSource(let source, let kind):
+            if let index = state.sources.firstIndex(where: { $0.id == source.id }) {
+                let existing = state.sources[index]
+                state.sources[index] = FolioSource(from: source, workspaceID: existing.workspaceID, kind: kind)
+            } else {
+                state.sources.append(FolioSource(from: source, workspaceID: nil, kind: kind))
+            }
+            state.selectedTab = .ask
+            state.activeReader = nil
+            state.sourcesMode = .spaces
         }
     }
 

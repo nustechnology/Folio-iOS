@@ -47,6 +47,10 @@ final class NetworkService: NetworkServiceProtocol {
     }
 
     private func perform(_ endpoint: APIEndpoint) async throws -> Data {
+        guard baseURL.scheme == "https" else {
+            throw NetworkError.insecureURL
+        }
+
         var components = URLComponents(url: baseURL.appendingPathComponent(endpoint.path), resolvingAgainstBaseURL: true)
         components?.queryItems = endpoint.queryItems
 
@@ -57,7 +61,7 @@ final class NetworkService: NetworkServiceProtocol {
         var request = URLRequest(url: url)
         request.httpMethod = endpoint.method.rawValue
         request.httpBody = endpoint.body
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(endpoint.contentType, forHTTPHeaderField: "Content-Type")
         endpoint.headers?.forEach { request.setValue($1, forHTTPHeaderField: $0) }
         if endpoint.requiresAuthentication,
            let accessToken = accessTokenProvider?.accessToken,
@@ -67,7 +71,7 @@ final class NetworkService: NetworkServiceProtocol {
 
         Logger.debug("→ \(endpoint.method.rawValue) \(url.absoluteString)")
 
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await session.data(for: request, delegate: RedirectDelegate(allowedOrigin: url))
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
@@ -85,6 +89,7 @@ final class NetworkService: NetworkServiceProtocol {
 
 enum NetworkError: LocalizedError {
     case invalidURL
+    case insecureURL
     case invalidResponse
     case httpError(statusCode: Int, data: Data? = nil)
     case decodingError(Error)
@@ -93,6 +98,8 @@ enum NetworkError: LocalizedError {
         switch self {
         case .invalidURL:
             return "Invalid URL"
+        case .insecureURL:
+            return "Non-HTTPS connections are not permitted"
         case .invalidResponse:
             return "Invalid response from server"
         case .httpError(let statusCode, _):
@@ -105,5 +112,41 @@ enum NetworkError: LocalizedError {
     var errorData: Data? {
         if case .httpError(_, let data) = self { return data }
         return nil
+    }
+}
+
+private final class RedirectDelegate: NSObject, URLSessionTaskDelegate {
+    let allowedOrigin: URL
+
+    init(allowedOrigin: URL) {
+        self.allowedOrigin = allowedOrigin
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @Sendable @escaping (URLRequest?) -> Void
+    ) {
+        guard let destination = request.url,
+              destination.scheme == allowedOrigin.scheme,
+              destination.host == allowedOrigin.host,
+              destination.effectivePort == allowedOrigin.effectivePort else {
+            completionHandler(nil)
+            return
+        }
+        completionHandler(request)
+    }
+}
+
+extension URL {
+    fileprivate var effectivePort: Int {
+        guard let explicit = port else {
+            if scheme == "http" { return 80 }
+            if scheme == "https" { return 443 }
+            return 0
+        }
+        return explicit
     }
 }

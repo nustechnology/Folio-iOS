@@ -13,6 +13,9 @@ struct FolioSourcesView: View {
     let onOpenAccountSettings: () -> Void
     let onBackToSpaces: () -> Void
     let userInitial: String
+    let onSourceAdded: ((Source) -> Void)?
+    let onSourceAsk: ((Source) -> Void)?
+    let uploadSourceUseCase: (any UploadSourceUseCaseProtocol)?
 
     init(
         workspaceID: String? = nil,
@@ -26,7 +29,10 @@ struct FolioSourcesView: View {
         onMenu: @escaping () -> Void,
         onOpenAccountSettings: @escaping () -> Void,
         onBackToSpaces: @escaping () -> Void,
-        userInitial: String
+        userInitial: String,
+        onSourceAdded: ((Source) -> Void)? = nil,
+        onSourceAsk: ((Source) -> Void)? = nil,
+        uploadSourceUseCase: (any UploadSourceUseCaseProtocol)? = nil
     ) {
         self.workspaceID = workspaceID
         self.workspaceTitle = workspaceTitle
@@ -40,9 +46,13 @@ struct FolioSourcesView: View {
         self.onOpenAccountSettings = onOpenAccountSettings
         self.onBackToSpaces = onBackToSpaces
         self.userInitial = userInitial
+        self.onSourceAdded = onSourceAdded
+        self.onSourceAsk = onSourceAsk
+        self.uploadSourceUseCase = uploadSourceUseCase
     }
 
     @State private var query = ""
+    @State private var showAddSheet = false
 
     private var filteredSources: [FolioSource] {
         guard !query.isEmpty else { return sources }
@@ -62,7 +72,7 @@ struct FolioSourcesView: View {
                     trailing: [
                         AnyView(Button(action: onSearch) { buttonIcon("magnifyingglass") }.buttonStyle(.plain)),
                         AnyView(Button(action: onMenu) { buttonIcon("ellipsis") }.buttonStyle(.plain)),
-                        AnyView(FolioAccountAvatarButton(initial: userInitial, size: 36, action: onOpenAccountSettings))
+                        workspaceID != nil ? AnyView(addSourceButton) : AnyView(EmptyView())
                     ]
                 )
                 .padding(.top, 4)
@@ -92,11 +102,29 @@ struct FolioSourcesView: View {
 
                 VStack(spacing: 12) {
                     if filteredSources.isEmpty {
-                        Text(query.isEmpty ? "No sources yet" : "No matching sources")
-                            .font(.system(size: 14))
-                            .foregroundStyle(Color.folioInkMuted)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 32)
+                        if sources.isEmpty {
+                            VStack(spacing: 20) {
+                                FolioEmptyStateView(
+                                    title: String(localized: "No sources yet"),
+                                    subtitle: String(localized: "Add your first source to start building your research archive."),
+                                    iconName: "doc.text"
+                                )
+
+                                if workspaceID != nil, !(workspaceID?.isEmpty ?? true), uploadSourceUseCase != nil {
+                                    FolioPrimaryButton(
+                                        title: String(localized: "Add Source"),
+                                        action: { showAddSheet = true }
+                                    )
+                                }
+                            }
+                            .padding(.vertical, 12)
+                        } else {
+                            Text("No matching sources")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.folioInkMuted)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 32)
+                        }
                     } else {
                         ForEach(filteredSources) { source in
                             FolioSourceCard(source: source, onTap: { onSelectSource(source) })
@@ -107,6 +135,36 @@ struct FolioSourcesView: View {
                 .padding(.bottom, 28)
             }
         }
+        .sheet(isPresented: $showAddSheet) {
+            if let useCase = uploadSourceUseCase {
+                FolioAddSourceSheet(
+                    uploadUseCase: useCase,
+                    spaceId: workspaceID ?? "",
+                    onSourceOpened: { source in onSourceAdded?(source) },
+                    onAskSource: { source in onSourceAsk?(source) }
+                )
+            }
+        }
+    }
+
+    private var addSourceButton: some View {
+        Button {
+            showAddSheet = true
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.white)
+                .frame(width: 36, height: 36)
+                .background(Color.folioOlive)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(Color.white, lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(0.06), radius: 8, y: 3)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Add source")
     }
 
     private func buttonIcon(_ systemName: String) -> some View {
@@ -165,6 +223,8 @@ private struct FolioSourceCard: View {
         onMenu: {},
         onOpenAccountSettings: {},
         onBackToSpaces: {},
-        userInitial: "A"
+        userInitial: "A",
+        onSourceAdded: { _ in },
+        onSourceAsk: { _ in }
     )
 }

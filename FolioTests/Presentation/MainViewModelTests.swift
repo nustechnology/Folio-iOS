@@ -21,6 +21,7 @@ final class MainViewModelTests: XCTestCase {
             signOutUseCase: EmptySignOutUseCase(),
             refreshTokenUseCase: EmptyRefreshTokenUseCase(),
             workspaceRepository: EmptyWorkspaceRepository(),
+            uploadSourceUseCase: EmptyUploadSourceUseCase(),
             initialSources: [
                 source(id: "turing", workspaceID: "dissertation-research"),
                 source(id: "arendt", workspaceID: "dissertation-research"),
@@ -83,4 +84,13 @@ private final class EmptyWorkspaceRepository: WorkspaceRepositoryProtocol {
         func fetchWorkspaces(query: WorkspaceListQuery) async throws -> WorkspaceListResult {
         WorkspaceListResult(workspaces: [], pagination: nil)
     }
+}
+
+private struct EmptyUploadSourceUseCase: UploadSourceUseCaseProtocol {
+    func uploadFile(spaceId: String, fileURL: URL, title: String?, author: String?) async throws -> Source { throw CancellationError() }
+    func uploadWeb(spaceId: String, url: String, title: String?, author: String?) async throws -> Source { throw CancellationError() }
+    func uploadManual(spaceId: String, content: String, title: String?, author: String?) async throws -> Source { throw CancellationError() }
+    func deleteSource(id: String) async throws {}
+    func retrySource(id: String) async throws -> Source { throw CancellationError() }
+    func sourceStatusStream() -> AsyncThrowingStream<SourceStatusEvent, Error> { AsyncThrowingStream { $0.finish() } }
 }

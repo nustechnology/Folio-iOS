@@ -47,4 +47,12 @@ final class AppDIContainer {
     lazy var workspaceRepository: WorkspaceRepositoryProtocol = {
         RemoteWorkspaceRepository(networkService: networkService)
     }()
+
+    lazy var sourceRepository: SourceRepositoryProtocol = {
+        SourceRepository(networkService: networkService, baseURL: AppConfiguration.apiBaseURL, accessTokenProvider: accessTokenProvider)
+    }()
+
+    lazy var uploadSourceUseCase: any UploadSourceUseCaseProtocol = {
+        UploadSourceUseCase(repository: sourceRepository)
+    }()
 }
