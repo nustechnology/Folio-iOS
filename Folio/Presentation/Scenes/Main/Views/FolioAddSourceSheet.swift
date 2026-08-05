@@ -27,7 +27,7 @@ struct FolioAddSourceSheet: View {
     }
 
     var body: some View {
-        ZStack {
+        Group {
             if viewModel.state.isProcessing {
                 processingView
             } else {
@@ -609,7 +609,7 @@ struct FolioAddSourceSheet: View {
                     RoundedRectangle(cornerRadius: 4, style: .continuous)
                         .fill(progressBarColor)
                         .frame(width: geometry.size.width * CGFloat(viewModel.state.isProcessingFailed ? 0 : viewModel.state.processingProgress), height: 8)
-                        .animation(.easeInOut(duration: 0.3), value: viewModel.state.processingProgress)
+                        .animation(.easeInOut(duration: FolioDuration.normal), value: viewModel.state.processingProgress)
                 }
             }
             .frame(height: 8)

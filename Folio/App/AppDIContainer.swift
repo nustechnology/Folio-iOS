@@ -55,4 +55,12 @@ final class AppDIContainer {
     lazy var uploadSourceUseCase: any UploadSourceUseCaseProtocol = {
         UploadSourceUseCase(repository: sourceRepository)
     }()
+
+    lazy var fetchSourcesUseCase: any FetchSourcesUseCaseProtocol = {
+        FetchSourcesUseCase(repository: sourceRepository)
+    }()
+
+    lazy var updateSourceUseCase: any UpdateSourceUseCaseProtocol = {
+        UpdateSourceUseCase(repository: sourceRepository)
+    }()
 }

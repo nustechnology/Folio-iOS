@@ -152,7 +152,7 @@ struct FolioTextField: View {
             if let error = error {
                 Text(error)
                     .font(.system(size: 11, weight: .regular))
-                    .foregroundStyle(Color.red)
+                    .foregroundStyle(Color.folioDanger)
                     .padding(.leading, 4)
             }
         }

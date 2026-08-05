@@ -150,7 +150,9 @@ struct FolioLoginView: View {
                 signOutUseCase: PreviewSignOutUseCase(),
                 refreshTokenUseCase: PreviewRefreshTokenUseCase(),
                 workspaceRepository: PreviewWorkspaceRepository(),
-                uploadSourceUseCase: PreviewUploadSourceUseCase()
+                uploadSourceUseCase: PreviewUploadSourceUseCase(),
+                fetchSourcesUseCase: PreviewLoginFetchSourcesUseCase(),
+                updateSourceUseCase: PreviewLoginUpdateSourceUseCase()
             ))
         }
 }
@@ -188,4 +190,12 @@ private struct PreviewUploadSourceUseCase: UploadSourceUseCaseProtocol {
     func deleteSource(id: String) async throws { fatalError("Preview") }
     func retrySource(id: String) async throws -> Source { fatalError("Preview") }
     func sourceStatusStream() -> AsyncThrowingStream<SourceStatusEvent, Error> { AsyncThrowingStream { $0.finish() } }
+}
+
+private struct PreviewLoginFetchSourcesUseCase: FetchSourcesUseCaseProtocol {
+    func execute(query: SourceListQuery) async throws -> SourceListResult { fatalError("Preview") }
+}
+
+private struct PreviewLoginUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
+    func execute(id: String, title: String, author: String) async throws -> Source { fatalError("Preview") }
 }

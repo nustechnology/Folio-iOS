@@ -34,41 +34,41 @@ enum FolioSourcesMode: String, Equatable {
 
 enum FolioSourceFilter: String, CaseIterable, Identifiable, Equatable {
     case all
-    case papers
-    case books
+    case files
     case web
+    case text
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .all: return "All"
-        case .papers: return "Papers"
-        case .books: return "Books"
-        case .web: return "Web"
+        case .all: return String(localized: "All")
+        case .files: return String(localized: "Files")
+        case .web: return String(localized: "Web")
+        case .text: return String(localized: "Text")
         }
     }
 
-    var count: Int {
+    var apiValue: String? {
         switch self {
-        case .all: return 128
-        case .papers: return 86
-        case .books: return 24
-        case .web: return 18
+        case .all: return nil
+        case .files: return "File"
+        case .web: return "Web"
+        case .text: return "Manual"
         }
     }
 }
 
 enum FolioSourceKind: String, Equatable {
-    case paper
-    case book
+    case file
     case web
+    case text
 
     var badge: String {
         switch self {
-        case .paper: return "PDF"
-        case .book: return "BOOK"
+        case .file: return "FILE"
         case .web: return "WEB"
+        case .text: return "TEXT"
         }
     }
 }
@@ -146,13 +146,19 @@ struct FolioSource: Identifiable, Equatable {
 }
 
 extension FolioSource {
-    init(from source: Source, workspaceID: String?, kind: FolioSourceKind) {
+    init(from source: Source, workspaceID: String?) {
         self.id = source.id
         self.workspaceID = workspaceID
-        self.kind = kind
+        self.kind = {
+            switch source.sourceType {
+            case .file: return .file
+            case .web: return .web
+            case .manual: return .text
+            }
+        }()
         self.title = source.title
         self.subtitle = source.author
-        self.addedText = String(localized: "Added just now")
+        self.addedText = source.createdAt.addedRelativeLabel
         self.status = {
             switch source.processingState {
             case .ready: return .ready
@@ -160,13 +166,21 @@ extension FolioSource {
             default: return .processing
             }
         }()
-        self.chapterTitle = source.title
-        self.chapterText = ""
+        self.chapterTitle = ""
+        self.chapterText = source.content
         self.calloutText = ""
         self.citationTitle = ""
         self.citationDetail = ""
         self.citationText = ""
         self.pageLabel = "1 of 1"
+    }
+
+    var badgeText: String {
+        switch kind {
+        case .file: return "FILE"
+        case .web: return "WEB"
+        case .text: return "TEXT"
+        }
     }
 }
 
@@ -178,88 +192,88 @@ enum FolioDesignFixtures {
         .init(id: "teaching-prep", title: "Teaching Prep", sourceCount: 27, noteCount: 8)
     ]
 
-    static let filters: [FolioSourceFilter] = [.all, .papers, .books, .web]
+    static let filters: [FolioSourceFilter] = [.all, .files, .web, .text]
 
     static let sources: [FolioSource] = [
         .init(
             id: "alan-turing",
             workspaceID: "dissertation-research",
-            kind: .paper,
+            kind: .file,
             title: "Alan Turing: Computing Machinery",
             subtitle: "The Origins of Computation",
             addedText: "Added 2d ago",
             status: .ready,
-            chapterTitle: "5. The Imitation Game",
-            chapterText: "The original question, \"Can machines think?\" I believe to be too meaningless to deserve discussion.",
-            calloutText: "I propose the question, \"Can machines do what we as thinking entities can do?\"",
-            citationTitle: "Citation 1",
-            citationDetail: "Alan Turing · p.28",
-            citationText: "Can machines do what we can do?",
-            pageLabel: "28 of 52"
+            chapterTitle: "",
+            chapterText: "",
+            calloutText: "",
+            citationTitle: "",
+            citationDetail: "",
+            citationText: "",
+            pageLabel: "1 of 1"
         ),
         .init(
             id: "totalitarianism",
             workspaceID: "dissertation-research",
-            kind: .paper,
+            kind: .file,
             title: "The Origins of Totalitarianism",
             subtitle: "Political systems and control",
             addedText: "Added 2d ago",
             status: .ready,
-            chapterTitle: "8. Social Atomization",
-            chapterText: "A population can be controlled when its members are isolated from each other and from public life.",
-            calloutText: "Isolation is the common condition that makes propaganda effective.",
-            citationTitle: "Citation 2",
-            citationDetail: "Hannah Arendt · p.115",
-            citationText: "Isolation precedes domination.",
-            pageLabel: "115 of 289"
+            chapterTitle: "",
+            chapterText: "",
+            calloutText: "",
+            citationTitle: "",
+            citationDetail: "",
+            citationText: "",
+            pageLabel: "1 of 1"
         ),
         .init(
             id: "weapons-of-math-destruction",
             workspaceID: "public-policy-insights",
-            kind: .book,
+            kind: .file,
             title: "Weapons of Math Destruction",
             subtitle: "How algorithms shape society",
             addedText: "Added 2d ago",
             status: .processing,
-            chapterTitle: "3. The Problem with Prediction",
-            chapterText: "When a model is optimized for the wrong goal, it can amplify the very harm it was supposed to reduce.",
-            calloutText: "Prediction systems often inherit the bias of the institutions that train them.",
-            citationTitle: "Citation 3",
-            citationDetail: "Cathy O'Neil · p.71",
-            citationText: "Models are opinions embedded in math.",
-            pageLabel: "71 of 317"
+            chapterTitle: "",
+            chapterText: "",
+            calloutText: "",
+            citationTitle: "",
+            citationDetail: "",
+            citationText: "",
+            pageLabel: "1 of 1"
         ),
         .init(
             id: "surveillance-capitalism",
             workspaceID: "history-of-science",
-            kind: .paper,
+            kind: .web,
             title: "The Age of Surveillance Capitalism",
             subtitle: "Data extraction and behavior",
             addedText: "Added 2d ago",
             status: .failed,
-            chapterTitle: "9. Instrumentarian Power",
-            chapterText: "Behavioral prediction becomes a market once attention is treated as a resource to be purchased.",
-            calloutText: "Extraction scales when friction is removed from every interaction.",
-            citationTitle: "Citation 4",
-            citationDetail: "Shoshana Zuboff · p.203",
-            citationText: "The future is privatized before it is public.",
-            pageLabel: "203 of 704"
+            chapterTitle: "",
+            chapterText: "",
+            calloutText: "",
+            citationTitle: "",
+            citationDetail: "",
+            citationText: "",
+            pageLabel: "1 of 1"
         ),
         .init(
             id: "attention-is-all-you-need",
             workspaceID: "teaching-prep",
-            kind: .web,
+            kind: .text,
             title: "Attention Is All You Need",
             subtitle: "Transformer architectures",
             addedText: "Added 2d ago",
             status: .ready,
-            chapterTitle: "7. Sequence Modeling",
-            chapterText: "Attention allows a model to weigh the importance of each token against the rest of the sequence.",
-            calloutText: "This architecture made long-range dependencies practical at scale.",
-            citationTitle: "Citation 5",
-            citationDetail: "Vaswani et al. · p.3",
-            citationText: "Attention replaced recurrence as the core primitive.",
-            pageLabel: "3 of 15"
+            chapterTitle: "",
+            chapterText: "",
+            calloutText: "",
+            citationTitle: "",
+            citationDetail: "",
+            citationText: "",
+            pageLabel: "1 of 1"
         )
     ]
 }

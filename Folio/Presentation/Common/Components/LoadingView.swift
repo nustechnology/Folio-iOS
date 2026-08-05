@@ -15,7 +15,7 @@ struct LoadingView: View {
             if let message {
                 Text(message)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color.folioInkSoft)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -32,7 +32,7 @@ final class MainViewModel: ViewModelProtocol {
         case openReader(FolioSource)
         case closeReader
         case dismissToast
-        case addNewSource(source: Source, kind: FolioSourceKind, workspaceID: String?)
+        case addNewSource(source: Source, workspaceID: String?)
         case openAskForSource(source: Source, kind: FolioSourceKind)
     }
 
@@ -44,6 +44,8 @@ final class MainViewModel: ViewModelProtocol {
     private let refreshTokenUseCase: any RefreshTokenUseCaseProtocol
     let workspaceRepository: WorkspaceRepositoryProtocol
     let uploadSourceUseCase: any UploadSourceUseCaseProtocol
+    let fetchSourcesUseCase: any FetchSourcesUseCaseProtocol
+    let updateSourceUseCase: any UpdateSourceUseCaseProtocol
 
     init(
         fetchUsersUseCase: any FetchUsersUseCaseProtocol,
@@ -54,6 +56,8 @@ final class MainViewModel: ViewModelProtocol {
         refreshTokenUseCase: any RefreshTokenUseCaseProtocol,
         workspaceRepository: WorkspaceRepositoryProtocol,
         uploadSourceUseCase: any UploadSourceUseCaseProtocol,
+        fetchSourcesUseCase: any FetchSourcesUseCaseProtocol,
+        updateSourceUseCase: any UpdateSourceUseCaseProtocol,
         initialSources: [FolioSource] = []
     ) {
         self.fetchUsersUseCase = fetchUsersUseCase
@@ -64,14 +68,9 @@ final class MainViewModel: ViewModelProtocol {
         self.refreshTokenUseCase = refreshTokenUseCase
         self.workspaceRepository = workspaceRepository
         self.uploadSourceUseCase = uploadSourceUseCase
+        self.fetchSourcesUseCase = fetchSourcesUseCase
+        self.updateSourceUseCase = updateSourceUseCase
         state.sources = initialSources
-#if DEBUG
-        if initialSources.isEmpty {
-            state.spaces = FolioDesignFixtures.spaces
-            state.sourceFilters = FolioDesignFixtures.filters
-            state.sources = FolioDesignFixtures.sources
-        }
-#endif
     }
 
     @Published private(set) var state: State = .init()
@@ -86,12 +85,12 @@ final class MainViewModel: ViewModelProtocol {
             switch state.selectedFilter {
             case .all:
                 return true
-            case .papers:
-                return source.kind == .paper
-            case .books:
-                return source.kind == .book
+            case .files:
+                return source.kind == .file
             case .web:
                 return source.kind == .web
+            case .text:
+                return source.kind == .text
             }
         }
     }
@@ -100,11 +99,6 @@ final class MainViewModel: ViewModelProtocol {
         switch action {
         case .onAppear:
             checkSession()
-            if state.isAuthenticated {
-                state.spaces = FolioDesignFixtures.spaces
-                state.sourceFilters = [.all, .papers, .books, .web]
-                Task { await loadUsers() }
-            }
         case .signIn(let email, let password):
             Task { await performSignIn(email: email, password: password) }
         case .signUp(let name, let email, let password):
@@ -127,7 +121,7 @@ final class MainViewModel: ViewModelProtocol {
         case .selectTab(let tab):
             state.selectedTab = tab
             state.activeReader = nil
-            state.sourcesMode = tab == .sources ? .library : .spaces
+            state.sourcesMode = .spaces
         case .showSpaces:
             state.selectedTab = .sources
             state.sourcesMode = .spaces
@@ -146,20 +140,20 @@ final class MainViewModel: ViewModelProtocol {
             state.activeReader = nil
         case .dismissToast:
             toastMessage = nil
-        case .addNewSource(let source, let kind, let workspaceID):
-            let folioSource = FolioSource(from: source, workspaceID: workspaceID, kind: kind)
+        case .addNewSource(let source, let workspaceID):
+            let folioSource = FolioSource(from: source, workspaceID: workspaceID)
             if let index = state.sources.firstIndex(where: { $0.id == source.id }) {
                 state.sources[index] = folioSource
             } else {
                 state.sources.append(folioSource)
             }
             state.activeReader = folioSource
-        case .openAskForSource(let source, let kind):
+        case .openAskForSource(let source, _):
             if let index = state.sources.firstIndex(where: { $0.id == source.id }) {
                 let existing = state.sources[index]
-                state.sources[index] = FolioSource(from: source, workspaceID: existing.workspaceID, kind: kind)
+                state.sources[index] = FolioSource(from: source, workspaceID: existing.workspaceID)
             } else {
-                state.sources.append(FolioSource(from: source, workspaceID: nil, kind: kind))
+                state.sources.append(FolioSource(from: source, workspaceID: nil))
             }
             state.selectedTab = .ask
             state.activeReader = nil
@@ -202,33 +196,6 @@ final class MainViewModel: ViewModelProtocol {
         state.selectedTab = .sources
         state.sourcesMode = .spaces
         state.activeReader = nil
-    }
-
-    private func loadUsers() async {
-        do {
-            let users = try await fetchUsersUseCase.execute()
-            state.sources = users.map { user in
-                FolioSource(
-                    id: "\(user.id)",
-                    workspaceID: nil,
-                    kind: .web,
-                    title: user.name,
-                    subtitle: user.email,
-                    addedText: "Added just now",
-                    status: .ready,
-                    chapterTitle: "",
-                    chapterText: user.email,
-                    calloutText: "",
-                    citationTitle: "",
-                    citationDetail: user.name,
-                    citationText: "",
-                    pageLabel: "\(user.id)"
-                )
-            }
-            Logger.debug("Fetched \(users.count) users")
-        } catch {
-            Logger.error("Failed to load users: \(error)")
-        }
     }
 
     private func checkSession() {

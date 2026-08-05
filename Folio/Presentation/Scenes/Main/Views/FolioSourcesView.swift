@@ -89,7 +89,7 @@ struct FolioSourcesView: View {
                                     onSelectFilter(filter)
                                 } label: {
                                     FolioPill(
-                                        title: "\(filter.title) \(filter.count)",
+                                        title: filter.title,
                                         isSelected: selectedFilter == filter
                                     )
                                 }

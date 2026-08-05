@@ -19,7 +19,9 @@ struct FolioApp: App {
                 signOutUseCase: diContainer.signOutUseCase,
                 refreshTokenUseCase: diContainer.refreshTokenUseCase,
                 workspaceRepository: diContainer.workspaceRepository,
-                uploadSourceUseCase: diContainer.uploadSourceUseCase
+                uploadSourceUseCase: diContainer.uploadSourceUseCase,
+                fetchSourcesUseCase: diContainer.fetchSourcesUseCase,
+                updateSourceUseCase: diContainer.updateSourceUseCase
             ))
         }
     }
