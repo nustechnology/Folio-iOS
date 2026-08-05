@@ -9,6 +9,7 @@ struct FolioCreateAccountView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
+    @State private var nameError: String? = nil
     @State private var emailError: String? = nil
     @State private var passwordError: String? = nil
     @State private var confirmPasswordError: String? = nil
@@ -47,7 +48,8 @@ struct FolioCreateAccountView: View {
                     FolioTextField(
                         label: "Name",
                         placeholder: "Alex Morgan",
-                        text: $name
+                        text: $name,
+                        error: nameError
                     )
 
                     FolioTextField(
@@ -107,9 +109,17 @@ struct FolioCreateAccountView: View {
         }
     }
 
+    private func validateName() {
+        if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            nameError = String(localized: "Name is required.")
+        } else {
+            nameError = nil
+        }
+    }
+
     private func validateEmail() {
         if email.isEmpty {
-            emailError = nil
+            emailError = String(localized: "Email is required.")
         } else if !Validator.isValidEmail(email) {
             emailError = String(localized: "Please enter a valid email address.")
         } else {
@@ -119,7 +129,7 @@ struct FolioCreateAccountView: View {
 
     private func validatePassword() {
         if password.isEmpty {
-            passwordError = nil
+            passwordError = String(localized: "Password is required.")
         } else if !Validator.isValidPassword(password) {
             passwordError = String(localized: "Password must be at least 4 characters long.")
         } else {
@@ -129,7 +139,7 @@ struct FolioCreateAccountView: View {
 
     private func validateConfirmPassword() {
         if confirmPassword.isEmpty {
-            confirmPasswordError = nil
+            confirmPasswordError = String(localized: "Please confirm your password.")
         } else if confirmPassword != password {
             confirmPasswordError = String(localized: "Passwords do not match.")
         } else {
@@ -138,18 +148,18 @@ struct FolioCreateAccountView: View {
     }
 
     private func submitSignUp() {
+        nameError = nil
         emailError = nil
         passwordError = nil
         confirmPasswordError = nil
+        validateName()
         validateEmail()
         validatePassword()
         validateConfirmPassword()
-        guard emailError == nil,
+        guard nameError == nil,
+              emailError == nil,
               passwordError == nil,
-              confirmPasswordError == nil,
-              !email.isEmpty,
-              !password.isEmpty,
-              !confirmPassword.isEmpty else { return }
+              confirmPasswordError == nil else { return }
         viewModel.handle(.signUp(name: name, email: email, password: password))
     }
 }
