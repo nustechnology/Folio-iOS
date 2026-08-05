@@ -2,6 +2,13 @@ import Foundation
 
 protocol AccessTokenProvider {
     var accessToken: String? { get }
+    var refreshToken: String? { get }
+    func clearSession()
+}
+
+extension AccessTokenProvider {
+    var refreshToken: String? { nil }
+    func clearSession() {}
 }
 
 struct SessionAccessTokenProvider: AccessTokenProvider {
@@ -16,5 +23,16 @@ struct SessionAccessTokenProvider: AccessTokenProvider {
             return nil
         }
         return session.accessToken
+    }
+
+    var refreshToken: String? {
+        guard let session: AuthTokenDTO = try? localStorage.load(forKey: StorageKey.authSession) else {
+            return nil
+        }
+        return session.refreshToken
+    }
+
+    func clearSession() {
+        localStorage.remove(forKey: StorageKey.authSession)
     }
 }

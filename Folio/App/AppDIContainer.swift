@@ -4,7 +4,14 @@ final class AppDIContainer {
     lazy var networkService: NetworkServiceProtocol = {
         NetworkService(
             baseURL: AppConfiguration.apiBaseURL,
-            accessTokenProvider: accessTokenProvider
+            accessTokenProvider: accessTokenProvider,
+            refreshSession: { [weak self] refreshToken in
+                guard let self else { throw NetworkError.unauthorized }
+                _ = try await self.authRepository.refreshToken(refreshToken)
+            },
+            onSessionInvalidated: {
+                NotificationCenter.default.post(name: .folioSessionInvalidated, object: nil)
+            }
         )
     }()
 

@@ -48,6 +48,7 @@ struct SourceFileUploadEndpoint: APIEndpoint {
     var queryItems: [URLQueryItem]? { nil }
     var requiresAuthentication: Bool { true }
     var contentType: String { "multipart/form-data; boundary=\(boundary)" }
+    var resiliencePolicy: EndpointResiliencePolicy { .upload }
 
     var body: Data? { fileBody }
 
@@ -73,6 +74,7 @@ enum SourceJSONEndpoint: APIEndpoint {
     var method: HTTPMethod { .post }
     var queryItems: [URLQueryItem]? { nil }
     var requiresAuthentication: Bool { true }
+    var resiliencePolicy: EndpointResiliencePolicy { .upload }
 
     var body: Data? {
         switch self {

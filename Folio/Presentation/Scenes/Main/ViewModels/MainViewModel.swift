@@ -44,6 +44,8 @@ final class MainViewModel: ViewModelProtocol {
     private let refreshTokenUseCase: any RefreshTokenUseCaseProtocol
     let workspaceRepository: WorkspaceRepositoryProtocol
     let uploadSourceUseCase: any UploadSourceUseCaseProtocol
+    private var sessionInvalidationObserver: NSObjectProtocol?
+    private var loadUsersTask: Task<Void, Never>?
 
     init(
         fetchUsersUseCase: any FetchUsersUseCaseProtocol,
@@ -65,6 +67,13 @@ final class MainViewModel: ViewModelProtocol {
         self.workspaceRepository = workspaceRepository
         self.uploadSourceUseCase = uploadSourceUseCase
         state.sources = initialSources
+        sessionInvalidationObserver = NotificationCenter.default.addObserver(
+            forName: .folioSessionInvalidated,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.resetAuthenticationState()
+        }
 #if DEBUG
         if initialSources.isEmpty {
             state.spaces = FolioDesignFixtures.spaces
@@ -72,6 +81,12 @@ final class MainViewModel: ViewModelProtocol {
             state.sources = FolioDesignFixtures.sources
         }
 #endif
+    }
+
+    deinit {
+        if let sessionInvalidationObserver {
+            NotificationCenter.default.removeObserver(sessionInvalidationObserver)
+        }
     }
 
     @Published private(set) var state: State = .init()
@@ -103,7 +118,8 @@ final class MainViewModel: ViewModelProtocol {
             if state.isAuthenticated {
                 state.spaces = FolioDesignFixtures.spaces
                 state.sourceFilters = [.all, .papers, .books, .web]
-                Task { await loadUsers() }
+                loadUsersTask?.cancel()
+                loadUsersTask = Task { await loadUsers() }
             }
         case .signIn(let email, let password):
             Task { await performSignIn(email: email, password: password) }
@@ -204,10 +220,25 @@ final class MainViewModel: ViewModelProtocol {
         state.activeReader = nil
     }
 
+    private func resetAuthenticationState() {
+        loadUsersTask?.cancel()
+        loadUsersTask = nil
+        state.isAuthenticated = false
+        state.userDisplayName = nil
+        state.userEmail = nil
+        state.selectedTab = .sources
+        state.sourcesMode = .spaces
+        state.activeReader = nil
+        state.spaces = []
+        state.sourceFilters = []
+        state.sources = []
+    }
+
     private func loadUsers() async {
         do {
             let users = try await fetchUsersUseCase.execute()
-            state.sources = users.map { user in
+            try Task.checkCancellation()
+            let mappedUsers = users.map { user in
                 FolioSource(
                     id: "\(user.id)",
                     workspaceID: nil,
@@ -225,7 +256,10 @@ final class MainViewModel: ViewModelProtocol {
                     pageLabel: "\(user.id)"
                 )
             }
+            state.sources = mappedUsers
             Logger.debug("Fetched \(users.count) users")
+        } catch is CancellationError {
+            Logger.debug("Load users cancelled")
         } catch {
             Logger.error("Failed to load users: \(error)")
         }
