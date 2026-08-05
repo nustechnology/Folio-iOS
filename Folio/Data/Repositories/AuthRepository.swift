@@ -37,20 +37,10 @@ final class AuthRepository: AuthRepositoryProtocol {
 
     func refreshToken(_ refreshToken: String) async throws -> AuthToken {
         do {
-            let existingUser = loadSession()
             let response: AuthResponseDTO = try await networkService.request(
                 AuthEndpoint.refreshToken(refreshToken: refreshToken)
             )
-            var token = response.toDomain()
-            if token.userName == nil, token.userEmail == nil {
-                token = AuthToken(
-                    accessToken: token.accessToken,
-                    refreshToken: token.refreshToken,
-                    expiresAt: token.expiresAt,
-                    userName: existingUser?.userName,
-                    userEmail: existingUser?.userEmail
-                )
-            }
+            let token = response.toDomain()
             saveSession(token)
             return token
         } catch let error as NetworkError {

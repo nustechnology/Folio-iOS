@@ -63,9 +63,10 @@ final class NetworkService: NetworkServiceProtocol {
         request.httpBody = endpoint.body
         request.setValue(endpoint.contentType, forHTTPHeaderField: "Content-Type")
         endpoint.headers?.forEach { request.setValue($1, forHTTPHeaderField: $0) }
-        if endpoint.requiresAuthentication,
-           let accessToken = accessTokenProvider?.accessToken,
-           !accessToken.isEmpty {
+        if endpoint.requiresAuthentication {
+            guard let accessToken = accessTokenProvider?.accessToken, !accessToken.isEmpty else {
+                throw NetworkError.missingAuthenticationToken
+            }
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         }
 
@@ -103,6 +104,7 @@ enum NetworkError: LocalizedError {
     case invalidResponse
     case httpError(statusCode: Int, data: Data? = nil)
     case decodingError(Error)
+    case missingAuthenticationToken
 
     var errorDescription: String? {
         switch self {
@@ -120,6 +122,8 @@ enum NetworkError: LocalizedError {
             return "HTTP error with status code \(statusCode)"
         case .decodingError(let error):
             return "Failed to decode response: \(error.localizedDescription)"
+        case .missingAuthenticationToken:
+            return "Authentication token is missing"
         }
     }
 

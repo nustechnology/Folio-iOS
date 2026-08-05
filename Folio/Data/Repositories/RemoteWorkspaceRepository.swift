@@ -11,7 +11,7 @@ final class RemoteWorkspaceRepository: WorkspaceRepositoryProtocol {
          let response: WorkspaceResponseDTO = try await networkService.request(WorkspaceEndpoint.list(query: query))
          return response.toDomain()
     }
-    
+
 
     func createWorkspace(name: String, objective: String) async throws -> Workspace {
          try await performMutation(WorkspaceEndpoint.create(name: name, objective: objective))

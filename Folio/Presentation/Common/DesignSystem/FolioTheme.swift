@@ -47,6 +47,59 @@ enum FolioTheme {
     static let cardBg = Color(hex: 0xFBFAF7)
 
     static let backdropWarm = Color(red: 0.956, green: 0.906, blue: 0.8)
+
+    static let purple80 = Color(hex: 0xD0BCFF)
+    static let purpleGrey80 = Color(hex: 0xCCC2DC)
+    static let pink80 = Color(hex: 0xEFB8C8)
+    static let purple40 = Color(hex: 0x6650A4)
+    static let purpleGrey40 = Color(hex: 0x625B71)
+    static let pink40 = Color(hex: 0x7D5260)
+
+    static let loginBackground = Color(hex: 0xFCF6E9)
+    static let loginBorder = Color(hex: 0xD0BB9E)
+    static let loginPrimary = Color(hex: 0x001F1B)
+    static let loginCopper = Color(hex: 0x96541B)
+    static let loginTextPrimary = Color(hex: 0x1A1A1A)
+    static let loginTextSecondary = Color(hex: 0x6F624D)
+    static let loginTextMuted = Color(hex: 0x9E9E9E)
+    static let loginPlaceholder = Color(hex: 0xBDBDBD)
+    static let loginButtonGlow = Color(hex: 0x2A4A4A)
+
+    static let homeHeader = Color(hex: 0x0B2A24)
+    static let homeBackground = Color(hex: 0xF7F1E6)
+    static let homeSearchField = Color(hex: 0x163B34)
+    static let homeSearchPlaceholder = Color(hex: 0x8FA9A2)
+    static let homeCardBackground = Color(hex: 0xFFFBF5)
+    static let homeCardBorder = Color(hex: 0xE6DCCB)
+    static let homeTypeBadgeBackground = Color(hex: 0xF0E6D6)
+    static let homeTypeFileBackground = Color(hex: 0xE3EDF7)
+    static let homeTypeFileText = Color(hex: 0x3B6B8C)
+    static let homeTypeWebBackground = Color(hex: 0xDCEEE8)
+    static let homeTypeWebText = Color(hex: 0x1F5C4D)
+    static let homeTypeTextBackground = Color(hex: 0xF5E6D4)
+    static let homeTypeTextText = Color(hex: 0x8B5A2B)
+    static let homeChipSelected = Color(hex: 0xEDE4D4)
+    static let homeChipBorder = Color(hex: 0xD9CEBC)
+    static let homeTextPrimary = Color(hex: 0x1A1A1A)
+    static let homeTextSecondary = Color(hex: 0x7A7164)
+    static let homeNavAccent = Color(hex: 0xC4A35A)
+    static let homeStatusReadyBackground = Color(hex: 0xDCEFDA)
+    static let homeStatusReadyText = Color(hex: 0x2F6B3A)
+    static let homeStatusProcessingBackground = Color(hex: 0xF8E6C8)
+    static let homeStatusProcessingText = Color(hex: 0xA86B1E)
+    static let homeStatusFailedBackground = Color(hex: 0xF6D6D4)
+    static let homeStatusFailedText = Color(hex: 0xA13A34)
+    static let homeSheetBackground = Color(hex: 0xFFFBF5)
+    static let homeSheetHandle = Color(hex: 0xD9CEBC)
+    static let homeUploadIcon = Color(hex: 0x4A433A)
+    static let homeReadOnlyFieldBackground = Color(hex: 0xF3F1EC)
+    static let homeReadOnlyFieldBorder = Color(hex: 0xD9CEBC)
+
+    static let accountAvatar = Color(hex: 0x9A6B3F)
+    static let accountCardBackground = Color(hex: 0xFFFBF5)
+    static let accountCardBorder = Color(hex: 0xE6DCCB)
+    static let accountTextPrimary = Color(hex: 0x1A1A1A)
+    static let accountTextSecondary = Color(hex: 0x9A8B74)
 }
 
 enum FolioRadius {
@@ -193,4 +246,57 @@ extension Color {
     static let folioSuccessLight = FolioTheme.successLight
     static let folioSuccessText = FolioTheme.successText
     static let folioCardBg = FolioTheme.cardBg
+
+    static let folioPurple80 = FolioTheme.purple80
+    static let folioPurpleGrey80 = FolioTheme.purpleGrey80
+    static let folioPink80 = FolioTheme.pink80
+    static let folioPurple40 = FolioTheme.purple40
+    static let folioPurpleGrey40 = FolioTheme.purpleGrey40
+    static let folioPink40 = FolioTheme.pink40
+
+    static let folioLoginBackground = FolioTheme.loginBackground
+    static let folioLoginBorder = FolioTheme.loginBorder
+    static let folioLoginPrimary = FolioTheme.loginPrimary
+    static let folioLoginCopper = FolioTheme.loginCopper
+    static let folioLoginTextPrimary = FolioTheme.loginTextPrimary
+    static let folioLoginTextSecondary = FolioTheme.loginTextSecondary
+    static let folioLoginTextMuted = FolioTheme.loginTextMuted
+    static let folioLoginPlaceholder = FolioTheme.loginPlaceholder
+    static let folioLoginButtonGlow = FolioTheme.loginButtonGlow
+
+    static let folioHomeHeader = FolioTheme.homeHeader
+    static let folioHomeBackground = FolioTheme.homeBackground
+    static let folioHomeSearchField = FolioTheme.homeSearchField
+    static let folioHomeSearchPlaceholder = FolioTheme.homeSearchPlaceholder
+    static let folioHomeCardBackground = FolioTheme.homeCardBackground
+    static let folioHomeCardBorder = FolioTheme.homeCardBorder
+    static let folioHomeTypeBadgeBackground = FolioTheme.homeTypeBadgeBackground
+    static let folioHomeTypeFileBackground = FolioTheme.homeTypeFileBackground
+    static let folioHomeTypeFileText = FolioTheme.homeTypeFileText
+    static let folioHomeTypeWebBackground = FolioTheme.homeTypeWebBackground
+    static let folioHomeTypeWebText = FolioTheme.homeTypeWebText
+    static let folioHomeTypeTextBackground = FolioTheme.homeTypeTextBackground
+    static let folioHomeTypeTextText = FolioTheme.homeTypeTextText
+    static let folioHomeChipSelected = FolioTheme.homeChipSelected
+    static let folioHomeChipBorder = FolioTheme.homeChipBorder
+    static let folioHomeTextPrimary = FolioTheme.homeTextPrimary
+    static let folioHomeTextSecondary = FolioTheme.homeTextSecondary
+    static let folioHomeNavAccent = FolioTheme.homeNavAccent
+    static let folioHomeStatusReadyBackground = FolioTheme.homeStatusReadyBackground
+    static let folioHomeStatusReadyText = FolioTheme.homeStatusReadyText
+    static let folioHomeStatusProcessingBackground = FolioTheme.homeStatusProcessingBackground
+    static let folioHomeStatusProcessingText = FolioTheme.homeStatusProcessingText
+    static let folioHomeStatusFailedBackground = FolioTheme.homeStatusFailedBackground
+    static let folioHomeStatusFailedText = FolioTheme.homeStatusFailedText
+    static let folioHomeSheetBackground = FolioTheme.homeSheetBackground
+    static let folioHomeSheetHandle = FolioTheme.homeSheetHandle
+    static let folioHomeUploadIcon = FolioTheme.homeUploadIcon
+    static let folioHomeReadOnlyFieldBackground = FolioTheme.homeReadOnlyFieldBackground
+    static let folioHomeReadOnlyFieldBorder = FolioTheme.homeReadOnlyFieldBorder
+
+    static let folioAccountAvatar = FolioTheme.accountAvatar
+    static let folioAccountCardBackground = FolioTheme.accountCardBackground
+    static let folioAccountCardBorder = FolioTheme.accountCardBorder
+    static let folioAccountTextPrimary = FolioTheme.accountTextPrimary
+    static let folioAccountTextSecondary = FolioTheme.accountTextSecondary
 }

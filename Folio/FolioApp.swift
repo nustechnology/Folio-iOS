@@ -13,6 +13,7 @@ struct FolioApp: App {
         WindowGroup {
             MainView(viewModel: MainViewModel(
                 fetchUsersUseCase: diContainer.fetchUsersUseCase,
+                fetchMeUseCase: diContainer.fetchMeUseCase,
                 localStorage: diContainer.localStorage,
                 signUpUseCase: diContainer.signUpUseCase,
                 signInUseCase: diContainer.signInUseCase,

@@ -87,13 +87,6 @@ enum FolioSourceStatus: String, Equatable {
     }
 }
 
-struct FolioSpace: Identifiable, Equatable {
-    let id: String
-    let title: String
-    let sourceCount: Int
-    let noteCount: Int
-}
-
 struct FolioCredential {
     let email: String
     let password: String
@@ -185,13 +178,6 @@ extension FolioSource {
 }
 
 enum FolioDesignFixtures {
-    static let spaces: [FolioSpace] = [
-        .init(id: "dissertation-research", title: "Dissertation Research", sourceCount: 128, noteCount: 32),
-        .init(id: "public-policy-insights", title: "Public Policy Insights", sourceCount: 64, noteCount: 18),
-        .init(id: "history-of-science", title: "History of Science", sourceCount: 42, noteCount: 12),
-        .init(id: "teaching-prep", title: "Teaching Prep", sourceCount: 27, noteCount: 8)
-    ]
-
     static let filters: [FolioSourceFilter] = [.all, .files, .web, .text]
 
     static let sources: [FolioSource] = [

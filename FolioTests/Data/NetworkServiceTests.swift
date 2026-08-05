@@ -43,6 +43,12 @@ final class NetworkServiceTests: XCTestCase {
         XCTAssertEqual(URLProtocolStub.lastRequest?.url?.query, "sort=recently-updated&page=3&limit=25")
     }
 
+    func testUpdateSpaceUsesPatchMethod() {
+        let endpoint = WorkspaceEndpoint.update(id: "space-id", name: "Research", objective: "Objective")
+
+        XCTAssertEqual(endpoint.method.rawValue, "PATCH")
+    }
+
     private func makeNetworkService(accessToken: String?) -> NetworkService {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [URLProtocolStub.self]

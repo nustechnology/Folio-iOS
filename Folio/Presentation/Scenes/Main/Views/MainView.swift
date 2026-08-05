@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainView: View {
     @StateObject var viewModel: MainViewModel
+    @State private var showAccountSheet = false
     @State private var showAccountSettings = false
     @State private var selectedWorkspace: Workspace?
     @State private var sourceListViewModel: SourceListViewModel?
@@ -12,6 +13,19 @@ struct MainView: View {
             content
         }
         .task { viewModel.handle(.onAppear) }
+        .sheet(isPresented: $showAccountSheet) {
+            AccountBottomSheet(
+                displayName: viewModel.state.userDisplayName ?? "User",
+                emailAddress: viewModel.state.userEmail ?? "Unknown",
+                onOpenSettings: {
+                    showAccountSheet = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        showAccountSettings = true
+                    }
+                }
+            )
+            .presentationDetents([.height(170)])
+        }
         .fullScreenCover(isPresented: $showAccountSettings) {
             FolioBackdrop()
                 .overlay {
@@ -60,7 +74,7 @@ struct MainView: View {
         case .some(let source):
             FolioSourceReaderView(source: source, onBack: {
                 viewModel.handle(.closeReader)
-            }, onOpenAccountSettings: { showAccountSettings = true }, userInitial: userInitial)
+            }, onOpenAccountSettings: { showAccountSheet = true }, userInitial: userInitial)
         case .none:
             switch viewModel.state.selectedTab {
             case .sources:
@@ -69,7 +83,7 @@ struct MainView: View {
                         viewModel: sourceVM,
                         workspaceTitle: workspace.name,
                         onBackToSpaces: { showMySpaces() },
-                        onOpenAccountSettings: { showAccountSettings = true },
+                        onOpenAccountSettings: { showAccountSheet = true },
                         userInitial: currentUserInitial,
                         onSourceOpened: { source in
                             viewModel.handle(.addNewSource(source: source, workspaceID: workspace.id))
@@ -84,18 +98,18 @@ struct MainView: View {
                             if selectedWorkspace?.id == deletedID { selectedWorkspace = nil }
                         },
                         onToast: { viewModel.toastMessage = .success($0) },
-                        onOpenAccountSettings: { showAccountSettings = true },
+                        onOpenAccountSettings: { showAccountSheet = true },
                         userInitial: userInitial
                     )
                 }
             case .ask:
-                FolioAskView(onOpenAccountSettings: { showAccountSettings = true }, onBackToSpaces: { showMySpaces() }, userInitial: userInitial)
+                FolioAskView(onOpenAccountSettings: { showAccountSheet = true }, onBackToSpaces: { showMySpaces() }, userInitial: userInitial)
             case .notes:
                 FolioPlaceholderView(
                     title: "Notes",
                     subtitle: "Capture claims, quotes, and follow-up ideas in one private space.",
                     iconName: "note.text",
-                    onOpenAccountSettings: { showAccountSettings = true },
+                    onOpenAccountSettings: { showAccountSheet = true },
                     onBackToSpaces: { showMySpaces() },
                     userInitial: userInitial
                 )
@@ -104,7 +118,7 @@ struct MainView: View {
                     title: "Notebook",
                     subtitle: "Organize drafts, syntheses, and research threads here.",
                     iconName: "book",
-                    onOpenAccountSettings: { showAccountSettings = true },
+                    onOpenAccountSettings: { showAccountSheet = true },
                     onBackToSpaces: { showMySpaces() },
                     userInitial: userInitial
                 )
@@ -136,6 +150,7 @@ struct MainView: View {
 #Preview {
     MainView(viewModel: MainViewModel(
         fetchUsersUseCase: PreviewFetchUsersUseCase(),
+        fetchMeUseCase: PreviewFetchMeUseCase(),
         localStorage: UserDefaultsStorage(),
         signUpUseCase: PreviewSignUpUseCase(),
         signInUseCase: PreviewSignInUseCase(),
@@ -161,15 +176,19 @@ private struct PreviewFetchUsersUseCase: FetchUsersUseCaseProtocol {
     func execute() async throws -> [User] { [] }
 }
 
+private struct PreviewFetchMeUseCase: FetchMeUseCaseProtocol {
+    func execute() async throws -> UserIdentity { UserIdentity(name: "Alice", email: "alice@example.com") }
+}
+
 private struct PreviewSignUpUseCase: SignUpUseCaseProtocol {
     func execute(name: String, email: String, password: String) async throws -> AuthToken {
-        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date(), userName: nil, userEmail: nil)
+        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date())
     }
 }
 
 private struct PreviewSignInUseCase: SignInUseCaseProtocol {
     func execute(email: String, password: String) async throws -> AuthToken {
-        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date(), userName: nil, userEmail: nil)
+        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date())
     }
 }
 
@@ -179,7 +198,7 @@ private struct PreviewSignOutUseCase: SignOutUseCaseProtocol {
 
 private struct PreviewRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
     func execute(refreshToken: String) async throws -> AuthToken {
-        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date(), userName: nil, userEmail: nil)
+        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date())
     }
 }
 
