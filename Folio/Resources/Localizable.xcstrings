@@ -262,6 +262,38 @@
         }
       }
     },
+    "Name is required." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name is required."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vui lòng nhập tên."
+          }
+        }
+      }
+    },
+    "Email is required." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Email is required."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vui lòng nhập email."
+          }
+        }
+      }
+    },
     "Article URL" : {
       "localizations" : {
         "en" : {
@@ -1256,6 +1288,22 @@
         }
       }
     },
+    "Password is required." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Password is required."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vui lòng nhập mật khẩu."
+          }
+        }
+      }
+    },
     "Password must be at least 4 characters long." : {
       "localizations" : {
         "en" : {
@@ -1284,6 +1332,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mật khẩu không khớp."
+          }
+        }
+      }
+    },
+    "Please confirm your password." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please confirm your password."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vui lòng xác nhận mật khẩu."
           }
         }
       }
