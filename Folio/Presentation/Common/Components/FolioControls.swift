@@ -97,65 +97,146 @@ struct FolioSecondaryButton: View {
 }
 
 struct FolioTextField: View {
+    enum FieldStyle {
+        case singleLine
+        case multiline(minHeight: CGFloat = 100, maxHeight: CGFloat = 160)
+    }
+
     var label: String? = nil
     var placeholder: String = ""
     @Binding var text: String
+    var style: FieldStyle = .singleLine
+    var maxLength: Int? = nil
     var isSecure: Bool = false
     var error: String? = nil
     var keyboardType: UIKeyboardType = .default
+    var focused: FocusState<Bool>.Binding? = nil
 
     @State private var isPasswordVisible = false
+
+    static func truncatedText(_ text: String, maxLength: Int?) -> String {
+        guard let maxLength else { return text }
+        return String(text.prefix(max(0, maxLength)))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             if let label = label {
                 Text(label)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.folioInkSoft)
+                    .foregroundStyle(Color.folioHomeTypeTextText)
             }
 
-            HStack {
-                Group {
-                    if isSecure && !isPasswordVisible {
-                        SecureField(placeholder, text: $text)
-                    } else {
-                        TextField(placeholder, text: $text)
-                    }
-                }
-                .font(.system(size: 14, weight: .regular))
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .foregroundStyle(Color.folioInk)
-                .keyboardType(keyboardType)
+            inputField
 
-                if isSecure {
-                    Button {
-                        isPasswordVisible.toggle()
-                    } label: {
-                        Image(systemName: isPasswordVisible ? "eye" : "eye.slash")
-                            .font(.system(size: 14, weight: .regular))
-                            .foregroundStyle(Color.folioInkSoft)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(isPasswordVisible ? "Hide password" : "Show password")
+            if let maxLength {
+                HStack {
+                    Spacer()
+                    Text("\(text.count)/\(maxLength)")
+                        .font(.system(size: 11))
+                        .foregroundStyle(text.count >= maxLength ? Color.folioDanger : Color.folioInkSoft)
                 }
+                .padding(.horizontal, 4)
             }
-            .padding(.horizontal, 16)
-            .frame(height: 52)
-            .background(Color.folioSurfaceStrong)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(error != nil ? Color.folioDanger : Color.folioFieldBorder, lineWidth: 2)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
-            if let error = error {
+            if let error {
                 Text(error)
                     .font(.system(size: 11, weight: .regular))
                     .foregroundStyle(Color.folioDanger)
                     .padding(.leading, 4)
             }
         }
+        .onChange(of: text) { _, newValue in
+            let truncatedText = Self.truncatedText(newValue, maxLength: maxLength)
+            if truncatedText != newValue {
+                text = truncatedText
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var inputField: some View {
+        switch style {
+        case .singleLine:
+            focusedInput(singleLineField)
+        case let .multiline(minHeight, maxHeight):
+            focusedInput(multilineField(minHeight: minHeight, maxHeight: maxHeight))
+        }
+    }
+
+    private var singleLineField: some View {
+        HStack {
+            Group {
+                if isSecure && !isPasswordVisible {
+                    SecureField(placeholder, text: $text)
+                } else {
+                    TextField(placeholder, text: $text)
+                }
+            }
+            .font(.system(size: 14, weight: .regular))
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .foregroundStyle(Color.folioInk)
+            .keyboardType(keyboardType)
+
+            if isSecure {
+                Button {
+                    isPasswordVisible.toggle()
+                } label: {
+                    Image(systemName: isPasswordVisible ? "eye" : "eye.slash")
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(Color.folioInkSoft)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isPasswordVisible ? "Hide password" : "Show password")
+            }
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 52)
+        .fieldStyle(error: error)
+    }
+
+    private func multilineField(minHeight: CGFloat, maxHeight: CGFloat) -> some View {
+        ZStack(alignment: .topLeading) {
+            TextEditor(text: $text)
+                .font(.system(size: 14, weight: .regular))
+                .foregroundStyle(Color.folioInk)
+                .scrollContentBackground(.hidden)
+                .frame(minHeight: minHeight, maxHeight: maxHeight)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+
+            if text.isEmpty {
+                Text(placeholder)
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.folioInkSoft.opacity(0.6))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .allowsHitTesting(false)
+            }
+        }
+        .frame(minHeight: minHeight, maxHeight: maxHeight)
+        .fieldStyle(error: error)
+    }
+
+    @ViewBuilder
+    private func focusedInput<Content: View>(_ content: Content) -> some View {
+        if let focused {
+            content.focused(focused)
+        } else {
+            content
+        }
+    }
+}
+
+private extension View {
+    func fieldStyle(error: String?) -> some View {
+        background(Color.folioSurfaceStrong)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(error != nil ? Color.folioDanger : Color.folioFieldBorder, lineWidth: 2)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 

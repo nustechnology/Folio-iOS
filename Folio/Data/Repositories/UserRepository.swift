@@ -15,4 +15,9 @@ final class UserRepository: UserRepositoryProtocol {
         try? localStorage.save(dtos, forKey: "cached_users")
         return users
     }
+
+    func fetchMe() async throws -> UserIdentity {
+        let response: UserMeResponseDTO = try await networkService.request(UserEndpoint.getMe)
+        return response.toDomain()
+    }
 }

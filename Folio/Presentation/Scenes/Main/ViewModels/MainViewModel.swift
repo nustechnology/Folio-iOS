@@ -9,7 +9,6 @@ final class MainViewModel: ViewModelProtocol {
         var sourcesMode: FolioSourcesMode = .spaces
         var selectedFilter: FolioSourceFilter = .all
         var activeReader: FolioSource?
-        var spaces: [FolioSpace] = []
         var sourceFilters: [FolioSourceFilter] = []
         var sources: [FolioSource] = []
         var authLoading = false
@@ -37,6 +36,7 @@ final class MainViewModel: ViewModelProtocol {
     }
 
     private let fetchUsersUseCase: any FetchUsersUseCaseProtocol
+    private let fetchMeUseCase: any FetchMeUseCaseProtocol
     private let localStorage: LocalStorageProtocol
     private let signUpUseCase: any SignUpUseCaseProtocol
     private let signInUseCase: any SignInUseCaseProtocol
@@ -46,9 +46,11 @@ final class MainViewModel: ViewModelProtocol {
     let uploadSourceUseCase: any UploadSourceUseCaseProtocol
     let fetchSourcesUseCase: any FetchSourcesUseCaseProtocol
     let updateSourceUseCase: any UpdateSourceUseCaseProtocol
+    private var profileRequestGeneration = 0
 
     init(
         fetchUsersUseCase: any FetchUsersUseCaseProtocol,
+        fetchMeUseCase: any FetchMeUseCaseProtocol,
         localStorage: LocalStorageProtocol,
         signUpUseCase: any SignUpUseCaseProtocol,
         signInUseCase: any SignInUseCaseProtocol,
@@ -61,6 +63,7 @@ final class MainViewModel: ViewModelProtocol {
         initialSources: [FolioSource] = []
     ) {
         self.fetchUsersUseCase = fetchUsersUseCase
+        self.fetchMeUseCase = fetchMeUseCase
         self.localStorage = localStorage
         self.signUpUseCase = signUpUseCase
         self.signInUseCase = signInUseCase
@@ -71,6 +74,12 @@ final class MainViewModel: ViewModelProtocol {
         self.fetchSourcesUseCase = fetchSourcesUseCase
         self.updateSourceUseCase = updateSourceUseCase
         state.sources = initialSources
+#if DEBUG
+        if initialSources.isEmpty {
+            state.sourceFilters = FolioDesignFixtures.filters
+            state.sources = FolioDesignFixtures.sources
+        }
+#endif
     }
 
     @Published private(set) var state: State = .init()
@@ -112,6 +121,7 @@ final class MainViewModel: ViewModelProtocol {
 #endif
         case .signOut:
             signOutUseCase.execute()
+            invalidateProfileRequest()
             state.isAuthenticated = false
             state.userDisplayName = nil
             state.userEmail = nil
@@ -191,11 +201,65 @@ final class MainViewModel: ViewModelProtocol {
 
     private func applySession(_ token: AuthToken) {
         state.isAuthenticated = true
-        state.userDisplayName = token.userName
-        state.userEmail = token.userEmail
+        state.userDisplayName = nil
+        state.userEmail = nil
         state.selectedTab = .sources
         state.sourcesMode = .spaces
         state.activeReader = nil
+        startProfileFetch()
+    }
+
+    private func loadUsers() async {
+        do {
+            let users = try await fetchUsersUseCase.execute()
+            state.sources = users.map { user in
+                FolioSource(
+                    id: "\(user.id)",
+                    workspaceID: nil,
+                    kind: .web,
+                    title: user.name,
+                    subtitle: user.email,
+                    addedText: "Added just now",
+                    status: .ready,
+                    chapterTitle: "",
+                    chapterText: user.email,
+                    calloutText: "",
+                    citationTitle: "",
+                    citationDetail: user.name,
+                    citationText: "",
+                    pageLabel: "\(user.id)"
+                )
+            }
+            Logger.debug("Fetched \(users.count) users")
+        } catch {
+            Logger.error("Failed to load users: \(error)")
+        }
+    }
+
+    private func startProfileFetch() {
+        profileRequestGeneration += 1
+        let requestGeneration = profileRequestGeneration
+        Task { [weak self] in
+            await self?.fetchMe(requestGeneration: requestGeneration)
+        }
+    }
+
+    private func invalidateProfileRequest() {
+        profileRequestGeneration += 1
+    }
+
+    private func fetchMe(requestGeneration: Int) async {
+        do {
+            let identity = try await fetchMeUseCase.execute()
+            guard requestGeneration == profileRequestGeneration, state.isAuthenticated else { return }
+            state.userDisplayName = identity.name
+            state.userEmail = identity.email
+        } catch {
+            guard requestGeneration == profileRequestGeneration, state.isAuthenticated else { return }
+            Logger.error("Failed to fetch user profile: \(error)")
+            state.userDisplayName = "User"
+            state.userEmail = "Unknown"
+        }
     }
 
     private func checkSession() {
@@ -203,8 +267,7 @@ final class MainViewModel: ViewModelProtocol {
         let token = dto.toDomain()
         if token.isValid {
             state.isAuthenticated = true
-            state.userDisplayName = token.userName
-            state.userEmail = token.userEmail
+            startProfileFetch()
             return
         }
         Task { await attemptTokenRefresh(token) }
@@ -217,6 +280,7 @@ final class MainViewModel: ViewModelProtocol {
             applySession(newToken)
         } catch {
             signOutUseCase.execute()
+            invalidateProfileRequest()
             state.isAuthenticated = false
             state.userDisplayName = nil
             state.userEmail = nil

@@ -94,6 +94,41 @@ final class WorkspaceListPaginationTests: XCTestCase {
         XCTAssertEqual(viewModel.state.visibleWorkspaces.map(\.id), ["matching"])
     }
 
+    func testUpdateReplacesOnlyMatchingWorkspaceAndClosesSheet() async {
+        let original = workspace(id: "one", name: "Original")
+        let other = workspace(id: "two", name: "Other")
+        let updated = Workspace(id: "one", name: "Updated", objective: "New objective", sourceCount: 3, noteCount: 2, updatedAt: .now)
+        let fetch = RecordingFetchWorkspacesUseCase(results: [WorkspaceListResult(workspaces: [original, other], pagination: nil)])
+        let viewModel = makeViewModel(fetch: fetch, update: ReturningUpdateWorkspaceUseCase(workspace: updated))
+
+        viewModel.send(.appeared)
+        await waitForTasks()
+        viewModel.send(.editTapped(original))
+        viewModel.send(.update(id: original.id, name: "Updated", objective: "New objective"))
+        await waitForTasks()
+
+        XCTAssertEqual(viewModel.state.allWorkspaces.map(\.name), ["Updated", "Other"])
+        XCTAssertNil(viewModel.state.presentedSheet)
+        XCTAssertEqual(viewModel.state.toastMessage, .success(String(localized: "Space updated")))
+    }
+
+    func testUpdateFailurePreservesEditSheetAndDraftMutationState() async {
+        let original = workspace(id: "one", name: "Original")
+        let fetch = RecordingFetchWorkspacesUseCase(results: [WorkspaceListResult(workspaces: [original], pagination: nil)])
+        let viewModel = makeViewModel(fetch: fetch, update: FailingUpdateWorkspaceUseCase())
+
+        viewModel.send(.appeared)
+        await waitForTasks()
+        viewModel.send(.editTapped(original))
+        viewModel.send(.update(id: original.id, name: "Draft name", objective: "Draft objective"))
+        await waitForTasks()
+
+        XCTAssertEqual(viewModel.state.presentedSheet, .edit(original))
+        XCTAssertFalse(viewModel.state.isMutating)
+        XCTAssertNotNil(viewModel.state.mutationError)
+        XCTAssertNotNil(viewModel.state.toastMessage)
+    }
+
     func testRefreshResetsPaginationAndLoadsPageOne() async {
         let pageOne = WorkspaceListResult(workspaces: [workspace(id: "one")], pagination: WorkspacePagination(page: 1, limit: 1, totalCount: 2, totalPages: 2))
         let pageTwo = WorkspaceListResult(workspaces: [workspace(id: "two")], pagination: WorkspacePagination(page: 2, limit: 1, totalCount: 2, totalPages: 2))
@@ -112,16 +147,47 @@ final class WorkspaceListPaginationTests: XCTestCase {
         XCTAssertEqual(fetch.requests.compactMap(\.page), [2])
     }
 
-    private func makeViewModel(
-        fetch: RecordingFetchWorkspacesUseCase,
-        create: any CreateWorkspaceUseCaseProtocol = EmptyCreateWorkspaceUseCase()
+    private func makeViewModel<Fetch: FetchWorkspacesUseCaseProtocol>(
+        fetch: Fetch,
+        create: any CreateWorkspaceUseCaseProtocol = EmptyCreateWorkspaceUseCase(),
+        update: any UpdateWorkspaceUseCaseProtocol = EmptyUpdateWorkspaceUseCase()
     ) -> WorkspaceListViewModel {
         WorkspaceListViewModel(
             fetchWorkspaces: fetch,
             createWorkspace: create,
-            updateWorkspace: EmptyUpdateWorkspaceUseCase(),
+            updateWorkspace: update,
             deleteWorkspace: EmptyDeleteWorkspaceUseCase()
         )
+    }
+
+    func testDelayedListResponseDoesNotOverwriteEditedWorkspaceAfterMutation() async {
+        let original = workspace(id: "one", name: "Original")
+        let other = workspace(id: "two", name: "Other")
+        let preEditPage = WorkspaceListResult(
+            workspaces: [original, other],
+            pagination: WorkspacePagination(page: 1, limit: 10, totalCount: 2, totalPages: 1)
+        )
+        let updated = Workspace(id: "one", name: "Updated", objective: "Objective", sourceCount: 0, noteCount: 0, updatedAt: .now)
+        let fetch = ControlledFetchWorkspacesUseCase(initialResult: preEditPage)
+        let viewModel = makeViewModel(fetch: fetch, update: ReturningUpdateWorkspaceUseCase(workspace: updated))
+
+        viewModel.send(.appeared)
+        await waitForTasks()
+        XCTAssertEqual(viewModel.state.allWorkspaces.map(\.id), ["one", "two"])
+
+        viewModel.send(.refresh)
+        await waitForTasks()
+        viewModel.send(.editTapped(original))
+        viewModel.send(.update(id: original.id, name: "Updated", objective: "Objective"))
+        await waitForTasks()
+
+        XCTAssertEqual(viewModel.state.allWorkspaces.first(where: { $0.id == "one" })?.name, "Updated")
+        XCTAssertFalse(viewModel.state.isLoading)
+
+        fetch.releaseNext(preEditPage)
+        await waitForTasks()
+
+        XCTAssertEqual(viewModel.state.allWorkspaces.first(where: { $0.id == "one" })?.name, "Updated")
     }
 
     func testNonPaginatedResultDoesNotTriggerLoadMore() async {
@@ -176,6 +242,32 @@ private final class RecordingFetchWorkspacesUseCase: FetchWorkspacesUseCaseProto
     }
 }
 
+@MainActor
+private final class ControlledFetchWorkspacesUseCase: FetchWorkspacesUseCaseProtocol {
+    private let initialResult: WorkspaceListResult
+    private var callCount = 0
+    private var continuations: [CheckedContinuation<WorkspaceListResult, Error>] = []
+
+    init(initialResult: WorkspaceListResult) {
+        self.initialResult = initialResult
+    }
+
+    func execute(query: WorkspaceListQuery) async throws -> WorkspaceListResult {
+        callCount += 1
+        if callCount == 1 {
+            return initialResult
+        }
+        return try await withCheckedThrowingContinuation { continuation in
+            continuations.append(continuation)
+        }
+    }
+
+    func releaseNext(_ result: WorkspaceListResult) {
+        let continuation = continuations.removeFirst()
+        continuation.resume(returning: result)
+    }
+}
+
 private struct EmptyCreateWorkspaceUseCase: CreateWorkspaceUseCaseProtocol {
     func execute(name: String, objective: String) async throws -> Workspace { fatalError("Not used") }
 }
@@ -185,6 +277,20 @@ private struct ReturningCreateWorkspaceUseCase: CreateWorkspaceUseCaseProtocol {
 
     func execute(name: String, objective: String) async throws -> Workspace {
         workspace
+    }
+}
+
+private struct ReturningUpdateWorkspaceUseCase: UpdateWorkspaceUseCaseProtocol {
+    let workspace: Workspace
+
+    func execute(id: String, name: String, objective: String) async throws -> Workspace {
+        workspace
+    }
+}
+
+private struct FailingUpdateWorkspaceUseCase: UpdateWorkspaceUseCaseProtocol {
+    func execute(id: String, name: String, objective: String) async throws -> Workspace {
+        throw WorkspaceRepositoryError.failed("Update failed")
     }
 }
 

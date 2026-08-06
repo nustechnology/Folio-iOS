@@ -169,6 +169,7 @@ struct FolioCreateAccountView: View {
         .overlay {
             FolioCreateAccountView(viewModel: MainViewModel(
                 fetchUsersUseCase: PreviewAuthFetchUsersUseCase(),
+                fetchMeUseCase: PreviewAuthFetchMeUseCase(),
                 localStorage: UserDefaultsStorage(),
                 signUpUseCase: PreviewAuthSignUpUseCase(),
                 signInUseCase: PreviewAuthSignInUseCase(),
@@ -186,15 +187,19 @@ private struct PreviewAuthFetchUsersUseCase: FetchUsersUseCaseProtocol {
     func execute() async throws -> [User] { [] }
 }
 
+private struct PreviewAuthFetchMeUseCase: FetchMeUseCaseProtocol {
+    func execute() async throws -> UserIdentity { UserIdentity(name: "Alice", email: "alice@example.com") }
+}
+
 private struct PreviewAuthSignUpUseCase: SignUpUseCaseProtocol {
     func execute(name: String, email: String, password: String) async throws -> AuthToken {
-        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date(), userName: nil, userEmail: nil)
+        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date())
     }
 }
 
 private struct PreviewAuthSignInUseCase: SignInUseCaseProtocol {
     func execute(email: String, password: String) async throws -> AuthToken {
-        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date(), userName: nil, userEmail: nil)
+        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date())
     }
 }
 
@@ -204,7 +209,7 @@ private struct PreviewAuthSignOutUseCase: SignOutUseCaseProtocol {
 
 private struct PreviewAuthRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
     func execute(refreshToken: String) async throws -> AuthToken {
-        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date(), userName: nil, userEmail: nil)
+        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date())
     }
 }
 

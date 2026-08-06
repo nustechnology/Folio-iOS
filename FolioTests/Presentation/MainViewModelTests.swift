@@ -3,6 +3,29 @@ import XCTest
 
 @MainActor
 final class MainViewModelTests: XCTestCase {
+    func testProfileResponseAfterSignOutDoesNotRestoreIdentity() async {
+        let fetchMe = DeferredFetchMeUseCase()
+        let viewModel = makeViewModel(
+            fetchMeUseCase: fetchMe,
+            localStorage: SessionLocalStorage(session: validSession())
+        )
+
+        viewModel.handle(.onAppear)
+        for _ in 0..<10 where !(await fetchMe.hasStarted()) {
+            await Task.yield()
+        }
+        let didStart = await fetchMe.hasStarted()
+        XCTAssertTrue(didStart)
+
+        viewModel.handle(.signOut)
+        await fetchMe.succeed(with: UserIdentity(name: "Previous User", email: "previous@example.com"))
+        await Task.yield()
+
+        XCTAssertFalse(viewModel.state.isAuthenticated)
+        XCTAssertNil(viewModel.state.userDisplayName)
+        XCTAssertNil(viewModel.state.userEmail)
+    }
+
     func testVisibleSourcesReturnsOnlySourcesInSelectedWorkspace() {
         let viewModel = makeViewModel()
 
@@ -12,10 +35,14 @@ final class MainViewModelTests: XCTestCase {
         XCTAssertTrue(sources.allSatisfy { $0.workspaceID == "dissertation-research" })
     }
 
-    private func makeViewModel() -> MainViewModel {
+    private func makeViewModel(
+        fetchMeUseCase: any FetchMeUseCaseProtocol = EmptyFetchMeUseCase(),
+        localStorage: LocalStorageProtocol = EmptyLocalStorage()
+    ) -> MainViewModel {
         MainViewModel(
             fetchUsersUseCase: EmptyFetchUsersUseCase(),
-            localStorage: EmptyLocalStorage(),
+            fetchMeUseCase: fetchMeUseCase,
+            localStorage: localStorage,
             signUpUseCase: EmptySignUpUseCase(),
             signInUseCase: EmptySignInUseCase(),
             signOutUseCase: EmptySignOutUseCase(),
@@ -29,6 +56,14 @@ final class MainViewModelTests: XCTestCase {
                 source(id: "arendt", workspaceID: "dissertation-research"),
                 source(id: "weapons", workspaceID: "public-policy-insights")
             ]
+        )
+    }
+
+    private func validSession() -> AuthTokenDTO {
+        AuthTokenDTO(
+            accessToken: "access-token",
+            refreshToken: "refresh-token",
+            expiresAt: .distantFuture
         )
     }
 
@@ -54,6 +89,51 @@ final class MainViewModelTests: XCTestCase {
 
 private struct EmptyFetchUsersUseCase: FetchUsersUseCaseProtocol {
     func execute() async throws -> [User] { [] }
+}
+
+private struct EmptyFetchMeUseCase: FetchMeUseCaseProtocol {
+    func execute() async throws -> UserIdentity {
+        UserIdentity(name: "Test User", email: "test@example.com")
+    }
+}
+
+private actor DeferredFetchMeUseCase: FetchMeUseCaseProtocol {
+    private var continuation: CheckedContinuation<UserIdentity, Error>?
+    private var started = false
+
+    func execute() async throws -> UserIdentity {
+        started = true
+        return try await withCheckedThrowingContinuation { continuation in
+            self.continuation = continuation
+        }
+    }
+
+    func hasStarted() -> Bool {
+        started
+    }
+
+    func succeed(with identity: UserIdentity) {
+        continuation?.resume(returning: identity)
+        continuation = nil
+    }
+}
+
+private final class SessionLocalStorage: LocalStorageProtocol {
+    private let session: AuthTokenDTO
+
+    init(session: AuthTokenDTO) {
+        self.session = session
+    }
+
+    func save<T>(_ value: T, forKey key: String) throws where T: Codable {}
+
+    func load<T>(forKey key: String) throws -> T? where T: Codable {
+        session as? T
+    }
+
+    func remove(forKey key: String) {}
+
+    func clear() {}
 }
 
 private final class EmptyLocalStorage: LocalStorageProtocol {

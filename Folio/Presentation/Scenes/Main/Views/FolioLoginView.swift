@@ -144,6 +144,7 @@ struct FolioLoginView: View {
         .overlay {
             FolioLoginView(viewModel: MainViewModel(
                 fetchUsersUseCase: PreviewFetchUsersUseCase(),
+                fetchMeUseCase: PreviewFetchMeUseCase(),
                 localStorage: UserDefaultsStorage(),
                 signUpUseCase: PreviewSignUpUseCase(),
                 signInUseCase: PreviewSignInUseCase(),
@@ -161,15 +162,19 @@ private struct PreviewFetchUsersUseCase: FetchUsersUseCaseProtocol {
     func execute() async throws -> [User] { [] }
 }
 
+private struct PreviewFetchMeUseCase: FetchMeUseCaseProtocol {
+    func execute() async throws -> UserIdentity { UserIdentity(name: "Alice", email: "alice@example.com") }
+}
+
 private struct PreviewSignUpUseCase: SignUpUseCaseProtocol {
     func execute(name: String, email: String, password: String) async throws -> AuthToken {
-        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date(), userName: nil, userEmail: nil)
+        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date())
     }
 }
 
 private struct PreviewSignInUseCase: SignInUseCaseProtocol {
     func execute(email: String, password: String) async throws -> AuthToken {
-        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date(), userName: nil, userEmail: nil)
+        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date())
     }
 }
 
@@ -179,7 +184,7 @@ private struct PreviewSignOutUseCase: SignOutUseCaseProtocol {
 
 private struct PreviewRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
     func execute(refreshToken: String) async throws -> AuthToken {
-        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date(), userName: nil, userEmail: nil)
+        AuthToken(accessToken: "", refreshToken: "", expiresAt: Date())
     }
 }
 

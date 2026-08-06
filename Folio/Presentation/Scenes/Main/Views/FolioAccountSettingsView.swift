@@ -3,15 +3,16 @@ import SwiftUI
 struct FolioAccountAvatarButton: View {
     let initial: String
     var size: CGFloat = 36
+    var fillColor: Color = .folioHomeHeader
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Text(initial.uppercased())
                 .font(.system(size: size * 0.38, weight: .medium, design: .serif))
-                .foregroundStyle(Color.folioOliveDark)
+                .foregroundStyle(Color.white)
                 .frame(width: size, height: size)
-                .background(Color.folioGold)
+                .background(fillColor)
                 .clipShape(Circle())
                 .overlay(
                     Circle()
@@ -22,6 +23,10 @@ struct FolioAccountAvatarButton: View {
         .buttonStyle(.plain)
         .contentShape(Circle())
         .accessibilityLabel("Account settings")
+        .overlay(
+            Circle()
+                .stroke(Color.white, lineWidth: 1)
+        )
     }
 }
 
@@ -37,24 +42,28 @@ struct FolioAccountSettingsView: View {
         ZStack {
             Color.folioCanvas.ignoresSafeArea()
             ScrollView {
-                VStack(spacing: 18) {
+                VStack(spacing: 0) {
                     header
 
-                    VStack(spacing: 24) {
-                        FolioAccountAvatarButton(initial: displayName.firstLetter ?? "A", size: 104) {
-                            dismiss()
+                    VStack(spacing: 0) {
+                        FolioAccountAvatarButton(
+                            initial: displayName.firstLetter,
+                            size: 104,
+                            fillColor: .folioAccountAvatar
+                        ) {
                         }
-                        .padding(.top, 20)
+                        .padding(.top, 38)
 
-                        VStack(spacing: 8) {
+                        VStack(spacing: 6) {
                             Text(displayName)
-                                .font(.custom("CormorantGaramond-Medium", size: 34))
+                                .font(.custom("CormorantGaramond-Medium", size: 26))
                                 .foregroundStyle(Color.folioInk)
 
                             Text(emailAddress)
-                                .font(.system(size: 12, weight: .regular))
+                                .font(.system(size: 12, weight: .regular, design: .serif))
                                 .foregroundStyle(Color.folioInkSoft)
                         }
+                        .padding(.top, 16)
 
                         VStack(spacing: 12) {
                             accountRow(title: "Profile settings", isDisabled: true) {}
@@ -65,13 +74,13 @@ struct FolioAccountSettingsView: View {
                                 showSignOutConfirmation = true
                             }
                         }
-                        .padding(.top, 4)
+                        .padding(.top, 60)
 
                         Spacer(minLength: 24)
                     }
-                    .padding(.horizontal, 18)
+                    .padding(.horizontal, 16)
                 }
-                .padding(.bottom, 28)
+                .padding(.bottom, 24)
             }
         }
         .alert(
@@ -87,44 +96,29 @@ struct FolioAccountSettingsView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
-            headerIconButton("chevron.left") {
+        HStack(spacing: 12) {
+            Button {
                 dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Color.white)
+                    .frame(width: 24, height: 24)
+                    .background(Color.folioHomeHeader)
+                    .clipShape(Circle())
             }
+            .buttonStyle(.plain)
+            .frame(width: 32, height: 32)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Profile")
-                    .font(.custom("CormorantGaramond-Medium", size: 30))
-                    .foregroundStyle(Color.folioGold.opacity(0.78))
+            Text("Account settings")
+                .font(.custom("CormorantGaramond-Medium", size: 28))
+                .foregroundStyle(Color.folioInk)
 
-                Text("Account settings")
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundStyle(Color.folioInkSoft)
-            }
-
-            Spacer(minLength: 16)
-
-            HStack(spacing: 18) {
-                headerIconButton("magnifyingglass", isDisabled: true) {}
-                headerIconButton("ellipsis", isDisabled: true) {}
-            }
+            Spacer()
         }
         .padding(.horizontal, 18)
-        .padding(.top, 14)
-    }
-
-    private func headerIconButton(_ systemName: String, isDisabled: Bool = false, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Color.folioInk)
-                .frame(width: 22, height: 22)
-        }
-        .buttonStyle(.plain)
-        .frame(width: 44, height: 44)
-        .contentShape(Rectangle())
-        .opacity(isDisabled ? 0.3 : 1.0)
-        .disabled(isDisabled)
+        .padding(.top, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func accountRow(title: String, isDestructive: Bool = false, isDisabled: Bool = false, action: @escaping () -> Void) -> some View {
@@ -132,32 +126,24 @@ struct FolioAccountSettingsView: View {
             HStack(spacing: 12) {
                 Text(title)
                     .font(.system(size: 14, weight: .regular))
-                    .foregroundStyle(isDestructive ? Color.folioDanger : Color.folioInk)
+                    .foregroundStyle(isDisabled ? Color.folioInkSoft : (isDestructive ? Color.black : Color.folioInk))
 
                 Spacer(minLength: 16)
 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.folioInkMuted)
+                    .foregroundStyle(isDisabled ? Color.folioInkSoft : Color.folioInk)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 16)
-            .background(Color.folioSurfaceStrong)
+            .frame(height: 48)
+            .background(isDisabled ? Color.white : Color.folioSurfaceStrong)
             .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(Color.folioRowBorder, lineWidth: 2)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(isDisabled ? Color.folioInkSoft.opacity(0.8) : Color.folioRowBorder, lineWidth: 1)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .opacity(isDisabled ? 0.4 : 1.0)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(isDisabled)
-    }
-}
-
-private extension String {
-    var firstLetter: String? {
-        guard let letter = first else { return nil }
-        return String(letter)
     }
 }

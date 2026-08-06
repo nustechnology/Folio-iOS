@@ -18,7 +18,7 @@ enum WorkspaceEndpoint: APIEndpoint {
         switch self {
         case .list: return .get
         case .create: return .post
-        case .update: return .put
+        case .update: return .patch
         case .delete: return .delete
         }
     }

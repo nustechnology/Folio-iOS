@@ -261,6 +261,7 @@ final class WorkspaceListViewModel: ObservableObject {
 
     private func create(name: String, objective: String) async {
         guard !state.isMutating else { return }
+        invalidateInFlightListLoads()
         state.createdWorkspaceID = nil
         await runMutation(fallbackMessage: "Failed to create space. Please try again.") {
             let workspace = try await self.createWorkspace.execute(name: name, objective: objective)
@@ -273,6 +274,7 @@ final class WorkspaceListViewModel: ObservableObject {
 
     private func update(id: String, name: String, objective: String) async {
         guard !state.isMutating else { return }
+        invalidateInFlightListLoads()
         await runMutation(fallbackMessage: "Failed to update space. Please try again.") {
             let workspace = try await self.updateWorkspace.execute(id: id, name: name, objective: objective)
             if let index = self.state.allWorkspaces.firstIndex(where: { $0.id == id }) {
@@ -286,6 +288,7 @@ final class WorkspaceListViewModel: ObservableObject {
 
     private func delete(workspace: Workspace) async {
         guard !state.isMutating else { return }
+        invalidateInFlightListLoads()
         var didDelete = false
         await runMutation(fallbackMessage: "Failed to delete space. Please try again.") {
             try await self.deleteWorkspace.execute(id: workspace.id)
@@ -296,6 +299,12 @@ final class WorkspaceListViewModel: ObservableObject {
             didDelete = true
         }
         if didDelete { await loadFirstPage() }
+    }
+
+    private func invalidateInFlightListLoads() {
+        requestGeneration += 1
+        state.isLoading = false
+        state.isLoadingNextPage = false
     }
 
     private func runMutation(fallbackMessage: String.LocalizationValue, _ operation: @escaping () async throws -> Void) async {
