@@ -11,6 +11,7 @@ final class WorkspaceListViewModel: ObservableObject {
         var allWorkspaces: [Workspace] = []
         var visibleWorkspaces: [Workspace] = []
         var searchQuery = ""
+        var sortOption = WorkspaceSortOption.recentlyUpdated
         var presentedSheet: Sheet?
         var confirmationWorkspace: Workspace?
         var isMutating = false
@@ -26,11 +27,13 @@ final class WorkspaceListViewModel: ObservableObject {
         enum Sheet: Identifiable, Equatable {
             case create
             case edit(Workspace)
+            case sortOptions
 
             var id: String {
                 switch self {
                 case .create: return "create"
                 case .edit(let workspace): return "edit-\(workspace.id)"
+                case .sortOptions: return "sort-options"
                 }
             }
         }
@@ -51,6 +54,8 @@ final class WorkspaceListViewModel: ObservableObject {
         case loadMore
         case searchQueryChanged(String)
         case clearSearch
+        case sortTapped
+        case sortSelected(WorkspaceSortOption)
         case createTapped
         case editTapped(Workspace)
         case deleteTapped(Workspace)
@@ -136,6 +141,17 @@ final class WorkspaceListViewModel: ObservableObject {
             state.searchQuery = ""
             searchTask?.cancel()
             Task { await loadFirstPage() }
+        case .sortTapped:
+            state.presentedSheet = .sortOptions
+        case .sortSelected(let option):
+            guard option != state.sortOption else {
+                state.presentedSheet = nil
+                return
+            }
+            searchTask?.cancel()
+            state.sortOption = option
+            state.presentedSheet = nil
+            Task { await loadFirstPage() }
         case .createTapped:
             state.mutationError = nil
             state.presentedSheet = .create
@@ -181,7 +197,7 @@ final class WorkspaceListViewModel: ObservableObject {
         do {
             let searchTerm = state.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
             let query = WorkspaceListQuery(
-                sort: WorkspaceListQuery.initial.sort,
+                sort: state.sortOption,
                 search: searchTerm.isEmpty ? nil : searchTerm,
                 page: nil,
                 limit: nil
@@ -217,7 +233,7 @@ final class WorkspaceListViewModel: ObservableObject {
         do {
             let searchTerm = state.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
             let query = WorkspaceListQuery(
-                sort: WorkspaceListQuery.initial.sort,
+                sort: state.sortOption,
                 search: searchTerm.isEmpty ? nil : searchTerm,
                 page: pagination.page + 1,
                 limit: pagination.limit
@@ -325,6 +341,7 @@ final class WorkspaceListViewModel: ObservableObject {
     }
 
     private func applyFilter() {
+        state.allWorkspaces = sortedWorkspaces(state.allWorkspaces)
         let query = state.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else {
             state.visibleWorkspaces = state.allWorkspaces
@@ -333,5 +350,31 @@ final class WorkspaceListViewModel: ObservableObject {
         state.visibleWorkspaces = state.allWorkspaces.filter {
             $0.name.localizedCaseInsensitiveContains(query) || $0.objective.localizedCaseInsensitiveContains(query)
         }
+    }
+
+    private func sortedWorkspaces(_ workspaces: [Workspace]) -> [Workspace] {
+        switch state.sortOption {
+        case .alphabeticalAZ:
+            return workspaces.sorted { workspaceComesBefore($0, $1, ascending: true) }
+        case .alphabeticalZA:
+            return workspaces.sorted { workspaceComesBefore($0, $1, ascending: false) }
+        case .recentlyUpdated:
+            return workspaces.sorted { lhs, rhs in
+                if lhs.updatedAt != rhs.updatedAt {
+                    return lhs.updatedAt > rhs.updatedAt
+                }
+                return lhs.id < rhs.id
+            }
+        case .recentlyCreated:
+            return workspaces
+        }
+    }
+
+    private func workspaceComesBefore(_ lhs: Workspace, _ rhs: Workspace, ascending: Bool) -> Bool {
+        let nameComparison = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+        guard nameComparison != .orderedSame else { return lhs.id < rhs.id }
+        return ascending
+            ? nameComparison == .orderedAscending
+            : nameComparison == .orderedDescending
     }
 }
