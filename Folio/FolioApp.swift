@@ -22,7 +22,7 @@ struct FolioApp: App {
                 workspaceRepository: diContainer.workspaceRepository,
                 uploadSourceUseCase: diContainer.uploadSourceUseCase,
                 fetchSourcesUseCase: diContainer.fetchSourcesUseCase,
-                updateSourceUseCase: diContainer.updateSourceUseCase
+                updateSourceUseCase: diContainer.updateSourceUseCase,
             ))
         }
     }

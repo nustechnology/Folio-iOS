@@ -184,6 +184,36 @@ xcodebuild -project Folio.xcodeproj -scheme Folio -configuration Debug test
 - Do not commit `.xcuserdata` or secrets
 - Only create git commits when explicitly asked
 
+## Coding Rules
+
+### Reuse and Component Design
+
+- Reuse existing shared components, extensions, design tokens, and modifiers before creating a new implementation.
+- Search `Presentation/Common` and the current feature module before adding a new view, control, validation helper, or formatting utility.
+- Extract a component when a UI pattern is repeated, has a clear responsibility, or needs isolated testing; do not extract one-off markup only to make a file shorter.
+- Keep reusable components generic enough for their known use cases, but do not add speculative configuration or abstractions.
+- Prefer composition of small views over deeply nested, duplicated SwiftUI markup.
+- Put feature-specific UI in the feature scene. Promote it to `Presentation/Common` only when it is genuinely shared by multiple features.
+- Use `FolioTheme` and existing design-system values instead of introducing duplicate colors, fonts, spacing, corner radii, or control styles.
+
+### Naming, Constants, and Readability
+
+- Use descriptive names that communicate intent and units. Prefer `maximumNameLength`, `pageSize`, and `requestTimeout` over `max`, `size`, or unexplained numeric literals.
+- Define reusable constants in a clearly named scope, such as a private `Constants` namespace/type or a feature-specific constants structure.
+- Do not scatter magic numbers, repeated user-facing strings, API paths, storage keys, or animation durations through implementation code.
+- Name constants according to what they represent, not how they are currently used. For example, use `maximumPageSize` rather than `value1` or `defaultValue`.
+- Keep constants close to the feature that owns them. Promote a constant to a shared location only when multiple features use the same concept.
+- Use Swift naming conventions: types and protocols in `UpperCamelCase`, properties/functions/actions in `lowerCamelCase`, and Boolean names that read naturally such as `isLoading`, `hasMorePages`, or `canSubmit`.
+- Avoid vague names such as `data`, `result`, `item`, `manager`, `helper`, or `process` when a domain-specific name is available.
+- Prefer small, intention-revealing functions. Split a function when it mixes validation, state mutation, networking, navigation, or formatting responsibilities.
+- Keep conditionals readable. Extract a named computed property or helper when a condition needs more than one line to understand.
+
+### Localization and Design System
+
+- Every user-facing string, including validation and error text, belongs in `Folio/Resources/Localizable.xcstrings`.
+- Reuse `FolioTheme` and shared components before adding feature-specific colors, typography, spacing, or controls.
+- Do not use debug text, placeholder copy, or `print` statements as production UI behavior.
+
 ## Adding a New Feature
 
 Follow dependency direction: define contracts in `Domain` first, implement in `Data`, consume from `Presentation`.

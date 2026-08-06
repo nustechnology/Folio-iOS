@@ -49,3 +49,8 @@ String catalog: `Folio/Resources/Localizable.xcstrings`
 1. Open `Folio.xcodeproj` in Xcode 16+
 2. Select scheme **Folio**
 3. Build & Run (`⌘R`)
+
+## Code style
+
+Formatting and import-order rules are defined in `.swiftlint.yml`. See
+[`Docs/CodeStyle.md`](Docs/CodeStyle.md) for installation and lint commands.

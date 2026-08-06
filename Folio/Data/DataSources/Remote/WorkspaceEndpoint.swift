@@ -46,6 +46,11 @@ enum WorkspaceEndpoint: APIEndpoint {
     }
 
     var requiresAuthentication: Bool { true }
+
+    var cachePolicy: URLRequest.CachePolicy {
+        if case .list = self { return .reloadRevalidatingCacheData }
+        return .useProtocolCachePolicy
+    }
 }
 
 private struct WorkspaceMutationDTO: Encodable {

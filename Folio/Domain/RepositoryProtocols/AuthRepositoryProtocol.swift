@@ -5,5 +5,10 @@ protocol AuthRepositoryProtocol {
     func signIn(email: String, password: String) async throws -> AuthToken
     func refreshToken(_ refreshToken: String) async throws -> AuthToken
     func signOut()
+    func signOutAwaitingCancellation() async
     func getCurrentSession() -> AuthToken?
+}
+
+extension AuthRepositoryProtocol {
+    func signOutAwaitingCancellation() async { signOut() }
 }

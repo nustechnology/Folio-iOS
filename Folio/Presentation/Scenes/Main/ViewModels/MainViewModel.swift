@@ -47,6 +47,10 @@ final class MainViewModel: ViewModelProtocol {
     let fetchSourcesUseCase: any FetchSourcesUseCaseProtocol
     let updateSourceUseCase: any UpdateSourceUseCaseProtocol
     private var profileRequestGeneration = 0
+    private var sessionGeneration = 0
+    private var signOutTask: Task<Void, Never>?
+    private var refreshTask: Task<Void, Never>?
+    private var refreshTaskID: UUID?
 
     init(
         fetchUsersUseCase: any FetchUsersUseCaseProtocol,
@@ -120,14 +124,23 @@ final class MainViewModel: ViewModelProtocol {
             state.activeReader = nil
 #endif
         case .signOut:
-            signOutUseCase.execute()
-            invalidateProfileRequest()
-            state.isAuthenticated = false
-            state.userDisplayName = nil
-            state.userEmail = nil
-            state.selectedTab = .sources
-            state.sourcesMode = .spaces
-            state.activeReader = nil
+            guard signOutTask == nil else { return }
+            sessionGeneration += 1
+            let refreshTask = self.refreshTask
+            refreshTask?.cancel()
+            signOutTask = Task { [weak self] in
+                guard let self else { return }
+                await refreshTask?.value
+                await signOutUseCase.executeAwaitingCancellation()
+                invalidateProfileRequest()
+                state.isAuthenticated = false
+                state.userDisplayName = nil
+                state.userEmail = nil
+                state.selectedTab = .sources
+                state.sourcesMode = .spaces
+                state.activeReader = nil
+                signOutTask = nil
+            }
         case .selectTab(let tab):
             state.selectedTab = tab
             state.activeReader = nil
@@ -172,7 +185,13 @@ final class MainViewModel: ViewModelProtocol {
     }
 
     private func performSignIn(email: String, password: String) async {
+        guard !state.authLoading else { return }
         state.authLoading = true
+        defer { state.authLoading = false }
+        sessionGeneration += 1
+        refreshTask?.cancel()
+        await refreshTask?.value
+        await signOutTask?.value
         do {
             let token = try await signInUseCase.execute(email: email, password: password)
             applySession(token)
@@ -182,11 +201,16 @@ final class MainViewModel: ViewModelProtocol {
             Logger.error("Sign-in failed: \(error)")
             toastMessage = .error(String(localized: "Unable to connect. Please check your internet and try again."))
         }
-        state.authLoading = false
     }
 
     private func performSignUp(name: String, email: String, password: String) async {
+        guard !state.authLoading else { return }
         state.authLoading = true
+        defer { state.authLoading = false }
+        sessionGeneration += 1
+        refreshTask?.cancel()
+        await refreshTask?.value
+        await signOutTask?.value
         do {
             let token = try await signUpUseCase.execute(name: name, email: email, password: password)
             applySession(token)
@@ -196,7 +220,6 @@ final class MainViewModel: ViewModelProtocol {
             Logger.error("Sign-up failed: \(error)")
             toastMessage = .error(String(localized: "Unable to connect. Please check your internet and try again."))
         }
-        state.authLoading = false
     }
 
     private func applySession(_ token: AuthToken) {
@@ -263,6 +286,7 @@ final class MainViewModel: ViewModelProtocol {
     }
 
     private func checkSession() {
+        guard refreshTask == nil, signOutTask == nil, !state.authLoading else { return }
         guard let dto: AuthTokenDTO = try? localStorage.load(forKey: StorageKey.authSession) else { return }
         let token = dto.toDomain()
         if token.isValid {
@@ -270,16 +294,27 @@ final class MainViewModel: ViewModelProtocol {
             startProfileFetch()
             return
         }
-        Task { await attemptTokenRefresh(token) }
+        sessionGeneration += 1
+        let generation = sessionGeneration
+        let taskID = UUID()
+        refreshTaskID = taskID
+        refreshTask = Task {
+            await attemptTokenRefresh(token, generation: generation)
+            guard refreshTaskID == taskID else { return }
+            refreshTask = nil
+            refreshTaskID = nil
+        }
     }
 
-    private func attemptTokenRefresh(_ token: AuthToken) async {
+    private func attemptTokenRefresh(_ token: AuthToken, generation: Int) async {
         guard !token.refreshToken.isEmpty else { return }
         do {
             let newToken = try await refreshTokenUseCase.execute(refreshToken: token.refreshToken)
+            guard generation == sessionGeneration else { return }
             applySession(newToken)
         } catch {
-            signOutUseCase.execute()
+            guard generation == sessionGeneration else { return }
+            await signOutUseCase.executeAwaitingCancellation()
             invalidateProfileRequest()
             state.isAuthenticated = false
             state.userDisplayName = nil

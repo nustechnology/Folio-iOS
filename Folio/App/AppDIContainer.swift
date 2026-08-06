@@ -9,7 +9,7 @@ final class AppDIContainer {
     }()
 
     lazy var accessTokenProvider: AccessTokenProvider = {
-        SessionAccessTokenProvider(localStorage: localStorage)
+        SessionAccessTokenProvider(localStorage: localStorage, baseURL: AppConfiguration.apiBaseURL)
     }()
 
     lazy var localStorage: LocalStorageProtocol = {

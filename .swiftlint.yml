@@ -1,0 +1,25 @@
+included:
+  - Folio
+  - FolioTests
+
+excluded:
+  - .build
+  - DerivedData
+
+reporter: xcode
+
+opt_in_rules:
+  - indentation_width
+  - sorted_imports
+
+line_length:
+  warning: 120
+  error: 160
+  ignores_comments: true
+  ignores_urls: true
+  ignores_multiline_strings: true
+
+indentation_width:
+  indentation_width: 4
+  include_comments: false
+  include_multiline_strings: false

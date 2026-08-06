@@ -49,6 +49,12 @@ final class AuthRepository: AuthRepositoryProtocol {
     }
 
     func signOut() {
+        networkService.cancelPendingRefresh()
+        localStorage.remove(forKey: StorageKey.authSession)
+    }
+
+    func signOutAwaitingCancellation() async {
+        await networkService.cancelPendingRefreshAndWait()
         localStorage.remove(forKey: StorageKey.authSession)
     }
 

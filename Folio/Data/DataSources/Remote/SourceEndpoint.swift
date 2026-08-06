@@ -21,6 +21,8 @@ struct SourceListEndpoint: APIEndpoint {
     }
 
     var body: Data? { nil }
+
+    var cachePolicy: URLRequest.CachePolicy { .reloadRevalidatingCacheData }
 }
 
 struct UpdateSourceEndpoint: APIEndpoint {

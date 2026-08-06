@@ -3,8 +3,16 @@ import Foundation
 final class SourceStatusSSEClient {
     private let session: URLSession
 
-    init(session: URLSession = .shared) {
-        self.session = session
+    init(session: URLSession? = nil) {
+        if let session {
+            self.session = session
+        } else {
+            let configuration = URLSessionConfiguration.default
+            configuration.timeoutIntervalForRequest = 15
+            configuration.timeoutIntervalForResource = .greatestFiniteMagnitude
+            configuration.waitsForConnectivity = true
+            self.session = URLSession(configuration: configuration)
+        }
     }
 
     func connect(endpoint: SourceStatusEndpoint) -> AsyncThrowingStream<SourceStatusEvent, Error> {
