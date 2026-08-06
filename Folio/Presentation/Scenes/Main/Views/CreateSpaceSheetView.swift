@@ -94,13 +94,13 @@ struct CreateSpaceSheetView: View {
                     if let error = nameError {
                         Text(error)
                             .font(.system(size: 11))
-                            .foregroundStyle(.red)
-                            .padding(.leading, 4)
-                    }
+                        .foregroundStyle(Color.folioDanger)
+                        .padding(.leading, 4)
                 }
+            }
 
-                VStack(alignment: .leading, spacing: 4) {
-                        Text(String(localized: "Research Objective (Optional)"))
+            VStack(alignment: .leading, spacing: 4) {
+                    Text(String(localized: "Research Objective (Optional)"))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(Color.folioInkSoft)
                         .padding(.leading, 4)

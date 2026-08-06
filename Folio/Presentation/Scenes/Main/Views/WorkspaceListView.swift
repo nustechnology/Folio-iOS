@@ -141,7 +141,7 @@ struct WorkspaceListView: View {
                         VStack(spacing: 6) {
                             Text(error)
                                 .font(.footnote)
-                                .foregroundStyle(.red)
+                                .foregroundStyle(Color.folioDanger)
                                 .multilineTextAlignment(.center)
                             Button(String(localized: "Retry")) {
                                 viewModel.send(.loadMore)
@@ -336,7 +336,7 @@ private struct WorkspaceEditorSheet: View {
                     TextField(String(localized: "Research objective (optional)"), text: $objective, axis: .vertical)
                         .lineLimit(3...6)
                 }
-                if let errorMessage { Text(errorMessage).foregroundStyle(.red) }
+                if let errorMessage { Text(errorMessage).foregroundStyle(Color.folioDanger) }
             }
             .navigationTitle(title)
             .toolbar {

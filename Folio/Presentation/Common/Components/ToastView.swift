@@ -26,14 +26,14 @@ struct ToastView: View {
     private var backgroundColor: Color {
         switch style {
         case .success: Color.folioOliveDark
-        case .error: Color.red
+        case .error: Color.folioDanger
         }
     }
 
     private var borderColor: Color {
         switch style {
         case .success: Color.folioGold.opacity(0.4)
-        case .error: Color.red.opacity(0.5)
+        case .error: Color.folioDanger.opacity(0.5)
         }
     }
 
@@ -56,7 +56,7 @@ struct ToastView: View {
                 .padding(.bottom, 40)
         }
         .task {
-            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            try? await Task.sleep(nanoseconds: FolioDuration.toastDismiss)
             onDismiss()
         }
     }
@@ -67,13 +67,13 @@ extension View {
         overlay(alignment: .bottom) {
             if let msg = message.wrappedValue {
                 ToastView(message: msg.text, style: msg.style) {
-                    withAnimation(.easeOut(duration: 0.25)) {
+                    withAnimation(.easeOut(duration: FolioDuration.fast)) {
                         message.wrappedValue = nil
                     }
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .animation(.easeInOut(duration: 0.25), value: message.wrappedValue)
+        .animation(.easeInOut(duration: FolioDuration.fast), value: message.wrappedValue)
     }
 }

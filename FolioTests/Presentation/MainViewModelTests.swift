@@ -22,6 +22,8 @@ final class MainViewModelTests: XCTestCase {
             refreshTokenUseCase: EmptyRefreshTokenUseCase(),
             workspaceRepository: EmptyWorkspaceRepository(),
             uploadSourceUseCase: EmptyUploadSourceUseCase(),
+            fetchSourcesUseCase: EmptyFetchSourcesUseCase(),
+            updateSourceUseCase: EmptyUpdateSourceUseCase(),
             initialSources: [
                 source(id: "turing", workspaceID: "dissertation-research"),
                 source(id: "arendt", workspaceID: "dissertation-research"),
@@ -34,7 +36,7 @@ final class MainViewModelTests: XCTestCase {
         FolioSource(
             id: id,
             workspaceID: workspaceID,
-            kind: .paper,
+            kind: .file,
             title: id,
             subtitle: "",
             addedText: "Added just now",
@@ -93,4 +95,12 @@ private struct EmptyUploadSourceUseCase: UploadSourceUseCaseProtocol {
     func deleteSource(id: String) async throws {}
     func retrySource(id: String) async throws -> Source { throw CancellationError() }
     func sourceStatusStream() -> AsyncThrowingStream<SourceStatusEvent, Error> { AsyncThrowingStream { $0.finish() } }
+}
+
+private struct EmptyFetchSourcesUseCase: FetchSourcesUseCaseProtocol {
+    func execute(query: SourceListQuery) async throws -> SourceListResult { throw CancellationError() }
+}
+
+private struct EmptyUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
+    func execute(id: String, title: String, author: String) async throws -> Source { throw CancellationError() }
 }

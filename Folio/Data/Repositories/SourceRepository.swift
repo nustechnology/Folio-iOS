@@ -15,6 +15,16 @@ final class SourceRepository: SourceRepositoryProtocol {
         self.accessTokenProvider = accessTokenProvider
     }
 
+    func fetchSources(query: SourceListQuery) async throws -> SourceListResult {
+        let response: SourceListResponseDTO = try await networkService.request(SourceListEndpoint(query: query))
+        return response.toDomain()
+    }
+
+    func updateSource(id: String, title: String, author: String) async throws -> Source {
+        let response: SourceResponseDTO = try await networkService.request(UpdateSourceEndpoint(sourceId: id, title: title, author: author))
+        return response.data.source.toDomain()
+    }
+
     func uploadFile(spaceId: String, fileURL: URL, title: String?, author: String?) async throws -> Source {
         let endpoint = try SourceFileUploadEndpoint(spaceId: spaceId, fileURL: fileURL, title: title, author: author)
         let response: SourceResponseDTO = try await networkService.request(endpoint)

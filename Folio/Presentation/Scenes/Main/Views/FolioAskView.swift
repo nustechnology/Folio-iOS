@@ -98,7 +98,7 @@ struct FolioAskView: View {
         errorText = nil
         resultText = nil
         Task {
-            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            try? await Task.sleep(nanoseconds: FolioDuration.askMockDelay)
             isLoading = false
             resultText = "Based on your sources, Turing argues that the question \"Can machines think?\" is too ambiguous. He reframes it as an imitation game where a machine's ability to mimic human responses is the practical test of intelligence."
         }

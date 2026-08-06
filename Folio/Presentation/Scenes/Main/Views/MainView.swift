@@ -4,6 +4,7 @@ struct MainView: View {
     @StateObject var viewModel: MainViewModel
     @State private var showAccountSettings = false
     @State private var selectedWorkspace: Workspace?
+    @State private var sourceListViewModel: SourceListViewModel?
 
     var body: some View {
         ZStack {
@@ -41,11 +42,9 @@ struct MainView: View {
         appShell
             .safeAreaInset(edge: .bottom) {
                 let isMySpaces = viewModel.state.selectedTab == .sources
-                    && viewModel.state.sourcesMode == .spaces
                     && selectedWorkspace == nil
                 if viewModel.state.activeReader == nil && !isMySpaces {
                     FolioBottomTabBar(selectedTab: viewModel.state.selectedTab) { tab in
-                        selectedWorkspace = nil
                         viewModel.handle(.selectTab(tab))
                     }
                     .padding(.horizontal, 20)
@@ -63,77 +62,52 @@ struct MainView: View {
                 viewModel.handle(.closeReader)
             }, onOpenAccountSettings: { showAccountSettings = true }, userInitial: userInitial)
         case .none:
-            if selectedWorkspace != nil {
-                FolioSourcesView(
-                    workspaceID: selectedWorkspace?.id,
-                    workspaceTitle: selectedWorkspace?.name,
-                    filters: viewModel.state.sourceFilters,
-                    selectedFilter: viewModel.state.selectedFilter,
-                    sources: viewModel.visibleSources(inWorkspaceID: selectedWorkspace?.id),
-                    onSelectFilter: { viewModel.handle(.selectFilter($0)) },
-                    onSelectSource: { viewModel.handle(.openReader($0)) },
-                    onSearch: {},
-                    onMenu: {},
-                    onOpenAccountSettings: { showAccountSettings = true },
-                    onBackToSpaces: { showMySpaces() },
-                    userInitial: currentUserInitial,
-                    onSourceAdded: { source in viewModel.handle(.addNewSource(source: source, kind: kindForSourceType(source.sourceType), workspaceID: selectedWorkspace?.id)) },
-                    onSourceAsk: { source in viewModel.handle(.openAskForSource(source: source, kind: kindForSourceType(source.sourceType))) },
-                    uploadSourceUseCase: viewModel.uploadSourceUseCase
-                )
-            } else {
-                switch viewModel.state.selectedTab {
-                case .sources:
-                    if viewModel.state.sourcesMode == .spaces {
-                        WorkspaceListView(
-                            viewModel: WorkspaceListViewModel(repository: viewModel.workspaceRepository),
-                            onSelectWorkspace: { selectedWorkspace = $0 },
-                            onWorkspaceCreated: { selectedWorkspace = $0 },
-                            onWorkspaceDeleted: { deletedID in
-                                if selectedWorkspace?.id == deletedID { selectedWorkspace = nil }
-                            },
-                            onToast: { viewModel.toastMessage = .success($0) },
-                            onOpenAccountSettings: { showAccountSettings = true },
-                            userInitial: userInitial
-                        )
-                    } else {
-                        FolioSourcesView(
-                            filters: viewModel.state.sourceFilters,
-                            selectedFilter: viewModel.state.selectedFilter,
-                            sources: viewModel.visibleSources,
-                            onSelectFilter: { viewModel.handle(.selectFilter($0)) },
-                            onSelectSource: { viewModel.handle(.openReader($0)) },
-                            onSearch: {},
-                            onMenu: {},
-                            onOpenAccountSettings: { showAccountSettings = true },
-                            onBackToSpaces: { showMySpaces() },
-                            userInitial: userInitial,
-                            onSourceAdded: { source in viewModel.handle(.addNewSource(source: source, kind: kindForSourceType(source.sourceType), workspaceID: nil)) },
-                            onSourceAsk: { source in viewModel.handle(.openAskForSource(source: source, kind: kindForSourceType(source.sourceType))) },
-                            uploadSourceUseCase: viewModel.uploadSourceUseCase
-                        )
-                    }
-                case .ask:
-                    FolioAskView(onOpenAccountSettings: { showAccountSettings = true }, onBackToSpaces: { showMySpaces() }, userInitial: userInitial)
-                case .notes:
-                    FolioPlaceholderView(
-                        title: "Notes",
-                        subtitle: "Capture claims, quotes, and follow-up ideas in one private space.",
-                        iconName: "note.text",
-                        onOpenAccountSettings: { showAccountSettings = true },
+            switch viewModel.state.selectedTab {
+            case .sources:
+                if let workspace = selectedWorkspace, let sourceVM = sourceListViewModel {
+                    SourceListView(
+                        viewModel: sourceVM,
+                        workspaceTitle: workspace.name,
                         onBackToSpaces: { showMySpaces() },
-                        userInitial: userInitial
+                        onOpenAccountSettings: { showAccountSettings = true },
+                        userInitial: currentUserInitial,
+                        onSourceOpened: { source in
+                            viewModel.handle(.addNewSource(source: source, workspaceID: workspace.id))
+                        }
                     )
-                case .notebook:
-                    FolioPlaceholderView(
-                        title: "Notebook",
-                        subtitle: "Organize drafts, syntheses, and research threads here.",
-                        iconName: "book",
+                } else {
+                    WorkspaceListView(
+                        viewModel: WorkspaceListViewModel(repository: viewModel.workspaceRepository),
+                        onSelectWorkspace: { openWorkspace($0) },
+                        onWorkspaceCreated: { openWorkspace($0) },
+                        onWorkspaceDeleted: { deletedID in
+                            if selectedWorkspace?.id == deletedID { selectedWorkspace = nil }
+                        },
+                        onToast: { viewModel.toastMessage = .success($0) },
                         onOpenAccountSettings: { showAccountSettings = true },
-                        onBackToSpaces: { showMySpaces() },
                         userInitial: userInitial
                     )
                 }
+            case .ask:
+                FolioAskView(onOpenAccountSettings: { showAccountSettings = true }, onBackToSpaces: { showMySpaces() }, userInitial: userInitial)
+            case .notes:
+                FolioPlaceholderView(
+                    title: "Notes",
+                    subtitle: "Capture claims, quotes, and follow-up ideas in one private space.",
+                    iconName: "note.text",
+                    onOpenAccountSettings: { showAccountSettings = true },
+                    onBackToSpaces: { showMySpaces() },
+                    userInitial: userInitial
+                )
+            case .notebook:
+                FolioPlaceholderView(
+                    title: "Notebook",
+                    subtitle: "Organize drafts, syntheses, and research threads here.",
+                    iconName: "book",
+                    onOpenAccountSettings: { showAccountSettings = true },
+                    onBackToSpaces: { showMySpaces() },
+                    userInitial: userInitial
+                )
             }
         }
     }
@@ -142,16 +116,20 @@ struct MainView: View {
         viewModel.state.userDisplayName?.first.map(String.init).map { $0.uppercased() } ?? "?"
     }
 
-    private func showMySpaces() {
-        selectedWorkspace = nil
-        viewModel.handle(.showSpaces)
+    private func openWorkspace(_ workspace: Workspace) {
+        sourceListViewModel = SourceListViewModel(
+            spaceId: workspace.id,
+            fetchSourcesUseCase: viewModel.fetchSourcesUseCase,
+            updateSourceUseCase: viewModel.updateSourceUseCase,
+            uploadSourceUseCase: viewModel.uploadSourceUseCase
+        )
+        selectedWorkspace = workspace
     }
 
-    private func kindForSourceType(_ type: SourceType) -> FolioSourceKind {
-        switch type {
-        case .file, .manual: return .paper
-        case .web: return .web
-        }
+    private func showMySpaces() {
+        selectedWorkspace = nil
+        sourceListViewModel = nil
+        viewModel.handle(.showSpaces)
     }
 }
 
@@ -164,7 +142,9 @@ struct MainView: View {
         signOutUseCase: PreviewSignOutUseCase(),
         refreshTokenUseCase: PreviewRefreshTokenUseCase(),
         workspaceRepository: PreviewWorkspaceRepository(),
-        uploadSourceUseCase: PreviewUploadSourceUseCase()
+        uploadSourceUseCase: PreviewUploadSourceUseCase(),
+        fetchSourcesUseCase: PreviewFetchSourcesUseCase(),
+        updateSourceUseCase: PreviewUpdateSourceUseCase()
     ))
 }
 
@@ -219,5 +199,17 @@ private struct PreviewUploadSourceUseCase: UploadSourceUseCaseProtocol {
     }
     func sourceStatusStream() -> AsyncThrowingStream<SourceStatusEvent, Error> {
         AsyncThrowingStream { $0.finish() }
+    }
+}
+
+private struct PreviewFetchSourcesUseCase: FetchSourcesUseCaseProtocol {
+    func execute(query: SourceListQuery) async throws -> SourceListResult {
+        SourceListResult(sources: [], pagination: nil)
+    }
+}
+
+private struct PreviewUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
+    func execute(id: String, title: String, author: String) async throws -> Source {
+        Source(id: id, researchSpaceId: "", sourceType: .file, title: title, author: author, sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
     }
 }

@@ -33,6 +33,38 @@ enum SourceProcessingState: String, Equatable, Sendable {
     case failed
 }
 
+struct SourceListQuery: Equatable, Sendable {
+    let spaceId: String
+    let sourceType: String?
+    let processingState: String?
+    let search: String?
+    let sort: String?
+    let page: Int?
+    let limit: Int?
+
+    init(spaceId: String, sourceType: String? = nil, processingState: String? = nil, search: String? = nil, sort: String? = "recently-added", page: Int? = nil, limit: Int? = nil) {
+        self.spaceId = spaceId
+        self.sourceType = sourceType
+        self.processingState = processingState
+        self.search = search
+        self.sort = sort
+        self.page = page
+        self.limit = limit
+    }
+}
+
+struct SourcePagination: Equatable, Sendable {
+    let page: Int
+    let limit: Int
+    let totalCount: Int
+    let totalPages: Int
+}
+
+struct SourceListResult: Equatable, Sendable {
+    let sources: [Source]
+    let pagination: SourcePagination?
+}
+
 extension Source {
     func withProcessingState(_ newState: SourceProcessingState) -> Source {
         Source(
@@ -53,5 +85,16 @@ extension Source {
             createdAt: createdAt,
             updatedAt: updatedAt
         )
+    }
+
+    var badgeText: String {
+        switch sourceType {
+        case .web: return "WEB"
+        case .manual: return "TEXT"
+        case .file:
+            let ext = (fileName as NSString).pathExtension.uppercased()
+            if !ext.isEmpty { return ext }
+            return fileType.uppercased()
+        }
     }
 }

@@ -1,5 +1,43 @@
 import Foundation
 
+struct SourceListEndpoint: APIEndpoint {
+    let query: SourceListQuery
+
+    var path: String { "/api/v1/sources" }
+    var method: HTTPMethod { .get }
+    var requiresAuthentication: Bool { true }
+
+    var queryItems: [URLQueryItem]? {
+        var items: [URLQueryItem] = [
+            URLQueryItem(name: "spaceId", value: query.spaceId)
+        ]
+        if let sourceType = query.sourceType { items.append(URLQueryItem(name: "sourceType", value: sourceType)) }
+        if let processingState = query.processingState { items.append(URLQueryItem(name: "processingState", value: processingState)) }
+        if let search = query.search, !search.isEmpty { items.append(URLQueryItem(name: "search", value: search)) }
+        if let sort = query.sort { items.append(URLQueryItem(name: "sort", value: sort)) }
+        if let page = query.page { items.append(URLQueryItem(name: "page", value: String(page))) }
+        if let limit = query.limit { items.append(URLQueryItem(name: "limit", value: String(limit))) }
+        return items
+    }
+
+    var body: Data? { nil }
+}
+
+struct UpdateSourceEndpoint: APIEndpoint {
+    let sourceId: String
+    let title: String
+    let author: String
+
+    var path: String { "/api/v1/sources/\(sourceId)" }
+    var method: HTTPMethod { .patch }
+    var queryItems: [URLQueryItem]? { nil }
+    var requiresAuthentication: Bool { true }
+
+    var body: Data? {
+        try? JSONEncoder().encode(UpdateSourceRequestDTO(title: title, author: author))
+    }
+}
+
 struct SourceFileUploadEndpoint: APIEndpoint {
     let spaceId: String
     let title: String?

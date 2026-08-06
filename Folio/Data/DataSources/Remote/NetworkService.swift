@@ -77,13 +77,23 @@ final class NetworkService: NetworkServiceProtocol {
             throw NetworkError.invalidResponse
         }
 
-        Logger.debug("← \(httpResponse.statusCode)")
+        #if DEBUG
+        logResponse(method: endpoint.method.rawValue, path: endpoint.path, statusCode: httpResponse.statusCode, data: data)
+        #endif
 
         guard (200...299).contains(httpResponse.statusCode) else {
             throw NetworkError.httpError(statusCode: httpResponse.statusCode, data: data)
         }
 
         return data
+    }
+
+    private func logResponse(method: String, path: String, statusCode: Int, data: Data) {
+        let label = (200...299).contains(statusCode) ? "[OK]" : "[ERR]"
+        Logger.debug("\(label) \(method) \(path) → \(statusCode)")
+        if let json = data.prettyJSON {
+            Logger.debug("[BODY]\n\(json)")
+        }
     }
 }
 
@@ -102,7 +112,11 @@ enum NetworkError: LocalizedError {
             return "Non-HTTPS connections are not permitted"
         case .invalidResponse:
             return "Invalid response from server"
-        case .httpError(let statusCode, _):
+        case .httpError(let statusCode, let data):
+            if let data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let message = json["message"] as? String {
+                return message
+            }
             return "HTTP error with status code \(statusCode)"
         case .decodingError(let error):
             return "Failed to decode response: \(error.localizedDescription)"
@@ -148,5 +162,15 @@ extension URL {
             return 0
         }
         return explicit
+    }
+}
+
+extension Data {
+    var prettyJSON: String? {
+        guard let json = try? JSONSerialization.jsonObject(with: self),
+              let pretty = try? JSONSerialization.data(withJSONObject: json, options: .prettyPrinted),
+              let string = String(data: pretty, encoding: .utf8)
+        else { return nil }
+        return string
     }
 }
