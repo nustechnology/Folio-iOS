@@ -26,6 +26,80 @@ final class MainViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.state.userEmail)
     }
 
+    func testAuthenticationLoadingStartsBeforeWaitingForRefreshCancellation() async {
+        let refreshToken = BlockingRefreshTokenUseCase()
+        let viewModel = makeViewModel(
+            localStorage: SessionLocalStorage(session: expiredSession()),
+            refreshTokenUseCase: refreshToken
+        )
+
+        viewModel.handle(.onAppear)
+        for _ in 0..<10 where !(await refreshToken.hasStarted()) {
+            await Task.yield()
+        }
+
+        viewModel.handle(.signIn(email: "test@example.com", password: "password"))
+        viewModel.handle(.signIn(email: "test@example.com", password: "password"))
+        await waitForAuthLoading(viewModel, toBe: true)
+
+        XCTAssertTrue(viewModel.state.authLoading)
+
+        for _ in 0..<10 where !(await refreshToken.wasCancelled()) {
+            await Task.yield()
+        }
+        let wasCancelled = await refreshToken.wasCancelled()
+        XCTAssertTrue(wasCancelled)
+
+        await refreshToken.fail()
+
+        await waitForAuthLoading(viewModel, toBe: false)
+
+        XCTAssertFalse(viewModel.state.authLoading)
+    }
+
+    func testSignOutWhileRefreshIsBlockedDoesNotRestoreAuthenticatedState() async {
+        let refreshToken = BlockingRefreshTokenUseCase()
+        let viewModel = makeViewModel(
+            localStorage: SessionLocalStorage(session: expiredSession()),
+            refreshTokenUseCase: refreshToken
+        )
+
+        viewModel.handle(.onAppear)
+        for _ in 0..<10 where !(await refreshToken.hasStarted()) {
+            await Task.yield()
+        }
+        viewModel.handle(.signOut)
+        await refreshToken.succeed(with: AuthToken(
+            accessToken: "refreshed-access-token",
+            refreshToken: "refreshed-refresh-token",
+            expiresAt: .distantFuture
+        ))
+
+        for _ in 0..<10 {
+            await Task.yield()
+        }
+
+        XCTAssertFalse(viewModel.state.isAuthenticated)
+    }
+
+    func testRepeatedSessionChecksStartOnlyOneRefresh() async {
+        let refreshToken = BlockingRefreshTokenUseCase()
+        let viewModel = makeViewModel(
+            localStorage: SessionLocalStorage(session: expiredSession()),
+            refreshTokenUseCase: refreshToken
+        )
+
+        viewModel.handle(.onAppear)
+        for _ in 0..<10 where !(await refreshToken.hasStarted()) {
+            await Task.yield()
+        }
+        viewModel.handle(.onAppear)
+
+        let refreshStartCount = await refreshToken.startCount()
+        XCTAssertEqual(refreshStartCount, 1)
+        await refreshToken.fail()
+    }
+
     func testVisibleSourcesReturnsOnlySourcesInSelectedWorkspace() {
         let viewModel = makeViewModel()
 
@@ -37,7 +111,8 @@ final class MainViewModelTests: XCTestCase {
 
     private func makeViewModel(
         fetchMeUseCase: any FetchMeUseCaseProtocol = EmptyFetchMeUseCase(),
-        localStorage: LocalStorageProtocol = EmptyLocalStorage()
+        localStorage: LocalStorageProtocol = EmptyLocalStorage(),
+        refreshTokenUseCase: any RefreshTokenUseCaseProtocol = EmptyRefreshTokenUseCase()
     ) -> MainViewModel {
         MainViewModel(
             fetchUsersUseCase: EmptyFetchUsersUseCase(),
@@ -46,7 +121,7 @@ final class MainViewModelTests: XCTestCase {
             signUpUseCase: EmptySignUpUseCase(),
             signInUseCase: EmptySignInUseCase(),
             signOutUseCase: EmptySignOutUseCase(),
-            refreshTokenUseCase: EmptyRefreshTokenUseCase(),
+            refreshTokenUseCase: refreshTokenUseCase,
             workspaceRepository: EmptyWorkspaceRepository(),
             uploadSourceUseCase: EmptyUploadSourceUseCase(),
             fetchSourcesUseCase: EmptyFetchSourcesUseCase(),
@@ -67,6 +142,14 @@ final class MainViewModelTests: XCTestCase {
         )
     }
 
+    private func expiredSession() -> AuthTokenDTO {
+        AuthTokenDTO(
+            accessToken: "expired-access-token",
+            refreshToken: "refresh-token",
+            expiresAt: .distantPast
+        )
+    }
+
     private func source(id: String, workspaceID: String) -> FolioSource {
         FolioSource(
             id: id,
@@ -84,6 +167,17 @@ final class MainViewModelTests: XCTestCase {
             citationText: "",
             pageLabel: "1 of 1"
         )
+    }
+
+    private func waitForAuthLoading(_ viewModel: MainViewModel, toBe expected: Bool) async {
+        let deadline = ContinuousClock.now + .seconds(1)
+        while viewModel.state.authLoading != expected {
+            guard ContinuousClock.now < deadline else {
+                XCTFail("Timed out waiting for authLoading to become \(expected)")
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
     }
 }
 
@@ -157,6 +251,53 @@ private struct EmptySignOutUseCase: SignOutUseCaseProtocol {
 
 private struct EmptyRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
     func execute(refreshToken: String) async throws -> AuthToken { throw CancellationError() }
+}
+
+private actor BlockingRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
+    private var continuations: [CheckedContinuation<AuthToken, Error>] = []
+    private var started = false
+    private var count = 0
+    private var cancelled = false
+
+    func execute(refreshToken: String) async throws -> AuthToken {
+        started = true
+        count += 1
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                continuations.append(continuation)
+            }
+        } onCancel: {
+            Task { await self.recordCancellation() }
+        }
+    }
+
+    func hasStarted() -> Bool {
+        started
+    }
+
+    func startCount() -> Int {
+        count
+    }
+
+    func wasCancelled() -> Bool {
+        cancelled
+    }
+
+    private func recordCancellation() {
+        cancelled = true
+    }
+
+    func fail() {
+        let pendingContinuations = continuations
+        continuations.removeAll()
+        pendingContinuations.forEach { $0.resume(throwing: CancellationError()) }
+    }
+
+    func succeed(with token: AuthToken) {
+        let pendingContinuations = continuations
+        continuations.removeAll()
+        pendingContinuations.forEach { $0.resume(returning: token) }
+    }
 }
 
 private final class EmptyWorkspaceRepository: WorkspaceRepositoryProtocol {

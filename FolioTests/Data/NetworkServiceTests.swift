@@ -1,6 +1,6 @@
+@testable import Folio
 import Foundation
 import XCTest
-@testable import Folio
 
 final class NetworkServiceTests: XCTestCase {
     override func setUp() {
@@ -25,7 +25,7 @@ final class NetworkServiceTests: XCTestCase {
     }
 
     func testSpaceListRequestOmitsUnsupportedPaginationQueryItems() async throws {
-        let service = makeNetworkService(accessToken: nil)
+        let service = makeNetworkService(accessToken: "token-123")
 
         let _: WorkspaceResponseDTO = try await service.request(WorkspaceEndpoint.list(query: .initial))
 
@@ -34,7 +34,7 @@ final class NetworkServiceTests: XCTestCase {
     }
 
     func testSpaceListRequestEncodesPaginationWhenExplicitlySupplied() async throws {
-        let service = makeNetworkService(accessToken: nil)
+        let service = makeNetworkService(accessToken: "token-123")
         let query = WorkspaceListQuery(sort: "recently-updated", page: 3, limit: 25)
 
         let _: WorkspaceResponseDTO = try await service.request(WorkspaceEndpoint.list(query: query))

@@ -315,6 +315,38 @@
         }
       }
     },
+    "Authentication refresh is unavailable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Authentication refresh is unavailable"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không thể làm mới xác thực"
+          }
+        }
+      }
+    },
+    "The service is temporarily unavailable. Please try again shortly." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The service is temporarily unavailable. Please try again shortly."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dịch vụ tạm thời không khả dụng. Vui lòng thử lại sau."
+          }
+        }
+      }
+    },
     "Already have an account? Sign in" : {
       "localizations" : {
         "en" : {

@@ -91,7 +91,9 @@ struct MainView: View {
                     )
                 } else {
                     WorkspaceListView(
-                        viewModel: WorkspaceListViewModel(repository: viewModel.workspaceRepository),
+                        viewModel: WorkspaceListViewModel(
+                            repository: viewModel.workspaceRepository,
+                        ),
                         onSelectWorkspace: { openWorkspace($0) },
                         onWorkspaceCreated: { openWorkspace($0) },
                         onWorkspaceDeleted: { deletedID in
@@ -135,7 +137,7 @@ struct MainView: View {
             spaceId: workspace.id,
             fetchSourcesUseCase: viewModel.fetchSourcesUseCase,
             updateSourceUseCase: viewModel.updateSourceUseCase,
-            uploadSourceUseCase: viewModel.uploadSourceUseCase
+            uploadSourceUseCase: viewModel.uploadSourceUseCase,
         )
         selectedWorkspace = workspace
     }
