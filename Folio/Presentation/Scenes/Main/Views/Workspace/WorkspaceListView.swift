@@ -112,6 +112,13 @@ struct WorkspaceListView: View {
                     viewModel.send(.create(name: name, objective: objective))
                 }
             )
+        case .sortOptions:
+            SortOptionsSheet(
+                title: String(localized: "Sort spaces"),
+                options: WorkspaceSortOption.allCases.map { ($0, $0.displayTitle) },
+                selectedValue: viewModel.state.sortOption,
+                onSelect: { viewModel.send(.sortSelected($0)) }
+            )
         }
     }
     
@@ -178,7 +185,9 @@ struct WorkspaceListView: View {
                 set: { viewModel.send(.searchQueryChanged($0)) }
             ),
             onOpenAccountSettings: onOpenAccountSettings,
-            onClearSearch: { viewModel.send(.clearSearch) }
+            onClearSearch: { viewModel.send(.clearSearch) },
+            onSortTapped: { viewModel.send(.sortTapped) },
+            isSortActive: viewModel.state.sortOption != .recentlyUpdated
         )
     }
 }

@@ -26,7 +26,7 @@ enum WorkspaceEndpoint: APIEndpoint {
     var queryItems: [URLQueryItem]? {
         guard case .list(let query) = self else { return nil }
         return [
-            query.sort.map { URLQueryItem(name: "sort", value: $0) },
+            query.sort.map { URLQueryItem(name: "sort", value: $0.rawValue) },
             query.search.flatMap { $0.isEmpty ? nil : URLQueryItem(name: "search", value: $0) },
             query.page.map { URLQueryItem(name: "page", value: String($0)) },
             query.limit.map { URLQueryItem(name: "limit", value: String($0)) }

@@ -210,7 +210,7 @@ xcodebuild -project Folio.xcodeproj -scheme Folio -configuration Debug test
 
 ### Localization and Design System
 
-- Every user-facing string, including validation and error text, belongs in `Folio/Resources/Localizable.xcstrings`.
+- Every user-facing string, including validation and error text, belongs in Folio/Resources/Localizable.xcstrings. Always append new localization entries to the end of the file. Do not insert, reorder, or modify existing entries unless explicitly required
 - Reuse `FolioTheme` and shared components before adding feature-specific colors, typography, spacing, or controls.
 - Do not use debug text, placeholder copy, or `print` statements as production UI behavior.
 

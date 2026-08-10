@@ -3,13 +3,25 @@ import XCTest
 
 @MainActor
 final class WorkspaceListPaginationTests: XCTestCase {
+    func testWorkspaceSortOptionKeepsAPIValueAndLocalizedTitle() {
+        XCTAssertEqual(WorkspaceSortOption.alphabeticalAZ.rawValue, "alphabetical-az")
+        XCTAssertEqual(WorkspaceSortOption.alphabeticalAZ.displayTitle, String(localized: "Alphabetical A-Z"))
+    }
+
     func testInitialLoadAndLoadMoreAppendOnlyUniqueWorkspaces() async {
         let first = WorkspaceListResult(
-            workspaces: [workspace(id: "one"), workspace(id: "two")],
+            workspaces: [
+                workspace(id: "one", updatedAt: Date(timeIntervalSince1970: 3)),
+                workspace(id: "two", updatedAt: Date(timeIntervalSince1970: 2))
+            ],
             pagination: WorkspacePagination(page: 1, limit: 2, totalCount: 3, totalPages: 2)
         )
         let second = WorkspaceListResult(
-            workspaces: [workspace(id: "two"), workspace(id: "three"), workspace(id: "three")],
+            workspaces: [
+                workspace(id: "two", updatedAt: Date(timeIntervalSince1970: 2)),
+                workspace(id: "three", updatedAt: Date(timeIntervalSince1970: 1)),
+                workspace(id: "three", updatedAt: Date(timeIntervalSince1970: 1))
+            ],
             pagination: WorkspacePagination(page: 2, limit: 2, totalCount: 3, totalPages: 2)
         )
         let fetch = RecordingFetchWorkspacesUseCase(pages: [1: first, 2: second])
@@ -94,6 +106,27 @@ final class WorkspaceListPaginationTests: XCTestCase {
         XCTAssertEqual(viewModel.state.visibleWorkspaces.map(\.id), ["matching"])
     }
 
+    func testCreateKeepsAlphabeticalSortOrder() async {
+        let initial = WorkspaceListResult(
+            workspaces: [workspace(id: "bravo", name: "Bravo"), workspace(id: "charlie", name: "Charlie")],
+            pagination: nil
+        )
+        let fetch = RecordingFetchWorkspacesUseCase(pages: [1: initial], refreshPage: initial)
+        let viewModel = makeViewModel(
+            fetch: fetch,
+            create: ReturningCreateWorkspaceUseCase(workspace: workspace(id: "alpha", name: "Alpha"))
+        )
+
+        viewModel.send(.appeared)
+        await waitForTasks()
+        viewModel.send(.sortSelected(.alphabeticalAZ))
+        await waitForTasks()
+        viewModel.send(.create(name: "Alpha", objective: ""))
+        await waitForTasks()
+
+        XCTAssertEqual(viewModel.state.visibleWorkspaces.map(\.name), ["Alpha", "Bravo", "Charlie"])
+    }
+
     func testUpdateReplacesOnlyMatchingWorkspaceAndClosesSheet() async {
         let original = workspace(id: "one", name: "Original")
         let other = workspace(id: "two", name: "Other")
@@ -110,6 +143,25 @@ final class WorkspaceListPaginationTests: XCTestCase {
         XCTAssertEqual(viewModel.state.allWorkspaces.map(\.name), ["Updated", "Other"])
         XCTAssertNil(viewModel.state.presentedSheet)
         XCTAssertEqual(viewModel.state.toastMessage, .success(String(localized: "Space updated")))
+    }
+
+    func testUpdateKeepsAlphabeticalSortOrderAfterNameChanges() async {
+        let original = workspace(id: "one", name: "Bravo")
+        let other = workspace(id: "two", name: "Charlie")
+        let updated = Workspace(id: "one", name: "Alpha", objective: "New objective", sourceCount: 3, noteCount: 2, updatedAt: .now)
+        let initial = WorkspaceListResult(workspaces: [original, other], pagination: nil)
+        let fetch = RecordingFetchWorkspacesUseCase(pages: [1: initial], refreshPage: initial)
+        let viewModel = makeViewModel(fetch: fetch, update: ReturningUpdateWorkspaceUseCase(workspace: updated))
+
+        viewModel.send(.appeared)
+        await waitForTasks()
+        viewModel.send(.sortSelected(.alphabeticalAZ))
+        await waitForTasks()
+        viewModel.send(.editTapped(original))
+        viewModel.send(.update(id: original.id, name: "Alpha", objective: "New objective"))
+        await waitForTasks()
+
+        XCTAssertEqual(viewModel.state.visibleWorkspaces.map(\.name), ["Alpha", "Charlie"])
     }
 
     func testUpdateFailurePreservesEditSheetAndDraftMutationState() async {
@@ -161,8 +213,8 @@ final class WorkspaceListPaginationTests: XCTestCase {
     }
 
     func testDelayedListResponseDoesNotOverwriteEditedWorkspaceAfterMutation() async {
-        let original = workspace(id: "one", name: "Original")
-        let other = workspace(id: "two", name: "Other")
+        let original = workspace(id: "one", name: "Original", updatedAt: Date(timeIntervalSince1970: 2))
+        let other = workspace(id: "two", name: "Other", updatedAt: Date(timeIntervalSince1970: 1))
         let preEditPage = WorkspaceListResult(
             workspaces: [original, other],
             pagination: WorkspacePagination(page: 1, limit: 10, totalCount: 2, totalPages: 1)
@@ -203,8 +255,70 @@ final class WorkspaceListPaginationTests: XCTestCase {
         XCTAssertNil(viewModel.state.pagination)
     }
 
-    private func workspace(id: String, name: String? = nil) -> Workspace {
-        Workspace(id: id, name: name ?? id, objective: "", sourceCount: 0, noteCount: 0, updatedAt: .now)
+    func testSelectingSortCancelsPendingSearchDebounce() async {
+        let result = WorkspaceListResult(
+            workspaces: [workspace(id: "one")],
+            pagination: nil
+        )
+        let fetch = RecordingFetchWorkspacesUseCase(results: [result])
+        let viewModel = makeViewModel(fetch: fetch)
+
+        viewModel.send(.appeared)
+        await waitForTasks()
+        viewModel.send(.searchQueryChanged("research"))
+        viewModel.send(.sortSelected(.alphabeticalAZ))
+        try? await Task.sleep(nanoseconds: 350_000_000)
+        await waitForTasks()
+
+        XCTAssertEqual(fetch.requests.count, 2)
+        XCTAssertEqual(fetch.requests.last?.sort, .alphabeticalAZ)
+        XCTAssertEqual(fetch.requests.last?.search, "research")
+    }
+
+    func testSelectingSortReloadsFromPageOneAndPreservesSortForPagination() async {
+        let first = WorkspaceListResult(
+            workspaces: [workspace(id: "one")],
+            pagination: WorkspacePagination(page: 1, limit: 1, totalCount: 2, totalPages: 2)
+        )
+        let second = WorkspaceListResult(
+            workspaces: [workspace(id: "two")],
+            pagination: WorkspacePagination(page: 2, limit: 1, totalCount: 2, totalPages: 2)
+        )
+        let fetch = RecordingFetchWorkspacesUseCase(pages: [1: first, 2: second])
+        let viewModel = makeViewModel(fetch: fetch)
+
+        viewModel.send(.appeared)
+        await waitForTasks()
+        viewModel.send(.sortSelected(.alphabeticalAZ))
+        await waitForTasks()
+
+        XCTAssertEqual(viewModel.state.sortOption, .alphabeticalAZ)
+        XCTAssertEqual(fetch.requests.map(\.sort), [.recentlyUpdated, .alphabeticalAZ])
+        XCTAssertEqual(fetch.requests.map(\.page), [nil, nil])
+
+        viewModel.send(.loadMore)
+        await waitForTasks()
+
+        XCTAssertEqual(fetch.requests.last?.sort, .alphabeticalAZ)
+        XCTAssertEqual(fetch.requests.last?.page, 2)
+    }
+
+    func testSearchPreservesSelectedSort() async {
+        let fetch = RecordingFetchWorkspacesUseCase(results: [WorkspaceListResult(workspaces: [workspace(id: "one")], pagination: nil)])
+        let viewModel = makeViewModel(fetch: fetch)
+
+        viewModel.send(.sortSelected(.recentlyCreated))
+        await waitForTasks()
+        viewModel.send(.searchQueryChanged("research"))
+        try? await Task.sleep(nanoseconds: 350_000_000)
+        await waitForTasks()
+
+        XCTAssertEqual(fetch.requests.last?.sort, .recentlyCreated)
+        XCTAssertEqual(fetch.requests.last?.search, "research")
+    }
+
+    private func workspace(id: String, name: String? = nil, updatedAt: Date = Date(timeIntervalSince1970: 0)) -> Workspace {
+        Workspace(id: id, name: name ?? id, objective: "", sourceCount: 0, noteCount: 0, updatedAt: updatedAt)
     }
 
     private func waitForTasks() async {
@@ -216,6 +330,8 @@ final class WorkspaceListPaginationTests: XCTestCase {
 @MainActor
 private final class RecordingFetchWorkspacesUseCase: FetchWorkspacesUseCaseProtocol {
     struct Request {
+        let sort: WorkspaceSortOption?
+        let search: String?
         let page: Int?
         let limit: Int?
     }
@@ -234,7 +350,7 @@ private final class RecordingFetchWorkspacesUseCase: FetchWorkspacesUseCaseProto
     }
 
     func execute(query: WorkspaceListQuery) async throws -> WorkspaceListResult {
-        requests.append(Request(page: query.page, limit: query.limit))
+        requests.append(Request(sort: query.sort, search: query.search, page: query.page, limit: query.limit))
         if requests.count > pages.count, let refreshPage {
             return refreshPage
         }
