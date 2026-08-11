@@ -49,7 +49,7 @@ enum SourceType: String, Equatable, Sendable {
     case manual = "Manual"
 }
 
-enum SourceSortOption: String, CaseIterable, Equatable, Hashable, Sendable, SortOption {
+enum SourceSortOption: String, CaseIterable, Equatable, Hashable, Sendable, SortOptionProtocol {
     case recentlyAdded = "recently-added"
     case recentlyUpdated = "recently-updated"
     case alphabeticalAZ = "alphabetical-az"

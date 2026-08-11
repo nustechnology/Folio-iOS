@@ -1,0 +1,184 @@
+@testable import Folio
+import XCTest
+
+@MainActor
+final class NoteListViewModelPaginationTests: XCTestCase {
+    func testLoadMoreMergesNextPage() async {
+        let viewModel = NoteListViewModel(
+            spaceId: "space-1",
+            fetchNotesUseCase: PaginatedFixtureNotesUseCase(),
+            fetchNoteUseCase: UnusedFixtureNoteUseCase(),
+            updateNoteUseCase: UnusedFixtureUpdateUseCase(),
+            deleteNoteUseCase: UnusedFixtureDeleteUseCase()
+        )
+
+        viewModel.handle(.onAppear)
+        await Task.yield()
+        await Task.yield()
+
+        XCTAssertEqual(viewModel.state.notes.map(\.id), ["p1"])
+        XCTAssertEqual(viewModel.state.pagination?.page, 1)
+        XCTAssertEqual(viewModel.state.pagination?.totalPages, 2)
+
+        viewModel.handle(.loadMore)
+        await Task.yield()
+        await Task.yield()
+
+        XCTAssertEqual(viewModel.state.notes.map(\.id), ["p1", "p2"])
+        XCTAssertEqual(viewModel.state.pagination?.page, 2)
+        XCTAssertNil(viewModel.state.paginationErrorMessage)
+    }
+
+    func testLoadMoreFailureSetsPaginationError() async {
+        let viewModel = NoteListViewModel(
+            spaceId: "space-1",
+            fetchNotesUseCase: FailingLoadMoreFixtureNotesUseCase(),
+            fetchNoteUseCase: UnusedFixtureNoteUseCase(),
+            updateNoteUseCase: UnusedFixtureUpdateUseCase(),
+            deleteNoteUseCase: UnusedFixtureDeleteUseCase()
+        )
+
+        viewModel.handle(.onAppear)
+        await Task.yield()
+        await Task.yield()
+
+        XCTAssertEqual(viewModel.state.notes.map(\.id), ["p1"])
+
+        viewModel.handle(.loadMore)
+        await Task.yield()
+        await Task.yield()
+
+        XCTAssertNotNil(viewModel.state.paginationErrorMessage)
+        XCTAssertEqual(viewModel.state.notes.map(\.id), ["p1"])
+        XCTAssertFalse(viewModel.state.isLoadingNextPage)
+    }
+
+    func testSuccessfulRefreshClearsPreviousPaginationError() async {
+        let viewModel = NoteListViewModel(
+            spaceId: "space-1",
+            fetchNotesUseCase: FailingLoadMoreFixtureNotesUseCase(),
+            fetchNoteUseCase: UnusedFixtureNoteUseCase(),
+            updateNoteUseCase: UnusedFixtureUpdateUseCase(),
+            deleteNoteUseCase: UnusedFixtureDeleteUseCase()
+        )
+
+        viewModel.handle(.onAppear)
+        await Task.yield()
+        await Task.yield()
+        viewModel.handle(.loadMore)
+        await Task.yield()
+        await Task.yield()
+
+        XCTAssertNotNil(viewModel.state.paginationErrorMessage)
+
+        viewModel.handle(.refresh)
+        await Task.yield()
+        await Task.yield()
+
+        XCTAssertNil(viewModel.state.paginationErrorMessage)
+        XCTAssertEqual(viewModel.state.notes.map(\.id), ["p1"])
+    }
+
+    func testCancellationErrorDuringRefreshDoesNotSetErrorMessage() async {
+        let viewModel = NoteListViewModel(
+            spaceId: "space-1",
+            fetchNotesUseCase: ThrowingNotesUseCase(error: CancellationError()),
+            fetchNoteUseCase: UnusedFixtureNoteUseCase(),
+            updateNoteUseCase: UnusedFixtureUpdateUseCase(),
+            deleteNoteUseCase: UnusedFixtureDeleteUseCase()
+        )
+
+        viewModel.handle(.refresh)
+        await Task.yield()
+        await Task.yield()
+
+        XCTAssertNil(viewModel.state.errorMessage)
+        XCTAssertFalse(viewModel.state.isLoading)
+    }
+
+    func testURLErrorCancelledDuringRefreshDoesNotSetErrorMessage() async {
+        let viewModel = NoteListViewModel(
+            spaceId: "space-1",
+            fetchNotesUseCase: ThrowingNotesUseCase(error: URLError(.cancelled)),
+            fetchNoteUseCase: UnusedFixtureNoteUseCase(),
+            updateNoteUseCase: UnusedFixtureUpdateUseCase(),
+            deleteNoteUseCase: UnusedFixtureDeleteUseCase()
+        )
+
+        viewModel.handle(.refresh)
+        await Task.yield()
+        await Task.yield()
+
+        XCTAssertNil(viewModel.state.errorMessage)
+        XCTAssertFalse(viewModel.state.isLoading)
+    }
+
+    func testNonCancellationErrorDuringRefreshSetsErrorMessage() async {
+        let viewModel = NoteListViewModel(
+            spaceId: "space-1",
+            fetchNotesUseCase: ThrowingNotesUseCase(error: NetworkError.httpError(statusCode: 500)),
+            fetchNoteUseCase: UnusedFixtureNoteUseCase(),
+            updateNoteUseCase: UnusedFixtureUpdateUseCase(),
+            deleteNoteUseCase: UnusedFixtureDeleteUseCase()
+        )
+
+        viewModel.handle(.refresh)
+        await Task.yield()
+        await Task.yield()
+
+        XCTAssertNotNil(viewModel.state.errorMessage)
+        XCTAssertFalse(viewModel.state.isLoading)
+    }
+}
+
+private struct PaginatedFixtureNotesUseCase: FetchNotesUseCaseProtocol {
+    func execute(query: NoteListQuery) async throws -> NoteListResult {
+        if query.page == nil {
+            return NoteListResult(
+                notes: [
+                    note(id: "p1", title: "Page 1", updatedAt: Date())
+                ],
+                pagination: NotePagination(page: 1, limit: 10, totalCount: 2, totalPages: 2)
+            )
+        }
+        return NoteListResult(
+            notes: [
+                note(id: "p2", title: "Page 2", updatedAt: Date(timeIntervalSince1970: 0))
+            ],
+            pagination: NotePagination(page: 2, limit: 10, totalCount: 2, totalPages: 2)
+        )
+    }
+
+    private func note(id: String, title: String, updatedAt: Date = Date()) -> NoteSummary {
+        NoteSummary(
+            id: id, researchSpaceId: "space-1", title: title,
+            originType: .userCreated, contentPreview: "",
+            createdAt: .now, updatedAt: updatedAt, citationCount: nil
+        )
+    }
+}
+
+private struct FailingLoadMoreFixtureNotesUseCase: FetchNotesUseCaseProtocol {
+    func execute(query: NoteListQuery) async throws -> NoteListResult {
+        if query.page == nil {
+            return NoteListResult(
+                notes: [
+                    NoteSummary(
+                        id: "p1", researchSpaceId: "space-1", title: "Page 1",
+                        originType: .userCreated, contentPreview: "",
+                        createdAt: .now, updatedAt: .now, citationCount: nil
+                    )
+                ],
+                pagination: NotePagination(page: 1, limit: 10, totalCount: 2, totalPages: 2)
+            )
+        }
+        throw NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: "Network error"])
+    }
+}
+
+private struct ThrowingNotesUseCase: FetchNotesUseCaseProtocol {
+    let error: Error
+    func execute(query: NoteListQuery) async throws -> NoteListResult {
+        throw error
+    }
+}

@@ -53,19 +53,18 @@ struct WorkspaceListView: View {
         )) { sheet in
             sheetContent(sheet)
         }
-        .alert(
-            String(localized: "Delete space?"),
-            isPresented: Binding(
-                get: { viewModel.state.confirmationWorkspace != nil },
-                set: { if !$0 { viewModel.send(.dismissConfirmation) } }
+        .deleteConfirmationOverlay(
+            isPresented: viewModel.state.confirmationWorkspace != nil,
+            title: String(localized: "Delete space?"),
+            message: String(
+                localized: "This action cannot be undone. All sources, notes, and conversations inside this space will be permanently removed."
             ),
-            presenting: viewModel.state.confirmationWorkspace
-        ) { workspace in
-            Button(String(localized: "Cancel"), role: .cancel) { viewModel.send(.dismissConfirmation) }
-            Button(String(localized: "Delete"), role: .destructive) { viewModel.send(.deleteConfirmed(workspace)) }
-        } message: { _ in
-            Text(String(localized: "This action cannot be undone. All sources, notes, and conversations inside this space will be permanently removed."))
-        }
+            onCancel: { viewModel.send(.dismissConfirmation) },
+            onDelete: {
+                guard let workspace = viewModel.state.confirmationWorkspace else { return }
+                viewModel.send(.deleteConfirmed(workspace))
+            }
+        )
         .folioToast(message: Binding(
             get: { viewModel.state.toastMessage },
             set: { _ in viewModel.send(.dismissToast) }
@@ -113,7 +112,7 @@ struct WorkspaceListView: View {
                 }
             )
         case .sortOptions:
-            SortOptionsSheet(
+            SortOptionsSheet<WorkspaceSortOption>(
                 title: String(localized: "Sort spaces"),
                 options: WorkspaceSortOption.allCases,
                 selectedValue: viewModel.state.sortOption,

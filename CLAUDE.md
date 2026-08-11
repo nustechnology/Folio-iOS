@@ -4,6 +4,20 @@ Native iOS client for Folio — private research, grounded answers. Sources, not
 
 **Bundle ID:** `com.nustechnology.Folio`
 
+## Mandatory AI Development Workflow
+
+Before implementing, modifying, or updating any code, every AI coding agent must:
+
+1. Read this `CLAUDE.md` file completely.
+2. Read [`Docs/ai/README.md`](Docs/ai/README.md) and the relevant guides under `Docs/ai/`.
+3. Inspect the existing source, related feature implementations, shared components, design tokens, services, helpers, localization entries, and tests before creating or changing anything.
+4. Treat the existing codebase and tests as the source of truth. Follow the documented architecture, conventions, and constraints; do not invent competing patterns.
+5. Search before creating, reuse before duplicating, and keep the change limited to the requested scope.
+
+The applicable `Docs/ai/` guidance must be followed during implementation, not merely consulted afterward. If a guide and the implementation appear to disagree, pause and verify the current source/tests; preserve existing behavior unless the requested change explicitly requires otherwise.
+
+After implementation, the agent must format changed code, run relevant linting/static analysis, run focused tests and the complete relevant build/test checks when available, review localization and architecture boundaries, and inspect the final diff. Report unavailable or failing checks explicitly. Do not claim completion without verification evidence.
+
 ## Tech Stack
 
 - **Language:** Swift 5.0
@@ -167,7 +181,7 @@ Config files in `Configuration/`:
 # Build
 xcodebuild -project Folio.xcodeproj -scheme Folio -configuration Debug build
 
-# Unit tests (none configured yet — use XCTest)
+# Unit tests
 xcodebuild -project Folio.xcodeproj -scheme Folio -configuration Debug test
 
 # Or: open Folio.xcodeproj → ⌘R to run, ⌘U to test
@@ -194,7 +208,13 @@ xcodebuild -project Folio.xcodeproj -scheme Folio -configuration Debug test
 - Keep reusable components generic enough for their known use cases, but do not add speculative configuration or abstractions.
 - Prefer composition of small views over deeply nested, duplicated SwiftUI markup.
 - Put feature-specific UI in the feature scene. Promote it to `Presentation/Common` only when it is genuinely shared by multiple features.
-- Use `FolioTheme` and existing design-system values instead of introducing duplicate colors, fonts, spacing, corner radii, or control styles.
+- Always use `FolioTheme` and `FolioDuration` for colors and animation timings — never introduce raw hex colors or hardcoded durations.
+
+### ViewModel Protocol Conformance
+
+- Every ViewModel must conform to `ViewModelProtocol`.
+- ViewModelProtocol defines `State`, `Action`, and `handle(_:)` — every ViewModel implements these.
+- Do not create a ViewModel that does not conform to ViewModelProtocol.
 
 ### Naming, Constants, and Readability
 
@@ -210,9 +230,8 @@ xcodebuild -project Folio.xcodeproj -scheme Folio -configuration Debug test
 
 ### Localization and Design System
 
-- Every user-facing string, including validation and error text, belongs in Folio/Resources/Localizable.xcstrings. Always append new localization entries to the end of the file. Do not insert, reorder, or modify existing entries unless explicitly required
+- Every user-facing string, including validation and error text, belongs in Folio/Resources/Localizable.xcstrings
 - Reuse `FolioTheme` and shared components before adding feature-specific colors, typography, spacing, or controls.
-- Do not use debug text, placeholder copy, or `print` statements as production UI behavior.
 
 ## Adding a New Feature
 

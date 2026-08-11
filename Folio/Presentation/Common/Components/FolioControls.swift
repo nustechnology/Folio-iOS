@@ -2,17 +2,34 @@ import SwiftUI
 
 struct FolioCard<Content: View>: View {
     let content: Content
+    var height: CGFloat? = nil
 
     var body: some View {
-        content
-            .padding(16)
+        if let height {
+            ScrollView {
+                content
+                    .padding(FolioSpacing.xl)
+            }
+            .frame(height: height)
+            .scrollBounceBehavior(.basedOnSize)
             .background(Color.folioSurfaceStrong)
             .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: FolioRadius.md, style: .continuous)
                     .stroke(Color.folioLine.opacity(0.75), lineWidth: 1)
             )
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .shadow(color: Color.black.opacity(0.03), radius: 10, y: 2)
+            .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md, style: .continuous))
+            .shadow(color: Color.black.opacity(0.03), radius: FolioRadius.md, y: 2)
+        } else {
+            content
+                .padding(FolioSpacing.xl)
+                .background(Color.folioSurfaceStrong)
+                .overlay(
+                    RoundedRectangle(cornerRadius: FolioRadius.md, style: .continuous)
+                        .stroke(Color.folioLine.opacity(0.75), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md, style: .continuous))
+                .shadow(color: Color.black.opacity(0.03), radius: FolioRadius.md, y: 2)
+        }
     }
 }
 
@@ -20,14 +37,20 @@ struct FolioPill: View {
     let title: String
     var isSelected: Bool = false
     var tint: Color = .folioGold
+    var fontSize: CGFloat = FolioFontSize.small
+    var backgroundColor: Color? = nil
+
+    var selectedBackground: Color {
+        backgroundColor ?? tint.opacity(0.18)
+    }
 
     var body: some View {
         Text(title)
-            .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(isSelected ? Color.folioOliveDark : Color.folioInkSoft)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(isSelected ? tint.opacity(0.18) : Color.folioSurface)
+            .font(.system(size: fontSize, weight: .medium))
+            .foregroundStyle(isSelected ? tint : Color.folioInkSoft)
+            .padding(.horizontal, FolioSpacing.lg2)
+            .padding(.vertical, FolioSpacing.md)
+            .background(isSelected ? selectedBackground : Color.folioSurface)
             .overlay(
                 Capsule(style: .continuous)
                     .stroke(isSelected ? tint.opacity(0.55) : Color.folioLine.opacity(0.7), lineWidth: 1)
@@ -39,6 +62,7 @@ struct FolioPill: View {
 struct FolioPrimaryButton: View {
     let title: String
     var isLoading: Bool = false
+    var isDisabled: Bool = false
     let action: () -> Void
 
     var body: some View {
@@ -65,20 +89,23 @@ struct FolioPrimaryButton: View {
             .shadow(color: Color.black.opacity(0.08), radius: 12, y: 4)
         }
         .buttonStyle(.plain)
-        .disabled(isLoading)
+        .disabled(isDisabled || isLoading)
+        .opacity(isDisabled ? 0.55 : 1)
     }
 }
 
 struct FolioSecondaryButton: View {
     let title: String
-    let iconName: String
+    var iconName: String? = nil
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                Image(systemName: iconName)
-                    .font(.system(size: 15, weight: .semibold))
+                if let iconName {
+                    Image(systemName: iconName)
+                        .font(.system(size: 15, weight: .semibold))
+                }
                 Text(title)
                     .font(.system(size: 15, weight: .semibold))
             }
@@ -93,6 +120,35 @@ struct FolioSecondaryButton: View {
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
         .buttonStyle(.plain)
+    }
+}
+
+struct FolioDangerButton: View {
+    let title: String
+    var isLoading: Bool = false
+    var isDisabled: Bool = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Group {
+                if isLoading {
+                    ProgressView()
+                        .tint(Color.folioDanger)
+                } else {
+                    Text(title)
+                }
+            }
+            .font(.system(size: 15, weight: .semibold))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .foregroundStyle(Color.folioDanger)
+            .background(Color.folioDanger.opacity(0.16))
+            .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled || isLoading)
+        .opacity(isDisabled ? 0.55 : 1)
     }
 }
 
@@ -292,14 +348,22 @@ struct FolioStatusBadge: View {
 
 struct FolioKindBadge: View {
     let title: String
+    let backgroundColor: Color
+    let textColor: Color
+
+    init(title: String, backgroundColor: Color = .folioSurface, textColor: Color = .folioInkSoft) {
+        self.title = title
+        self.backgroundColor = backgroundColor
+        self.textColor = textColor
+    }
 
     var body: some View {
         Text(title)
             .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(Color.folioInkSoft)
+            .foregroundStyle(textColor)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(Color.folioSurface)
+            .background(backgroundColor)
             .overlay(
                 Capsule(style: .continuous)
                     .stroke(Color.folioLine.opacity(0.7), lineWidth: 1)

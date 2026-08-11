@@ -1,0 +1,58 @@
+import Foundation
+
+fileprivate func noteDetailPath(spaceId: String, noteId: String) -> String {
+  "/api/v1/spaces/\(spaceId)/notes/\(noteId)"
+}
+
+struct NoteListEndpoint: APIEndpoint {
+  let query: NoteListQuery
+  var path: String { "/api/v1/spaces/\(query.spaceId)/notes" }
+  var method: HTTPMethod { .get }
+  var requiresAuthentication: Bool { true }
+  var body: Data? { nil }
+  var queryItems: [URLQueryItem]? {
+    var items: [URLQueryItem] = []
+    if let search = query.search, !search.isEmpty {
+      items.append(URLQueryItem(name: "search", value: search))
+    }
+    items.append(URLQueryItem(name: "sort", value: query.sort))
+    items.append(URLQueryItem(name: "origin", value: query.origin))
+    if let page = query.page { items.append(URLQueryItem(name: "page", value: String(page))) }
+    if let limit = query.limit { items.append(URLQueryItem(name: "limit", value: String(limit))) }
+    return items
+  }
+}
+
+struct NoteDetailEndpoint: APIEndpoint {
+  let spaceId: String
+  let noteId: String
+  var path: String { noteDetailPath(spaceId: spaceId, noteId: noteId) }
+  var method: HTTPMethod { .get }
+  var queryItems: [URLQueryItem]? { nil }
+  var body: Data? { nil }
+  var requiresAuthentication: Bool { true }
+}
+
+struct UpdateNoteEndpoint: APIEndpoint {
+  let spaceId: String
+  let noteId: String
+  let title: String
+  let content: String
+  var path: String { noteDetailPath(spaceId: spaceId, noteId: noteId) }
+  var method: HTTPMethod { .patch }
+  var queryItems: [URLQueryItem]? { nil }
+  var requiresAuthentication: Bool { true }
+  var body: Data? {
+    try? JSONEncoder().encode(UpdateNoteRequestDTO(title: title, content: content))
+  }
+}
+
+struct DeleteNoteEndpoint: APIEndpoint {
+  let spaceId: String
+  let noteId: String
+  var path: String { noteDetailPath(spaceId: spaceId, noteId: noteId) }
+  var method: HTTPMethod { .delete }
+  var queryItems: [URLQueryItem]? { nil }
+  var body: Data? { nil }
+  var requiresAuthentication: Bool { true }
+}

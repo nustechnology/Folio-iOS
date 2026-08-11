@@ -3535,6 +3535,286 @@
           }
         }
       }
+    },
+    "%lld Citations" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Citations"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld trích dẫn"
+          }
+        }
+      }
+    },
+    "1 Citation" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Citation"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 trích dẫn"
+          }
+        }
+      }
+    },
+    "A fixed snapshot will be created. Later note edits will not change the source." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A fixed snapshot will be created. Later note edits will not change the source."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Một bản chụp cố định sẽ được tạo. Các chỉnh sửa ghi chú sau này sẽ không thay đổi nguồn."
+          }
+        }
+      }
+    },
+    "Add note" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Add note" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thêm ghi chú" } }
+      }
+    },
+    "Are you sure you want to delete this note?" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Are you sure you want to delete this note?" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Bạn có chắc chắn muốn xóa ghi chú này không?" } }
+      }
+    },
+    "Convert to source" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Convert to source" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chuyển thành nguồn" } }
+      }
+    },
+    "Convert to Source" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Convert to Source" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chuyển thành nguồn" } }
+      }
+    },
+    "Create a note or save an answer from the chat." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Create a note or save an answer from the chat." } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tạo ghi chú hoặc lưu câu trả lời từ cuộc trò chuyện." } }
+      }
+    },
+    "Create source" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Create source" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tạo nguồn" } }
+      }
+    },
+    "Edit note" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Edit note" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chỉnh sửa ghi chú" } }
+      }
+    },
+    "No notes found" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No notes found" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không tìm thấy ghi chú" } }
+      }
+    },
+    "No notes found matching \"%@\"" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No notes found matching \"%@\"" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không tìm thấy ghi chú khớp với \"%@\"" } }
+      }
+    },
+    "No notes yet" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No notes yet" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa có ghi chú" } }
+      }
+    },
+    "None" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "None"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không có"
+          }
+        }
+      }
+    },
+    "Note creation is unavailable" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Note creation is unavailable" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa thể tạo ghi chú" } }
+      }
+    },
+    "Note deleted" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Note deleted" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã xóa ghi chú" } }
+      }
+    },
+    "Note updated successfully" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Note updated successfully" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Đã cập nhật ghi chú" } }
+      }
+    },
+    "Saved answer" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved answer"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Câu trả lời đã lưu"
+          }
+        }
+      }
+    },
+    "Saved answers" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Saved answers" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Câu trả lời đã lưu" } }
+      }
+    },
+    "Search notes" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Search notes" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tìm kiếm ghi chú" } }
+      }
+    },
+    "Select a Research Space from Sources to view its notes." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select a Research Space from Sources to view its notes."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn Không gian Nghiên cứu từ Nguồn để xem ghi chú."
+          }
+        }
+      }
+    },
+    "Snapshot" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Snapshot" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Bản chụp" } }
+      }
+    },
+    "Sort notes" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sort notes" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Sắp xếp ghi chú" } }
+      }
+    },
+    "Source conversion is unavailable" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Source conversion is unavailable" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Chưa thể chuyển thành nguồn" } }
+      }
+    },
+    "Source title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Source title" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Tiêu đề nguồn" } }
+      }
+    },
+    "This does not change the notebook or an existing source snapshot." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This does not change the notebook or an existing source snapshot." } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Thao tác này không thay đổi sổ tay hoặc bản chụp nguồn hiện có." } }
+      }
+    },
+    "Update the title and content for this note." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Update the title and content for this note." } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Cập nhật tiêu đề và nội dung ghi chú này." } }
+      }
+    },
+    "User created" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "User created" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Do người dùng tạo" } }
+      }
+    },
+    "User-created" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "User-created"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Do người dùng tạo"
+          }
+        }
+      }
+    },
+    "View" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "View" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Xem" } }
+      }
+    },
+    "Write your note" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Write your note" } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Viết ghi chú của bạn" } }
+      }
+    },
+    "Failed to delete note. Please try again." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to delete note. Please try again." } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không thể xóa ghi chú. Vui lòng thử lại." } }
+      }
+    },
+    "Failed to fetch note. Please try again." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to fetch note. Please try again." } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không thể tải ghi chú. Vui lòng thử lại." } }
+      }
+    },
+    "Failed to load notes. Please try again." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to load notes. Please try again." } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không thể tải danh sách ghi chú. Vui lòng thử lại." } }
+      }
+    },
+    "Failed to update note. Please try again." : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to update note. Please try again." } },
+        "vi" : { "stringUnit" : { "state" : "translated", "value" : "Không thể cập nhật ghi chú. Vui lòng thử lại." } }
+      }
     }
   },
   "version" : "1.1"
