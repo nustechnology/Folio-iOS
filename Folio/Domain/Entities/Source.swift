@@ -13,10 +13,34 @@ struct Source: Identifiable, Equatable, Sendable {
     let pageCount: Int
     let characterCount: Int
     let content: String
+    let structuredContent: SourceStructuredContent?
     let processingState: SourceProcessingState
     let processingError: String
     let createdAt: Date
     let updatedAt: Date
+}
+
+struct SourceStructuredContent: Equatable, Sendable {
+    let html: String
+    let type: String
+
+    enum Kind: String {
+        case document
+        case slides
+        case sheet
+        case web
+        case text
+
+        init(_ raw: String?) {
+            if let raw, let kind = Kind(rawValue: raw) {
+                self = kind
+            } else {
+                self = .document
+            }
+        }
+    }
+
+    var kind: Kind { Kind(type) }
 }
 
 enum SourceType: String, Equatable, Sendable {
@@ -80,7 +104,30 @@ extension Source {
             pageCount: pageCount,
             characterCount: characterCount,
             content: content,
+            structuredContent: structuredContent,
             processingState: newState,
+            processingError: processingError,
+            createdAt: createdAt,
+            updatedAt: updatedAt
+        )
+    }
+
+    func withStructuredContent(_ newContent: SourceStructuredContent?) -> Source {
+        Source(
+            id: id,
+            researchSpaceId: researchSpaceId,
+            sourceType: sourceType,
+            title: title,
+            author: author,
+            sourceUrl: sourceUrl,
+            fileName: fileName,
+            fileSize: fileSize,
+            fileType: fileType,
+            pageCount: pageCount,
+            characterCount: characterCount,
+            content: content,
+            structuredContent: newContent,
+            processingState: processingState,
             processingError: processingError,
             createdAt: createdAt,
             updatedAt: updatedAt
@@ -97,4 +144,10 @@ extension Source {
             return fileType.uppercased()
         }
     }
+}
+
+struct SourcePreview: Equatable, Sendable {
+    let url: String
+
+    var urlValue: URL? { URL(string: url) }
 }

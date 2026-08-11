@@ -49,6 +49,24 @@ struct UpdateSourceRequestDTO: Encodable {
     let author: String
 }
 
+struct StructuredContentDTO: Decodable {
+    let html: String
+    let type: String?
+}
+
+struct SourcePreviewResponseDTO: Decodable {
+    let status: String
+    let data: SourcePreviewDataDTO
+
+    func toDomain() -> SourcePreview {
+        SourcePreview(url: data.previewUrl)
+    }
+}
+
+struct SourcePreviewDataDTO: Decodable {
+    let previewUrl: String
+}
+
 struct SourceDTO: Decodable {
     let id: String
     let researchSpaceId: String
@@ -62,6 +80,7 @@ struct SourceDTO: Decodable {
     let pageCount: Int?
     let characterCount: Int?
     let content: String?
+    let structuredContent: StructuredContentDTO?
     let processingState: String
     let processingError: String? // nil when success
     let createdAt: Date
@@ -81,6 +100,9 @@ struct SourceDTO: Decodable {
             pageCount: pageCount ?? 0,
             characterCount: characterCount ?? 0,
             content: content ?? "",
+            structuredContent: structuredContent.map {
+                SourceStructuredContent(html: $0.html, type: $0.type ?? "")
+            },
             processingState: SourceProcessingState(rawValue: processingState) ?? .added,
             processingError: processingError ?? "",
             createdAt: createdAt,

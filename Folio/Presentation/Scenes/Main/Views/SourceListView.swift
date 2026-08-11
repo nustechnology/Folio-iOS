@@ -76,139 +76,36 @@ struct SourceListView: View {
         case .editSource:
             EditSourceSheet(viewModel: viewModel)
         case .processing(let source):
-            processingSheet(source)
+            SourceProcessingSheet(
+                source: source,
+                uploadSourceUseCase: viewModel.uploadSourceUseCase,
+                onDismiss: {
+                    viewModel.send(.dismissSheet)
+                },
+                onDeleted: { deletedSource in
+                    viewModel.send(.sourceDeletedFromProcessing(deletedSource))
+                },
+                onStatusChanged: { updatedSource in
+                    viewModel.send(.sourceStatusChanged(updatedSource))
+                },
+                onSourceOpened: onSourceOpened
+            )
         case .failure(let source):
-            failureSheet(source)
+            SourceProcessingSheet(
+                source: source,
+                uploadSourceUseCase: viewModel.uploadSourceUseCase,
+                onDismiss: {
+                    viewModel.send(.dismissSheet)
+                },
+                onDeleted: { deletedSource in
+                    viewModel.send(.sourceDeletedFromProcessing(deletedSource))
+                },
+                onStatusChanged: { updatedSource in
+                    viewModel.send(.sourceStatusChanged(updatedSource))
+                },
+                onSourceOpened: onSourceOpened
+            )
         }
-    }
-
-    private func processingSheet(_ source: Source) -> some View {
-        VStack(spacing: FolioSpacing.xl3) {
-            RoundedRectangle(cornerRadius: FolioRadius.handle)
-                .fill(Color.folioHandle)
-                .frame(width: FolioSize.dragHandleW, height: FolioSize.dragHandleH)
-                .padding(.top, FolioSpacing.lg)
-
-            Image(systemName: "gearshape.arrow.triangle.2.circlepath")
-                .font(.system(size: FolioFontSize.display, weight: .regular))
-                .foregroundStyle(Color.folioAccent)
-                .frame(width: FolioSize.cardIcon, height: FolioSize.cardIcon)
-                .background(Color.folioAccentLight)
-                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.xl2))
-                .overlay(
-                    RoundedRectangle(cornerRadius: FolioRadius.xl2)
-                        .stroke(Color.folioBorder, lineWidth: 1)
-                )
-
-            VStack(spacing: FolioSpacing.sm) {
-                Text(String(localized: "Processing"))
-                    .font(.system(size: FolioFontSize.title2, weight: .semibold))
-                    .foregroundStyle(Color.folioTextPrimary)
-                Text(source.title)
-                    .font(.system(size: FolioFontSize.body))
-                    .foregroundStyle(Color.folioInkSoft)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, FolioSpacing.xl3)
-                Text(String(localized: "Your source is being processed. This may take a moment."))
-                    .font(.system(size: FolioFontSize.bodySmall))
-                    .foregroundStyle(Color.folioInkSoft)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, FolioSpacing.xl3)
-            }
-
-            ProgressView()
-                .tint(Color.folioOlive)
-                .padding(.top, FolioSpacing.sm)
-
-            Button(String(localized: "Close")) { viewModel.send(.dismissSheet) }
-                .buttonStyle(.plain)
-                .font(.system(size: FolioFontSize.bodyLarge, weight: .medium))
-                .foregroundStyle(Color.folioTextSecondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 13)
-                .background(Color.folioCanvas)
-                .overlay(
-                    RoundedRectangle(cornerRadius: FolioRadius.md)
-                        .stroke(Color.folioBorder, lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                .padding(.horizontal, FolioSpacing.xl3)
-                .padding(.bottom, FolioSpacing.xl6)
-        }
-        .background(.white)
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.hidden)
-    }
-
-    private func failureSheet(_ source: Source) -> some View {
-        VStack(spacing: FolioSpacing.xl3) {
-            RoundedRectangle(cornerRadius: FolioRadius.handle)
-                .fill(Color.folioHandle)
-                .frame(width: FolioSize.dragHandleW, height: FolioSize.dragHandleH)
-                .padding(.top, FolioSpacing.lg)
-
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: FolioFontSize.display, weight: .regular))
-                .foregroundStyle(Color.folioDanger)
-                .frame(width: FolioSize.cardIcon, height: FolioSize.cardIcon)
-                .background(Color.folioDanger.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.xl2))
-                .overlay(
-                    RoundedRectangle(cornerRadius: FolioRadius.xl2)
-                        .stroke(Color.folioDanger.opacity(0.2), lineWidth: 1)
-                )
-
-            VStack(spacing: FolioSpacing.sm) {
-                Text(String(localized: "Processing Failed"))
-                    .font(.system(size: FolioFontSize.title2, weight: .semibold))
-                    .foregroundStyle(Color.folioTextPrimary)
-                Text(source.title)
-                    .font(.system(size: FolioFontSize.body))
-                    .foregroundStyle(Color.folioInkSoft)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, FolioSpacing.xl3)
-                if !source.processingError.isEmpty {
-                    Text(source.processingError)
-                        .font(.system(size: FolioFontSize.small))
-                        .foregroundStyle(Color.folioDanger)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, FolioSpacing.xl3)
-                }
-            }
-
-            HStack(spacing: FolioSpacing.lg) {
-                Button {
-                    viewModel.send(.deleteFailedSource(source))
-                } label: {
-                    Text(String(localized: "Delete"))
-                        .font(.system(size: FolioFontSize.bodyLarge, weight: .medium))
-                        .foregroundStyle(Color.folioDanger)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 13)
-                        .background(Color.folioDanger.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    viewModel.send(.retryProcessing(source))
-                } label: {
-                    Text(String(localized: "Retry"))
-                        .font(.system(size: FolioFontSize.bodyLarge, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 13)
-                        .background(Color.folioOlive)
-                        .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, FolioSpacing.xl3)
-            .padding(.bottom, FolioSpacing.xl6)
-        }
-        .background(.white)
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.hidden)
     }
 
     private var header: some View {
