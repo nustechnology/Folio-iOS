@@ -2,10 +2,15 @@ import SwiftUI
 
 struct MainView: View {
     @StateObject var viewModel: MainViewModel
+    let fetchNotesUseCase: any FetchNotesUseCaseProtocol
+    let fetchNoteUseCase: any FetchNoteUseCaseProtocol
+    let updateNoteUseCase: any UpdateNoteUseCaseProtocol
+    let deleteNoteUseCase: any DeleteNoteUseCaseProtocol
     @State private var showAccountSheet = false
     @State private var showAccountSettings = false
     @State private var selectedWorkspace: Workspace?
     @State private var sourceListViewModel: SourceListViewModel?
+    @State private var noteListViewModel: NoteListViewModel?
 
     var body: some View {
         ZStack {
@@ -66,7 +71,6 @@ struct MainView: View {
                     viewModel.handle(.selectTab(tab))
                 }
                 .padding(.horizontal, 20)
-                .padding(.bottom, 8)
             }
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
@@ -129,18 +133,26 @@ struct MainView: View {
                     scopedSource: viewModel.state.activeAskScope
                 )
             case .notes:
-                FolioPlaceholderView(
-                    title: "Notes",
-                    subtitle: "Capture claims, quotes, and follow-up ideas in one private space.",
-                    iconName: "note.text",
-                    onBackToSpaces: { showMySpaces() }
-                )
+                if let workspace = selectedWorkspace, let noteVM = noteListViewModel {
+                    NoteListView(viewModel: noteVM, workspaceTitle: workspace.name, onBackToSpaces: showMySpaces)
+                } else {
+                    FolioPlaceholderView(
+                        title: String(localized: "Notes"),
+                        subtitle: String(localized: "Select a Research Space from Sources to view its notes."),
+                        iconName: "note.text",
+                        onOpenAccountSettings: { showAccountSheet = true },
+                        onBackToSpaces: { showMySpaces() },
+                        userInitial: userInitial
+                    )
+                }
             case .notebook:
                 FolioPlaceholderView(
                     title: "Notebook",
                     subtitle: "Organize drafts, syntheses, and research threads here.",
                     iconName: "book",
-                    onBackToSpaces: { showMySpaces() }
+                    onOpenAccountSettings: { showAccountSheet = true },
+                    onBackToSpaces: { showMySpaces() },
+                    userInitial: userInitial
                 )
             }
         }
@@ -157,12 +169,20 @@ struct MainView: View {
             updateSourceUseCase: viewModel.updateSourceUseCase,
             uploadSourceUseCase: viewModel.uploadSourceUseCase,
         )
+        noteListViewModel = NoteListViewModel(
+            spaceId: workspace.id,
+            fetchNotesUseCase: fetchNotesUseCase,
+            fetchNoteUseCase: fetchNoteUseCase,
+            updateNoteUseCase: updateNoteUseCase,
+            deleteNoteUseCase: deleteNoteUseCase
+        )
         selectedWorkspace = workspace
     }
 
     private func showMySpaces() {
         selectedWorkspace = nil
         sourceListViewModel = nil
+        noteListViewModel = nil
         viewModel.handle(.showSpaces)
     }
 }
@@ -182,7 +202,7 @@ struct MainView: View {
         updateSourceUseCase: PreviewUpdateSourceUseCase(),
         fetchSourceDetailUseCase: PreviewFetchSourceDetailUseCase(),
         fetchSourcePreviewUseCase: PreviewFetchSourcePreviewUseCase()
-    ))
+    ), fetchNotesUseCase: PreviewFetchNotesUseCase(), fetchNoteUseCase: PreviewFetchNoteUseCase(), updateNoteUseCase: PreviewUpdateNoteUseCase(), deleteNoteUseCase: PreviewDeleteNoteUseCase())
 }
 
 final class PreviewWorkspaceRepository: WorkspaceRepositoryProtocol {
@@ -266,3 +286,8 @@ private struct PreviewFetchSourcePreviewUseCase: FetchSourcePreviewUseCaseProtoc
         SourcePreview(url: "https://example.com/preview.pdf")
     }
 }
+
+private struct PreviewFetchNotesUseCase: FetchNotesUseCaseProtocol { func execute(query: NoteListQuery) async throws -> NoteListResult { NoteListResult(notes: [], pagination: nil) } }
+private struct PreviewFetchNoteUseCase: FetchNoteUseCaseProtocol { func execute(spaceId: String, noteId: String) async throws -> Note { fatalError("Preview only") } }
+private struct PreviewUpdateNoteUseCase: UpdateNoteUseCaseProtocol { func execute(spaceId: String, noteId: String, title: String, content: String) async throws -> Note { fatalError("Preview only") } }
+private struct PreviewDeleteNoteUseCase: DeleteNoteUseCaseProtocol { func execute(spaceId: String, noteId: String) async throws {} }

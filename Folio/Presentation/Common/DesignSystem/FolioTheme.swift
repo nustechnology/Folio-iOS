@@ -119,6 +119,7 @@ enum FolioSpacing {
     static let sm: CGFloat = 8
     static let md: CGFloat = 10
     static let lg: CGFloat = 12
+    static let lg2: CGFloat = 14
     static let xl: CGFloat = 16
     static let xl2: CGFloat = 18
     static let xl3: CGFloat = 20
@@ -165,6 +166,19 @@ enum FolioSize {
     static let tabIndicatorH: CGFloat = 3
     static let dragHandleW: CGFloat = 36
     static let dragHandleH: CGFloat = 5
+    static let sheetDefaultMin: CGFloat = 300
+    static let sheetDefaultMax: CGFloat = 600
+    static let snapshotCardH: CGFloat = 150
+    static let conversionSheetMinH: CGFloat = 470
+    static let conversionSheetMaxH: CGFloat = 760
+    static let noteActionSheetMinH: CGFloat = 310
+    static let noteActionSheetMaxH: CGFloat = 520
+    static let workspaceActionSheetMinH: CGFloat = 194
+    static let workspaceActionSheetMaxH: CGFloat = 420
+    static let noteDetailSheetMinH: CGFloat = 330
+    static let noteDetailSheetMaxH: CGFloat = 600
+    static let noteEditSheetMinH: CGFloat = 460
+    static let noteEditSheetMaxH: CGFloat = 760
 }
 
 enum FolioFontSize {
@@ -264,6 +278,7 @@ extension Color {
     static let folioLoginPlaceholder = FolioTheme.loginPlaceholder
     static let folioLoginButtonGlow = FolioTheme.loginButtonGlow
 
+    static let folioPrimary = FolioTheme.homeHeader
     static let folioHomeHeader = FolioTheme.homeHeader
     static let folioHomeBackground = FolioTheme.homeBackground
     static let folioHomeSearchField = FolioTheme.homeSearchField

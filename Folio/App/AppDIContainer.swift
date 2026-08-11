@@ -56,6 +56,15 @@ final class AppDIContainer {
         SourceRepository(networkService: networkService, baseURL: AppConfiguration.apiBaseURL, accessTokenProvider: accessTokenProvider)
     }()
 
+    lazy var noteRepository: NoteRepositoryProtocol = {
+        NoteRepository(networkService: networkService)
+    }()
+
+    lazy var fetchNotesUseCase: any FetchNotesUseCaseProtocol = { FetchNotesUseCase(repository: noteRepository) }()
+    lazy var fetchNoteUseCase: any FetchNoteUseCaseProtocol = { FetchNoteUseCase(repository: noteRepository) }()
+    lazy var updateNoteUseCase: any UpdateNoteUseCaseProtocol = { UpdateNoteUseCase(repository: noteRepository) }()
+    lazy var deleteNoteUseCase: any DeleteNoteUseCaseProtocol = { DeleteNoteUseCase(repository: noteRepository) }()
+
     lazy var uploadSourceUseCase: any UploadSourceUseCaseProtocol = {
         UploadSourceUseCase(repository: sourceRepository)
     }()

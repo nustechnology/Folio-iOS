@@ -97,7 +97,7 @@ struct WorkspaceEditorSheet: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(title)
-                    .font(.system(size: 24, design: .serif))
+                    .font(.custom("CormorantGaramond-Medium", size: FolioFontSize.heading))
                     .foregroundStyle(Color.folioInk)
                 Spacer()
                 Button(action: onCancel) {
