@@ -4,19 +4,18 @@ struct FolioPlaceholderView: View {
     let title: String
     let subtitle: String
     let iconName: String
-    let onOpenAccountSettings: () -> Void
     let onBackToSpaces: () -> Void
-    let userInitial: String
 
     var body: some View {
         VStack {
             Spacer(minLength: 24)
 
-            FolioTopBar(
+            FolioContentHeader(
                 title: title,
                 subtitle: subtitle,
-                leading: AnyView(Button(action: onBackToSpaces) { buttonIcon("chevron.left") }.buttonStyle(.plain).accessibilityLabel("Back to My Spaces")),
-                trailing: [AnyView(buttonIcon("ellipsis")), AnyView(FolioAccountAvatarButton(initial: userInitial, size: 36, action: onOpenAccountSettings))]
+                onBackToSpaces: onBackToSpaces,
+                onPlusTapped: nil,
+                searchText: .constant("")
             )
 
             Spacer()
@@ -27,15 +26,8 @@ struct FolioPlaceholderView: View {
             Spacer()
         }
     }
-
-    private func buttonIcon(_ systemName: String) -> some View {
-        Image(systemName: systemName)
-            .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(Color.white)
-            .frame(width: 22, height: 22)
-    }
 }
 
 #Preview {
-    FolioPlaceholderView(title: "Notes", subtitle: "Capture and review", iconName: "note.text", onOpenAccountSettings: {}, onBackToSpaces: {}, userInitial: "A")
+    FolioPlaceholderView(title: "Notes", subtitle: "Capture and review", iconName: "note.text", onBackToSpaces: {})
 }

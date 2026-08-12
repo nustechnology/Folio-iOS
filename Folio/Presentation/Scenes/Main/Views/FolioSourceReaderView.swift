@@ -3,6 +3,7 @@ import SwiftUI
 struct FolioSourceReaderView: View {
     @StateObject private var viewModel: SourceReaderViewModel
     @State private var webContentHeight: CGFloat = 300
+    @State private var showSourceActionSheet = false
 
     private let passageID: String?
     private let onBack: () -> Void
@@ -60,6 +61,23 @@ struct FolioSourceReaderView: View {
                 FolioShareSheet(items: [url])
             }
         }
+        .sheet(isPresented: $showSourceActionSheet) {
+            SourceActionSheet(
+                title: viewModel.source.title,
+                onEdit: { viewModel.send(.editTapped) },
+                onDelete: { viewModel.send(.deleteTapped) }
+            )
+        }
+        .sheet(isPresented: Binding(
+            get: { viewModel.state.showOpenOriginalSheet },
+            set: { if !$0 { viewModel.send(.dismissOpenOriginalSheet) } }
+        )) {
+            OpenOriginalBottomSheet(
+                fileName: viewModel.source.fileName,
+                onCancel: { viewModel.send(.dismissOpenOriginalSheet) },
+                onOpen: { viewModel.send(.openOriginalConfirmed) }
+            )
+        }
         .alert(
             String(localized: "Delete this source?"),
             isPresented: Binding(
@@ -81,17 +99,8 @@ struct FolioSourceReaderView: View {
     // MARK: - Header
 
     private var menuButton: some View {
-        Menu {
-            Button {
-                viewModel.send(.editTapped)
-            } label: {
-                Label(String(localized: "Edit"), systemImage: "pencil")
-            }
-            Button(role: .destructive) {
-                viewModel.send(.deleteTapped)
-            } label: {
-                Label(String(localized: "Delete"), systemImage: "trash")
-            }
+        Button {
+            showSourceActionSheet = true
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 14, weight: .semibold))
@@ -100,11 +109,12 @@ struct FolioSourceReaderView: View {
                 .frame(width: 36, height: 36)
                 .overlay(
                     Circle()
-                        .stroke(Color.folioFieldBorder, lineWidth: 1)
+                        .stroke(Color.folioFieldBorder, lineWidth: 0.5)
                 )
                 .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .accessibilityLabel(String(localized: "More options"))
     }
 
@@ -134,21 +144,16 @@ struct FolioSourceReaderView: View {
         Button {
             viewModel.send(.openOriginalTapped)
         } label: {
-            HStack(spacing: 5) {
-                Image(systemName: "arrow.up.right.square")
-                    .font(.system(size: 11, weight: .semibold))
-                Text(String(localized: "Open original"))
-                    .font(.system(size: 13, weight: .semibold))
-            }
-            .foregroundStyle(Color.folioOlive)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(Color.folioSurfaceStrong)
-            .overlay(
-                RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
-                    .stroke(Color.folioFieldBorder, lineWidth: 1.5)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
+            Image(systemName: "arrow.up.forward.square")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.folioInk)
+                .frame(width: 36, height: 36)
+                .overlay(
+                    Circle()
+                        .stroke(Color.folioFieldBorder, lineWidth: 0.5)
+                )
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(String(localized: "Open original"))

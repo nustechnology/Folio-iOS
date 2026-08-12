@@ -14,7 +14,7 @@ struct SourceListEndpoint: APIEndpoint {
         if let sourceType = query.sourceType { items.append(URLQueryItem(name: "sourceType", value: sourceType)) }
         if let processingState = query.processingState { items.append(URLQueryItem(name: "processingState", value: processingState)) }
         if let search = query.search, !search.isEmpty { items.append(URLQueryItem(name: "search", value: search)) }
-        if let sort = query.sort { items.append(URLQueryItem(name: "sort", value: sort)) }
+        items.append(URLQueryItem(name: "sort", value: query.sort.rawValue))
         if let page = query.page { items.append(URLQueryItem(name: "page", value: String(page))) }
         if let limit = query.limit { items.append(URLQueryItem(name: "limit", value: String(limit))) }
         return items

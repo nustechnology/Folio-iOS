@@ -53,18 +53,23 @@ struct MainView: View {
     }
 
     private var appShellWithTab: some View {
-        appShell
-            .safeAreaInset(edge: .bottom) {
-                let isMySpaces = viewModel.state.selectedTab == .sources
-                    && selectedWorkspace == nil
-                if viewModel.state.activeReader == nil && !isMySpaces {
-                    FolioBottomTabBar(selectedTab: viewModel.state.selectedTab) { tab in
-                        viewModel.handle(.selectTab(tab))
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 8)
+        let isMySpaces = viewModel.state.selectedTab == .sources
+            && selectedWorkspace == nil
+        let showTabBar = viewModel.state.activeReader == nil && !isMySpaces
+
+        return ZStack(alignment: .bottom) {
+            appShell
+                .padding(.bottom, showTabBar ? 84 : 0)
+
+            if showTabBar {
+                FolioBottomTabBar(selectedTab: viewModel.state.selectedTab) { tab in
+                    viewModel.handle(.selectTab(tab))
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
             }
+        }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
     @ViewBuilder
@@ -120,9 +125,7 @@ struct MainView: View {
                 }
             case .ask:
                 FolioAskView(
-                    onOpenAccountSettings: { showAccountSheet = true },
                     onBackToSpaces: { showMySpaces() },
-                    userInitial: userInitial,
                     scopedSource: viewModel.state.activeAskScope
                 )
             case .notes:
@@ -130,18 +133,14 @@ struct MainView: View {
                     title: "Notes",
                     subtitle: "Capture claims, quotes, and follow-up ideas in one private space.",
                     iconName: "note.text",
-                    onOpenAccountSettings: { showAccountSheet = true },
-                    onBackToSpaces: { showMySpaces() },
-                    userInitial: userInitial
+                    onBackToSpaces: { showMySpaces() }
                 )
             case .notebook:
                 FolioPlaceholderView(
                     title: "Notebook",
                     subtitle: "Organize drafts, syntheses, and research threads here.",
                     iconName: "book",
-                    onOpenAccountSettings: { showAccountSheet = true },
-                    onBackToSpaces: { showMySpaces() },
-                    userInitial: userInitial
+                    onBackToSpaces: { showMySpaces() }
                 )
             }
         }

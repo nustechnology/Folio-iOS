@@ -49,6 +49,22 @@ enum SourceType: String, Equatable, Sendable {
     case manual = "Manual"
 }
 
+enum SourceSortOption: String, CaseIterable, Equatable, Hashable, Sendable, SortOption {
+    case recentlyAdded = "recently-added"
+    case recentlyUpdated = "recently-updated"
+    case alphabeticalAZ = "alphabetical-az"
+    case alphabeticalZA = "alphabetical-za"
+
+    var displayTitle: String {
+        switch self {
+        case .recentlyAdded: return String(localized: "Recently Added")
+        case .recentlyUpdated: return String(localized: "Recently Updated")
+        case .alphabeticalAZ: return String(localized: "Alphabetical A-Z")
+        case .alphabeticalZA: return String(localized: "Alphabetical Z-A")
+        }
+    }
+}
+
 enum SourceProcessingState: String, Equatable, Sendable {
     case added
     case extractingText = "extracting_text"
@@ -62,11 +78,11 @@ struct SourceListQuery: Equatable, Sendable {
     let sourceType: String?
     let processingState: String?
     let search: String?
-    let sort: String?
+    let sort: SourceSortOption
     let page: Int?
     let limit: Int?
 
-    init(spaceId: String, sourceType: String? = nil, processingState: String? = nil, search: String? = nil, sort: String? = "recently-added", page: Int? = nil, limit: Int? = nil) {
+    init(spaceId: String, sourceType: String? = nil, processingState: String? = nil, search: String? = nil, sort: SourceSortOption = .recentlyAdded, page: Int? = nil, limit: Int? = nil) {
         self.spaceId = spaceId
         self.sourceType = sourceType
         self.processingState = processingState
