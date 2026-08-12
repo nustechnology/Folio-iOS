@@ -16,6 +16,7 @@ final class SourceReaderViewModel: ObservableObject {
         var isDeleting = false
         var previewUrl: URL?
         var showShareSheet = false
+        var showOpenOriginalSheet = false
         var toastMessage: ToastMessage?
     }
 
@@ -69,6 +70,8 @@ final class SourceReaderViewModel: ObservableObject {
         case deleteConfirmed
         case askThisSource
         case openOriginalTapped
+        case dismissOpenOriginalSheet
+        case openOriginalConfirmed
         case dismissShareSheet
         case dismissToast
     }
@@ -115,6 +118,11 @@ final class SourceReaderViewModel: ObservableObject {
         case .askThisSource:
             onAskSource?(source)
         case .openOriginalTapped:
+            state.showOpenOriginalSheet = true
+        case .dismissOpenOriginalSheet:
+            state.showOpenOriginalSheet = false
+        case .openOriginalConfirmed:
+            state.showOpenOriginalSheet = false
             Task { await loadPreview() }
         case .dismissShareSheet:
             state.showShareSheet = false

@@ -115,7 +115,7 @@ struct WorkspaceListView: View {
         case .sortOptions:
             SortOptionsSheet(
                 title: String(localized: "Sort spaces"),
-                options: WorkspaceSortOption.allCases.map { ($0, $0.displayTitle) },
+                options: WorkspaceSortOption.allCases,
                 selectedValue: viewModel.state.sortOption,
                 onSelect: { viewModel.send(.sortSelected($0)) }
             )

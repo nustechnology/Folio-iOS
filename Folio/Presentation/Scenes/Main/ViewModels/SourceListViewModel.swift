@@ -13,6 +13,7 @@ final class SourceListViewModel: ObservableObject {
         var searchQuery = ""
         var selectedFilter: FolioSourceFilter = .all
         var filters: [FolioSourceFilter] = [.all, .files, .web, .text]
+        var sortOption = SourceSortOption.recentlyAdded
         var presentedSheet: Sheet?
         var deleteConfirmationSource: Source?
         var editSource: Source?
@@ -26,6 +27,7 @@ final class SourceListViewModel: ObservableObject {
             case editSource(Source)
             case processing(Source)
             case failure(Source)
+            case sortOptions
 
             var id: String {
                 switch self {
@@ -33,6 +35,7 @@ final class SourceListViewModel: ObservableObject {
                 case .editSource(let source): return "editSource-\(source.id)"
                 case .processing(let source): return "processing-\(source.id)"
                 case .failure(let source): return "failure-\(source.id)"
+                case .sortOptions: return "sortOptions"
                 }
             }
         }
@@ -165,6 +168,16 @@ final class SourceListViewModel: ObservableObject {
             state.editSource = nil
         case .sourceUploaded:
             Task { await loadFirstPage() }
+        case .sortTapped:
+            state.presentedSheet = .sortOptions
+        case .sortSelected(let option):
+            guard option != state.sortOption else {
+                state.presentedSheet = nil
+                return
+            }
+            state.sortOption = option
+            state.presentedSheet = nil
+            Task { await loadFirstPage() }
         case .dismissToast:
             state.toastMessage = nil
         }
@@ -189,6 +202,8 @@ final class SourceListViewModel: ObservableObject {
         case deleteConfirmed
         case cancelDelete
         case sourceUploaded
+        case sortTapped
+        case sortSelected(SourceSortOption)
         case dismissToast
     }
 
@@ -228,7 +243,7 @@ final class SourceListViewModel: ObservableObject {
                 spaceId: spaceId,
                 sourceType: state.selectedFilter.apiValue,
                 search: searchTerm.isEmpty ? nil : searchTerm,
-                sort: "recently-added",
+                sort: state.sortOption,
                 page: nil,
                 limit: nil
             )
@@ -272,7 +287,7 @@ final class SourceListViewModel: ObservableObject {
                 spaceId: spaceId,
                 sourceType: state.selectedFilter.apiValue,
                 search: searchTerm.isEmpty ? nil : searchTerm,
-                sort: "recently-added",
+                sort: state.sortOption,
                 page: pagination.page + 1,
                 limit: pagination.limit
             )
@@ -291,7 +306,7 @@ final class SourceListViewModel: ObservableObject {
     }
 
     private func replace(with result: SourceListResult) {
-        state.allSources = result.sources.sorted { $0.createdAt > $1.createdAt }
+        state.allSources = sortedSources(result.sources)
         state.pagination = result.pagination
         state.totalCount = result.pagination?.totalCount ?? result.sources.count
         applyFilter()
@@ -304,14 +319,45 @@ final class SourceListViewModel: ObservableObject {
             return true
         }
         state.allSources.append(contentsOf: newSources)
-        state.allSources.sort { $0.createdAt > $1.createdAt }
+        state.allSources = sortedSources(state.allSources)
         state.pagination = result.pagination
         state.totalCount = result.pagination?.totalCount ?? state.allSources.count
         applyFilter()
     }
 
     private func applyFilter() {
-        state.visibleSources = state.allSources.sorted { $0.createdAt > $1.createdAt }
+        state.visibleSources = sortedSources(state.allSources)
+    }
+
+    private func sortedSources(_ sources: [Source]) -> [Source] {
+        switch state.sortOption {
+        case .recentlyAdded:
+            return sources.sorted { lhs, rhs in
+                if lhs.createdAt != rhs.createdAt {
+                    return lhs.createdAt > rhs.createdAt
+                }
+                return lhs.id < rhs.id
+            }
+        case .recentlyUpdated:
+            return sources.sorted { lhs, rhs in
+                if lhs.updatedAt != rhs.updatedAt {
+                    return lhs.updatedAt > rhs.updatedAt
+                }
+                return lhs.id < rhs.id
+            }
+        case .alphabeticalAZ:
+            return sources.sorted { sourceComesBefore($0, $1, ascending: true) }
+        case .alphabeticalZA:
+            return sources.sorted { sourceComesBefore($0, $1, ascending: false) }
+        }
+    }
+
+    private func sourceComesBefore(_ lhs: Source, _ rhs: Source, ascending: Bool) -> Bool {
+        let titleComparison = lhs.title.localizedCaseInsensitiveCompare(rhs.title)
+        guard titleComparison != .orderedSame else { return lhs.id < rhs.id }
+        return ascending
+            ? titleComparison == .orderedAscending
+            : titleComparison == .orderedDescending
     }
 
     private func performEdit() async {
@@ -376,22 +422,14 @@ extension Date {
         let calendar = Calendar.current
         let now = Date()
         let minutes = max(0, Int(now.timeIntervalSince(self) / 60))
-        if minutes < 3 { return String(localized: "Just now") }
-        if calendar.isDateInToday(self) { return String(localized: "Today") }
-        if calendar.isDateInYesterday(self) { return String(localized: "Yesterday") }
-        if let daysAgo = calendar.dateComponents([.day], from: self, to: now).day, daysAgo < 7 {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "EEEE"
-            return formatter.string(from: self)
-        }
-        let thisYear = calendar.component(.year, from: now)
-        let dateYear = calendar.component(.year, from: self)
-        let formatter = DateFormatter()
-        if dateYear == thisYear {
-            formatter.dateFormat = "MMM d"
-        } else {
-            formatter.dateFormat = "MMM d yyyy"
-        }
-        return formatter.string(from: self)
+        if minutes < 1 { return String(localized: "Added just now") }
+        if minutes < 60 { return String(localized: "Added \(minutes)m ago") }
+        let hours = minutes / 60
+        if hours < 24 { return String(localized: "Added \(hours)h ago") }
+        let days = hours / 24
+        if days < 7 { return String(localized: "Added \(days)d ago") }
+        if days < 30 { return String(localized: "Added \(days / 7)w ago") }
+        if days < 365 { return String(localized: "Added \(days / 30)mo ago") }
+        return String(localized: "Added \(days / 365)y ago")
     }
 }

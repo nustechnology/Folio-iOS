@@ -1,9 +1,7 @@
 import SwiftUI
 
 struct FolioAskView: View {
-    let onOpenAccountSettings: () -> Void
     let onBackToSpaces: () -> Void
-    let userInitial: String
     var scopedSource: Source? = nil
 
     @State private var prompt = ""
@@ -14,13 +12,13 @@ struct FolioAskView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                FolioTopBar(
+                FolioContentHeader(
                     title: "Ask",
                     subtitle: "Private research assistant",
-                    leading: AnyView(Button(action: onBackToSpaces) { buttonIcon("chevron.left") }.buttonStyle(.plain).accessibilityLabel("Back to My Spaces")),
-                    trailing: [AnyView(buttonIcon("ellipsis")), AnyView(FolioAccountAvatarButton(initial: userInitial, size: 36, action: onOpenAccountSettings))]
+                    onBackToSpaces: onBackToSpaces,
+                    onPlusTapped: nil,
+                    searchText: .constant("")
                 )
-                .padding(.top, 4)
 
                 if let scopedSource {
                     scopeBanner(source: scopedSource)
@@ -117,13 +115,6 @@ struct FolioAskView: View {
         )
     }
 
-    private func buttonIcon(_ systemName: String) -> some View {
-        Image(systemName: systemName)
-            .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(Color.white)
-            .frame(width: 22, height: 22)
-    }
-
     private func submitAsk() {
         guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         isLoading = true
@@ -138,5 +129,5 @@ struct FolioAskView: View {
 }
 
 #Preview {
-    FolioAskView(onOpenAccountSettings: {}, onBackToSpaces: {}, userInitial: "A")
+    FolioAskView(onBackToSpaces: {})
 }

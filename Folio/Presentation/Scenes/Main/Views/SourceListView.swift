@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SourceListView: View {
     @StateObject private var viewModel: SourceListViewModel
+    @State private var actionSheetSource: Source?
     let workspaceTitle: String
     let onBackToSpaces: () -> Void
     let onOpenAccountSettings: () -> Void
@@ -27,12 +28,10 @@ struct SourceListView: View {
     var body: some View {
         ZStack {
             Color.folioCanvas.ignoresSafeArea()
-            GeometryReader { geometry in
-                VStack(spacing: 0) {
-                    header
-                    Spacer(minLength: 0)
-                    content.frame(height: geometry.size.height - geometry.safeAreaInsets.top)
-                }
+            VStack(spacing: 0) {
+                header
+                content
+                    .frame(maxHeight: .infinity)
             }
         }
         .task { viewModel.send(.appeared) }
@@ -41,6 +40,13 @@ struct SourceListView: View {
             set: { _ in viewModel.send(.dismissSheet) }
         )) { sheet in
             sheetContent(sheet)
+        }
+        .sheet(item: $actionSheetSource) { source in
+            SourceActionSheet(
+                title: source.title,
+                onEdit: { viewModel.send(.ellipsisTapped(source)) },
+                onDelete: { viewModel.send(.deleteTapped(source)) }
+            )
         }
         .alert(
             String(localized: "Delete source?"),
@@ -105,99 +111,71 @@ struct SourceListView: View {
                 },
                 onSourceOpened: onSourceOpened
             )
+        case .sortOptions:
+            SortOptionsSheet(
+                title: String(localized: "Sort sources"),
+                options: SourceSortOption.allCases,
+                selectedValue: viewModel.state.sortOption,
+                onSelect: { viewModel.send(.sortSelected($0)) }
+            )
         }
     }
 
     private var header: some View {
         VStack(spacing: 0) {
-            FolioTopBar(
+            FolioContentHeader(
                 title: String(localized: "Sources"),
                 subtitle: workspaceTitle,
-                leading: AnyView(
-                    Button(action: onBackToSpaces) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: FolioFontSize.bodySmall, weight: .medium))
-                            .foregroundStyle(.white)
-                            .frame(width: FolioSize.iconLg, height: FolioSize.iconLg)
+                onBackToSpaces: onBackToSpaces,
+                onPlusTapped: { viewModel.send(.addTapped) },
+                searchPlaceholder: String(localized: "Search sources..."),
+                searchText: Binding(
+                    get: { viewModel.state.searchQuery },
+                    set: { viewModel.send(.searchQueryChanged($0)) }
+                ),
+                onClearSearch: { viewModel.send(.clearSearch) },
+                onSortTapped: { viewModel.send(.sortTapped) },
+                isSortActive: viewModel.state.sortOption != .recentlyAdded
+            )
+
+            HStack(spacing: FolioSpacing.md) {
+                ForEach(viewModel.state.filters) { filter in
+                    Button {
+                        viewModel.send(.selectFilter(filter))
+                    } label: {
+                        Text(filter.displayTitle)
+                            .font(.system(size: FolioFontSize.body, weight: .medium))
+                            .foregroundStyle(Color.folioTextSecondary)
+                            .padding(.horizontal, FolioSpacing.xl2)
+                            .frame(height: FolioSize.chipHeight)
+                            .background(
+                                viewModel.state.selectedFilter == filter
+                                    ? Color.folioAccentBg
+                                    : Color.folioCardBg
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: FolioRadius.chip)
+                                    .stroke(
+                                        viewModel.state.selectedFilter == filter
+                                            ? Color.folioAccentBorder
+                                            : Color.folioBorder,
+                                        lineWidth: 1
+                                    )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: FolioRadius.chip))
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(String(localized: "Back to My Spaces"))
-                ),
-                trailing: [
-                    AnyView(
-                        Button(action: { viewModel.send(.addTapped) }) {
-                            Image(systemName: "plus")
-                                .font(.system(size: FolioFontSize.body, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .frame(width: FolioSize.buttonMd, height: FolioSize.buttonMd)
-                                .clipShape(Circle())
-                                .overlay(Circle().stroke(.white, lineWidth: 1))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(String(localized: "Add source"))
+                    .accessibilityAddTraits(
+                        viewModel.state.selectedFilter == filter ? .isSelected : []
                     )
-                ]
-            )
-            .padding(.top, FolioSpacing.xs)
-
-            VStack(spacing: FolioSpacing.lg) {
-                HStack {
-                    Text(String(localized: "Sources"))
-                        .font(.system(size: FolioFontSize.bodySmall, weight: .regular))
-                        .foregroundStyle(Color.folioInkSoft)
-                    Text("\(viewModel.state.totalCount) total")
-                        .font(.system(size: FolioFontSize.bodySmall, weight: .regular))
-                        .foregroundStyle(Color.folioInkSoft)
-                    Spacer()
                 }
-                .padding(.horizontal, FolioSpacing.xl)
-                .padding(.top, FolioSpacing.lg)
-
-                FolioSearchField(
-                    placeholder: String(localized: "Search sources..."),
-                    text: Binding(
-                        get: { viewModel.state.searchQuery },
-                        set: { viewModel.send(.searchQueryChanged($0)) }
-                    )
-                )
-                .padding(.horizontal, FolioSpacing.xl)
-
-                HStack(spacing: FolioSpacing.md) {
-                    ForEach(viewModel.state.filters) { filter in
-                        Button {
-                            viewModel.send(.selectFilter(filter))
-                        } label: {
-                            Text(filter.displayTitle)
-                                .font(.system(size: FolioFontSize.body, weight: .medium))
-                                .foregroundStyle(Color.folioTextSecondary)
-                                .padding(.horizontal, FolioSpacing.xl2)
-                                .frame(height: FolioSize.chipHeight)
-                                .background(
-                                    viewModel.state.selectedFilter == filter
-                                        ? Color.folioAccentBg
-                                        : Color.folioCanvas
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: FolioRadius.chip)
-                                        .stroke(
-                                            viewModel.state.selectedFilter == filter
-                                                ? Color.folioAccentBorder
-                                                : Color.folioBorder,
-                                            lineWidth: 1
-                                        )
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.chip))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    Spacer()
-                }
-                .padding(.horizontal, FolioSpacing.xl)
+                Spacer()
             }
-            .padding(.bottom, FolioSpacing.lg)
-            .background(.white)
+            .padding(.horizontal, FolioSpacing.xl)
+            .padding(.top, 16)
+            .padding(.bottom, 16)
+            .background(Color.folioCanvas)
         }
-        .background(Color.folioOlive)
     }
 
     @ViewBuilder
@@ -277,31 +255,54 @@ struct SourceListView: View {
     private var emptyContent: some View {
         VStack(spacing: 0) {
             Spacer()
-                .frame(height: 60)
 
-            VStack(spacing: FolioSpacing.xl3) {
-                FolioEmptyStateView(
-                    title: String(localized: "No sources yet"),
-                    subtitle: String(localized: "Add your first source to start building your research archive."),
-                    iconName: "doc.text"
-                )
+            VStack(spacing: 0) {
+                Image(systemName: "doc.text")
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundStyle(Color.folioInkSoft)
+                    .frame(width: 44, height: 44)
+                    .background(
+                        Circle()
+                            .fill(Color.folioSurfaceStrong)
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(Color.folioLine, lineWidth: 1)
+                    )
+                    .clipShape(Circle())
+
+                Spacer().frame(height: FolioSpacing.xl3)
+
+                Text(String(localized: "No sources yet"))
+                    .font(.system(size: FolioFontSize.headline, weight: .semibold))
+                    .foregroundStyle(Color.folioTextPrimary)
+                    .multilineTextAlignment(.center)
+
+                Spacer().frame(height: FolioSpacing.sm)
+
+                Text(String(localized: "Add a file, web article, or manual text source."))
+                    .font(.system(size: FolioFontSize.body, weight: .regular))
+                    .foregroundStyle(Color.folioInkSoft)
+                    .multilineTextAlignment(.center)
+
+                Spacer().frame(height: FolioSpacing.xl4)
 
                 Button(action: { viewModel.send(.addTapped) }) {
-                    Text(String(localized: "Add Source"))
+                    Text(String(localized: "Add source"))
                         .font(.system(size: FolioFontSize.bodyLarge, weight: .semibold))
                         .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 13)
+                        .padding(.horizontal, FolioSpacing.xl3)
+                        .padding(.vertical, 12)
                         .background(Color.folioOlive)
-                        .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
+                        .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg))
                 }
                 .buttonStyle(.plain)
-                .padding(.horizontal, FolioSpacing.xl)
             }
 
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, FolioSpacing.xl3)
     }
 
     private func sourceList(_ sources: [Source]) -> some View {
@@ -311,7 +312,7 @@ struct SourceListView: View {
                     SourceCard(source: source) {
                         handleCardTap(source)
                     } onEdit: {
-                        viewModel.send(.ellipsisTapped(source))
+                        actionSheetSource = source
                     } onDelete: {
                         viewModel.send(.deleteTapped(source))
                     }
@@ -341,7 +342,7 @@ struct SourceListView: View {
                 }
             }
             .padding(.horizontal, FolioSpacing.xl)
-            .padding(.top, FolioSpacing.lg)
+            .padding(.top, 0)
         }
         .refreshable { await viewModel.refresh() }
     }
@@ -370,7 +371,7 @@ private struct SourceCard: View {
 
             VStack(alignment: .leading, spacing: FolioSpacing.xs) {
                 Text(source.title)
-                    .font(.system(size: FolioFontSize.headline, weight: .semibold))
+                    .font(.custom("CormorantGaramond-SemiBold", size: 20))
                     .foregroundStyle(Color.folioTextPrimary)
                     .lineLimit(2)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -399,14 +400,11 @@ private struct SourceCard: View {
                     .font(.system(size: FolioFontSize.caption2, weight: .semibold))
                     .foregroundStyle(statusTitleColor)
                     .padding(.horizontal, FolioSpacing.md)
-                    .frame(height: FolioSize.badgeHeight)
+                    .frame(height: 35)
                     .background(statusBackgroundColor)
                     .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm))
 
-                Menu {
-                    Button(String(localized: "Edit"), action: onEdit)
-                    Button(String(localized: "Delete"), role: .destructive, action: onDelete)
-                } label: {
+                Button(action: onEdit) {
                     Image(systemName: "ellipsis")
                         .font(.system(size: FolioFontSize.body, weight: .semibold))
                         .foregroundStyle(Color.folioTextSecondary)
@@ -414,6 +412,7 @@ private struct SourceCard: View {
                         .frame(width: FolioSize.iconXl, height: FolioSpacing.xl6)
                         .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
                 .accessibilityLabel(String(localized: "More options for \(source.title)"))
                 .padding(.trailing, -4)
             }

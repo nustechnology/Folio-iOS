@@ -9,7 +9,7 @@ struct Workspace: Identifiable, Equatable, Hashable, Sendable {
     var updatedAt: Date
 }
 
-enum WorkspaceSortOption: String, CaseIterable, Equatable, Hashable, Sendable {
+enum WorkspaceSortOption: String, CaseIterable, Equatable, Hashable, Sendable, SortOption {
     case recentlyUpdated = "recently-updated"
     case recentlyCreated = "recently-created"
     case alphabeticalAZ = "alphabetical-az"

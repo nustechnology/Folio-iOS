@@ -1,10 +1,10 @@
 import SwiftUI
 
-struct SortOptionsSheet: View {
+struct SortOptionsSheet<Option: SortOption>: View {
     let title: String
-    let options: [(value: WorkspaceSortOption, title: String)]
-    let selectedValue: WorkspaceSortOption
-    let onSelect: (WorkspaceSortOption) -> Void
+    let options: [Option]
+    let selectedValue: Option
+    let onSelect: (Option) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -17,19 +17,18 @@ struct SortOptionsSheet: View {
                 .padding(.bottom, 14)
 
             VStack(spacing: 10) {
-                ForEach(options.indices, id: \.self) { index in
-                    let option = options[index]
+                ForEach(options, id: \.self) { option in
                     Button {
-                        onSelect(option.value)
+                        onSelect(option)
                     } label: {
                         HStack(spacing: 8) {
-                            Image(systemName: option.value == selectedValue ? "checkmark.circle.fill" : "circle")
+                            Image(systemName: option == selectedValue ? "checkmark.circle.fill" : "circle")
                                 .font(.system(size: 20, weight: .medium))
                                 .foregroundStyle(
-                                    option.value == selectedValue ? Color.folioOlive : Color.folioFieldBorder
+                                    option == selectedValue ? Color.folioOlive : Color.folioFieldBorder
                                 )
 
-                            Text(option.title)
+                            Text(option.displayTitle)
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(Color.folioInk)
 
@@ -37,11 +36,11 @@ struct SortOptionsSheet: View {
                         }
                         .padding(.horizontal, 12)
                         .frame(maxWidth: .infinity, minHeight: 42, alignment: .leading)
-                        .background(option.value == selectedValue ? Color.folioAccentLight : Color.clear)
+                        .background(option == selectedValue ? Color.folioAccentLight : Color.clear)
                         .overlay(
                             RoundedRectangle(cornerRadius: 11, style: .continuous)
                                 .stroke(
-                                    option.value == selectedValue ? Color.folioInk : Color.folioRowBorder,
+                                    option == selectedValue ? Color.folioInk : Color.folioRowBorder,
                                     lineWidth: 1
                                 )
                         )
@@ -49,8 +48,8 @@ struct SortOptionsSheet: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(option.title)
-                    .accessibilityAddTraits(option.value == selectedValue ? .isSelected : [])
+                    .accessibilityLabel(option.displayTitle)
+                    .accessibilityAddTraits(option == selectedValue ? .isSelected : [])
                 }
             }
             .padding(.horizontal, 18)
