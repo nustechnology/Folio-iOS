@@ -4,6 +4,7 @@ struct FolioAskView: View {
     let onOpenAccountSettings: () -> Void
     let onBackToSpaces: () -> Void
     let userInitial: String
+    var scopedSource: Source? = nil
 
     @State private var prompt = ""
     @State private var isLoading = false
@@ -20,6 +21,10 @@ struct FolioAskView: View {
                     trailing: [AnyView(buttonIcon("ellipsis")), AnyView(FolioAccountAvatarButton(initial: userInitial, size: 36, action: onOpenAccountSettings))]
                 )
                 .padding(.top, 4)
+
+                if let scopedSource {
+                    scopeBanner(source: scopedSource)
+                }
 
                 VStack(alignment: .leading, spacing: 14) {
                     Text("Ask across your sources with grounded citations and traceable evidence.")
@@ -74,6 +79,33 @@ struct FolioAskView: View {
                 .padding(.bottom, 26)
             }
         }
+    }
+
+    private func scopeBanner(source: Source) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.folioOliveDark)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Scoping to this source")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.folioInkMuted)
+                Text(source.title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.folioInk)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.folioGold.opacity(0.18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(Color.folioGold.opacity(0.55), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .padding(.horizontal, 18)
     }
 
     private func promptCard(_ text: String) -> some View {

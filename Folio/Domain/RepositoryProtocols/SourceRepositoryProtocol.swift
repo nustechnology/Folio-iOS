@@ -2,6 +2,8 @@ import Foundation
 
 protocol SourceRepositoryProtocol {
     func fetchSources(query: SourceListQuery) async throws -> SourceListResult
+    func fetchSource(id: String) async throws -> Source
+    func fetchSourcePreview(id: String) async throws -> SourcePreview
     func uploadFile(spaceId: String, fileURL: URL, title: String?, author: String?) async throws -> Source
     func uploadWeb(spaceId: String, url: String, title: String?, author: String?) async throws -> Source
     func uploadManual(spaceId: String, content: String, title: String?, author: String?) async throws -> Source

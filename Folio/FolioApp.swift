@@ -23,6 +23,8 @@ struct FolioApp: App {
                 uploadSourceUseCase: diContainer.uploadSourceUseCase,
                 fetchSourcesUseCase: diContainer.fetchSourcesUseCase,
                 updateSourceUseCase: diContainer.updateSourceUseCase,
+                fetchSourceDetailUseCase: diContainer.fetchSourceDetailUseCase,
+                fetchSourcePreviewUseCase: diContainer.fetchSourcePreviewUseCase
             ))
         }
     }

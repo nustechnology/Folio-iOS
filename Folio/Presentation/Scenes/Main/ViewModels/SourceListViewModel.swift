@@ -126,6 +126,19 @@ final class SourceListViewModel: ObservableObject {
             state.mutationError = nil
         case .sourceTapped(let source):
             handleSourceTap(source)
+        case .sourceStatusChanged(let source):
+            invalidateInFlightLoads()
+            if let index = state.allSources.firstIndex(where: { $0.id == source.id }) {
+                state.allSources[index] = source
+                applyFilter()
+            }
+        case .sourceDeletedFromProcessing(let source):
+            invalidateInFlightLoads()
+            state.presentedSheet = nil
+            state.allSources.removeAll { $0.id == source.id }
+            state.totalCount = max(0, state.totalCount - 1)
+            applyFilter()
+            state.toastMessage = .success(String(localized: "Source deleted"))
         case .ellipsisTapped(let source):
             editTitle = source.title
             editAuthor = source.author
@@ -150,13 +163,6 @@ final class SourceListViewModel: ObservableObject {
         case .cancelDelete:
             state.deleteConfirmationSource = nil
             state.editSource = nil
-        case .retryProcessing(let source):
-            state.presentedSheet = nil
-            invalidateInFlightLoads()
-            Task { await retrySource(source) }
-        case .deleteFailedSource(let source):
-            state.presentedSheet = nil
-            state.deleteConfirmationSource = source
         case .sourceUploaded:
             Task { await loadFirstPage() }
         case .dismissToast:
@@ -175,13 +181,13 @@ final class SourceListViewModel: ObservableObject {
         case addTapped
         case dismissSheet
         case sourceTapped(Source)
+        case sourceStatusChanged(Source)
+        case sourceDeletedFromProcessing(Source)
         case ellipsisTapped(Source)
         case editConfirmed
         case deleteTapped(Source)
         case deleteConfirmed
         case cancelDelete
-        case retryProcessing(Source)
-        case deleteFailedSource(Source)
         case sourceUploaded
         case dismissToast
     }
@@ -354,20 +360,6 @@ final class SourceListViewModel: ObservableObject {
         state.deleteConfirmationSource = nil
         state.editSource = nil
         isDeleting = false
-    }
-
-    private func retrySource(_ source: Source) async {
-        do {
-            _ = try await uploadSourceUseCase.retrySource(id: source.id)
-            if let index = state.allSources.firstIndex(where: { $0.id == source.id }) {
-                state.allSources[index] = state.allSources[index].withProcessingState(.added)
-                applyFilter()
-            }
-            state.presentedSheet = .processing(state.allSources.first { $0.id == source.id } ?? source)
-            state.toastMessage = .success(String(localized: "Processing retried"))
-        } catch {
-            state.toastMessage = .error(error.localizedDescription)
-        }
     }
 
     func refresh() async {

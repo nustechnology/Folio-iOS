@@ -8,7 +8,8 @@ final class MainViewModel: ViewModelProtocol {
         var selectedTab: FolioTab = .sources
         var sourcesMode: FolioSourcesMode = .spaces
         var selectedFilter: FolioSourceFilter = .all
-        var activeReader: FolioSource?
+        var activeReader: Source?
+        var activeAskScope: Source?
         var sourceFilters: [FolioSourceFilter] = []
         var sources: [FolioSource] = []
         var authLoading = false
@@ -28,10 +29,11 @@ final class MainViewModel: ViewModelProtocol {
         case showSpaces
         case showLibrary
         case selectFilter(FolioSourceFilter)
-        case openReader(FolioSource)
+        case openReader(Source)
         case closeReader
         case dismissToast
         case addNewSource(source: Source, workspaceID: String?)
+        case sourceDeleted(source: Source)
         case openAskForSource(source: Source, kind: FolioSourceKind)
     }
 
@@ -51,6 +53,8 @@ final class MainViewModel: ViewModelProtocol {
     private var signOutTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
     private var refreshTaskID: UUID?
+    let fetchSourceDetailUseCase: any FetchSourceDetailUseCaseProtocol
+    let fetchSourcePreviewUseCase: any FetchSourcePreviewUseCaseProtocol
 
     init(
         fetchUsersUseCase: any FetchUsersUseCaseProtocol,
@@ -64,6 +68,8 @@ final class MainViewModel: ViewModelProtocol {
         uploadSourceUseCase: any UploadSourceUseCaseProtocol,
         fetchSourcesUseCase: any FetchSourcesUseCaseProtocol,
         updateSourceUseCase: any UpdateSourceUseCaseProtocol,
+        fetchSourceDetailUseCase: any FetchSourceDetailUseCaseProtocol,
+        fetchSourcePreviewUseCase: any FetchSourcePreviewUseCaseProtocol,
         initialSources: [FolioSource] = []
     ) {
         self.fetchUsersUseCase = fetchUsersUseCase
@@ -77,6 +83,8 @@ final class MainViewModel: ViewModelProtocol {
         self.uploadSourceUseCase = uploadSourceUseCase
         self.fetchSourcesUseCase = fetchSourcesUseCase
         self.updateSourceUseCase = updateSourceUseCase
+        self.fetchSourceDetailUseCase = fetchSourceDetailUseCase
+        self.fetchSourcePreviewUseCase = fetchSourcePreviewUseCase
         state.sources = initialSources
 #if DEBUG
         if initialSources.isEmpty {
@@ -144,19 +152,25 @@ final class MainViewModel: ViewModelProtocol {
         case .selectTab(let tab):
             state.selectedTab = tab
             state.activeReader = nil
+            if tab != .ask {
+                state.activeAskScope = nil
+            }
             state.sourcesMode = .spaces
         case .showSpaces:
             state.selectedTab = .sources
             state.sourcesMode = .spaces
             state.activeReader = nil
+            state.activeAskScope = nil
         case .showLibrary:
             state.selectedTab = .sources
             state.sourcesMode = .library
             state.activeReader = nil
+            state.activeAskScope = nil
         case .selectFilter(let filter):
             state.selectedFilter = filter
         case .openReader(let source):
             state.activeReader = source
+            state.activeAskScope = nil
             state.selectedTab = .sources
             state.sourcesMode = .library
         case .closeReader:
@@ -170,7 +184,13 @@ final class MainViewModel: ViewModelProtocol {
             } else {
                 state.sources.append(folioSource)
             }
-            state.activeReader = folioSource
+            state.activeReader = source
+            state.activeAskScope = nil
+        case .sourceDeleted(let source):
+            state.sources.removeAll { $0.id == source.id }
+            state.activeReader = nil
+            state.activeAskScope = nil
+            toastMessage = .success(String(localized: "Source deleted"))
         case .openAskForSource(let source, _):
             if let index = state.sources.firstIndex(where: { $0.id == source.id }) {
                 let existing = state.sources[index]
@@ -180,6 +200,7 @@ final class MainViewModel: ViewModelProtocol {
             }
             state.selectedTab = .ask
             state.activeReader = nil
+            state.activeAskScope = source
             state.sourcesMode = .spaces
         }
     }

@@ -153,7 +153,9 @@ struct FolioLoginView: View {
                 workspaceRepository: PreviewWorkspaceRepository(),
                 uploadSourceUseCase: PreviewUploadSourceUseCase(),
                 fetchSourcesUseCase: PreviewLoginFetchSourcesUseCase(),
-                updateSourceUseCase: PreviewLoginUpdateSourceUseCase()
+                updateSourceUseCase: PreviewLoginUpdateSourceUseCase(),
+                fetchSourceDetailUseCase: PreviewLoginFetchSourceDetailUseCase(),
+                fetchSourcePreviewUseCase: PreviewLoginFetchSourcePreviewUseCase()
             ))
         }
 }
@@ -203,4 +205,12 @@ private struct PreviewLoginFetchSourcesUseCase: FetchSourcesUseCaseProtocol {
 
 private struct PreviewLoginUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
     func execute(id: String, title: String, author: String) async throws -> Source { fatalError("Preview") }
+}
+
+private struct PreviewLoginFetchSourceDetailUseCase: FetchSourceDetailUseCaseProtocol {
+    func execute(id: String) async throws -> Source { fatalError("Preview") }
+}
+
+private struct PreviewLoginFetchSourcePreviewUseCase: FetchSourcePreviewUseCaseProtocol {
+    func execute(source: Source) async throws -> SourcePreview { fatalError("Preview") }
 }

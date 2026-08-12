@@ -72,9 +72,23 @@ struct MainView: View {
         let userInitial = viewModel.state.userDisplayName?.first.map(String.init).map { $0.uppercased() } ?? "?"
         switch viewModel.state.activeReader {
         case .some(let source):
-            FolioSourceReaderView(source: source, onBack: {
-                viewModel.handle(.closeReader)
-            }, onOpenAccountSettings: { showAccountSheet = true }, userInitial: userInitial)
+            FolioSourceReaderView(
+                source: source,
+                fetchSourceDetailUseCase: viewModel.fetchSourceDetailUseCase,
+                updateSourceUseCase: viewModel.updateSourceUseCase,
+                uploadSourceUseCase: viewModel.uploadSourceUseCase,
+                fetchSourcePreviewUseCase: viewModel.fetchSourcePreviewUseCase,
+                onBack: {
+                    viewModel.handle(.closeReader)
+                },
+                onAskSource: { source in
+                    viewModel.handle(.openAskForSource(source: source, kind: .file))
+                },
+                onDeleted: { deletedSource in
+                    viewModel.handle(.sourceDeleted(source: deletedSource))
+                    Task { await sourceListViewModel?.refresh() }
+                }
+            )
         case .none:
             switch viewModel.state.selectedTab {
             case .sources:
@@ -105,7 +119,12 @@ struct MainView: View {
                     )
                 }
             case .ask:
-                FolioAskView(onOpenAccountSettings: { showAccountSheet = true }, onBackToSpaces: { showMySpaces() }, userInitial: userInitial)
+                FolioAskView(
+                    onOpenAccountSettings: { showAccountSheet = true },
+                    onBackToSpaces: { showMySpaces() },
+                    userInitial: userInitial,
+                    scopedSource: viewModel.state.activeAskScope
+                )
             case .notes:
                 FolioPlaceholderView(
                     title: "Notes",
@@ -161,7 +180,9 @@ struct MainView: View {
         workspaceRepository: PreviewWorkspaceRepository(),
         uploadSourceUseCase: PreviewUploadSourceUseCase(),
         fetchSourcesUseCase: PreviewFetchSourcesUseCase(),
-        updateSourceUseCase: PreviewUpdateSourceUseCase()
+        updateSourceUseCase: PreviewUpdateSourceUseCase(),
+        fetchSourceDetailUseCase: PreviewFetchSourceDetailUseCase(),
+        fetchSourcePreviewUseCase: PreviewFetchSourcePreviewUseCase()
     ))
 }
 
@@ -206,17 +227,17 @@ private struct PreviewRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
 
 private struct PreviewUploadSourceUseCase: UploadSourceUseCaseProtocol {
     func uploadFile(spaceId: String, fileURL: URL, title: String?, author: String?) async throws -> Source {
-        Source(id: "preview", researchSpaceId: spaceId, sourceType: .file, title: title ?? "", author: author ?? "", sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
+        Source(id: "preview", researchSpaceId: spaceId, sourceType: .file, title: title ?? "", author: author ?? "", sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", structuredContent: nil, processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
     }
     func uploadWeb(spaceId: String, url: String, title: String?, author: String?) async throws -> Source {
-        Source(id: "preview", researchSpaceId: spaceId, sourceType: .web, title: title ?? "", author: author ?? "", sourceUrl: url, fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
+        Source(id: "preview", researchSpaceId: spaceId, sourceType: .web, title: title ?? "", author: author ?? "", sourceUrl: url, fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", structuredContent: nil, processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
     }
     func uploadManual(spaceId: String, content: String, title: String?, author: String?) async throws -> Source {
-        Source(id: "preview", researchSpaceId: spaceId, sourceType: .manual, title: title ?? "", author: author ?? "", sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: content, processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
+        Source(id: "preview", researchSpaceId: spaceId, sourceType: .manual, title: title ?? "", author: author ?? "", sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: content, structuredContent: nil, processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
     }
     func deleteSource(id: String) async throws {}
     func retrySource(id: String) async throws -> Source {
-        Source(id: id, researchSpaceId: "", sourceType: .file, title: "", author: "", sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", processingState: .added, processingError: "", createdAt: Date(), updatedAt: Date())
+        Source(id: id, researchSpaceId: "", sourceType: .file, title: "", author: "", sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", structuredContent: nil, processingState: .added, processingError: "", createdAt: Date(), updatedAt: Date())
     }
     func sourceStatusStream() -> AsyncThrowingStream<SourceStatusEvent, Error> {
         AsyncThrowingStream { $0.finish() }
@@ -231,6 +252,18 @@ private struct PreviewFetchSourcesUseCase: FetchSourcesUseCaseProtocol {
 
 private struct PreviewUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
     func execute(id: String, title: String, author: String) async throws -> Source {
-        Source(id: id, researchSpaceId: "", sourceType: .file, title: title, author: author, sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
+        Source(id: id, researchSpaceId: "", sourceType: .file, title: title, author: author, sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", structuredContent: nil, processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
+    }
+}
+
+private struct PreviewFetchSourceDetailUseCase: FetchSourceDetailUseCaseProtocol {
+    func execute(id: String) async throws -> Source {
+        Source(id: id, researchSpaceId: "", sourceType: .file, title: "", author: "", sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", structuredContent: nil, processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
+    }
+}
+
+private struct PreviewFetchSourcePreviewUseCase: FetchSourcePreviewUseCaseProtocol {
+    func execute(source: Source) async throws -> SourcePreview {
+        SourcePreview(url: "https://example.com/preview.pdf")
     }
 }

@@ -66,6 +66,97 @@ final class SourceListMutationConsistencyTests: XCTestCase {
         XCTAssertEqual(viewModel.state.allSources.count, 0)
     }
 
+    func testProcessingSourceTapPresentsProcessingSheet() async {
+        let processing = source(id: "proc", title: "Processing", state: .added)
+        let viewModel = makeViewModel(fetch: FailingFetchSourcesUseCase())
+
+        viewModel.send(.sourceTapped(processing))
+        await waitForTasks()
+
+        guard case .processing(let presented)? = viewModel.state.presentedSheet else {
+            XCTFail("Expected processing sheet")
+            return
+        }
+        XCTAssertEqual(presented.id, "proc")
+    }
+
+    func testFailedSourceTapPresentsFailureSheet() async {
+        let failed = source(id: "failed", title: "Failed", state: .failed)
+        let viewModel = makeViewModel(fetch: FailingFetchSourcesUseCase())
+
+        viewModel.send(.sourceTapped(failed))
+        await waitForTasks()
+
+        guard case .failure(let presented)? = viewModel.state.presentedSheet else {
+            XCTFail("Expected failure sheet")
+            return
+        }
+        XCTAssertEqual(presented.id, "failed")
+    }
+
+    func testReadySourceTapDoesNotPresentSheet() async {
+        let ready = source(id: "ready", title: "Ready", state: .ready)
+        let viewModel = makeViewModel(fetch: FailingFetchSourcesUseCase())
+
+        viewModel.send(.sourceTapped(ready))
+        await waitForTasks()
+
+        XCTAssertNil(viewModel.state.presentedSheet)
+    }
+
+    func testDismissSheetClearsProcessingSheet() async {
+        let processing = source(id: "proc", title: "Processing", state: .added)
+        let viewModel = makeViewModel(fetch: FailingFetchSourcesUseCase())
+
+        viewModel.send(.sourceTapped(processing))
+        await waitForTasks()
+        XCTAssertNotNil(viewModel.state.presentedSheet)
+
+        viewModel.send(.dismissSheet)
+        await waitForTasks()
+
+        XCTAssertNil(viewModel.state.presentedSheet)
+    }
+
+    func testSourceDeletedFromProcessingRemovesSource() async {
+        let failed = source(id: "failed", title: "Failed", state: .failed)
+        let fetch = GatedFetchSourcesUseCase(results: [SourceListResult(sources: [failed], pagination: nil)])
+        let viewModel = makeViewModel(fetch: fetch)
+
+        viewModel.send(.appeared)
+        await fetch.waitUntilBlocked()
+        fetch.releaseNext()
+        await waitForTasks()
+
+        XCTAssertEqual(viewModel.state.allSources.count, 1)
+        XCTAssertEqual(viewModel.state.totalCount, 1)
+
+        viewModel.send(.sourceDeletedFromProcessing(failed))
+
+        XCTAssertNil(viewModel.state.presentedSheet)
+        XCTAssertEqual(viewModel.state.allSources.count, 0)
+        XCTAssertEqual(viewModel.state.totalCount, 0)
+        XCTAssertNotNil(viewModel.state.toastMessage)
+    }
+
+    func testSourceStatusChangedUpdatesListEntry() async {
+        let processing = source(id: "proc", title: "Processing", state: .added)
+        let fetch = GatedFetchSourcesUseCase(results: [SourceListResult(sources: [processing], pagination: nil)])
+        let viewModel = makeViewModel(fetch: fetch)
+
+        viewModel.send(.appeared)
+        await fetch.waitUntilBlocked()
+        fetch.releaseNext()
+        await waitForTasks()
+
+        XCTAssertEqual(viewModel.state.allSources.count, 1)
+
+        let updated = processing.withProcessingState(.ready)
+        viewModel.send(.sourceStatusChanged(updated))
+
+        XCTAssertEqual(viewModel.state.allSources.first?.processingState, .ready)
+    }
+
     private func makeViewModel(
         fetch: FetchSourcesUseCaseProtocol,
         update: UpdateSourceUseCaseProtocol = FailingUpdateSourceUseCase(),
@@ -79,7 +170,7 @@ final class SourceListMutationConsistencyTests: XCTestCase {
         )
     }
 
-    private func source(id: String, title: String) -> Source {
+    private func source(id: String, title: String, state: SourceProcessingState = .ready) -> Source {
         Source(
             id: id,
             researchSpaceId: "space-1",
@@ -93,7 +184,8 @@ final class SourceListMutationConsistencyTests: XCTestCase {
             pageCount: 0,
             characterCount: 0,
             content: "",
-            processingState: .ready,
+            structuredContent: nil,
+            processingState: state,
             processingError: "",
             createdAt: .now,
             updatedAt: .now
@@ -159,6 +251,7 @@ private struct ReturningUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
             pageCount: 0,
             characterCount: 0,
             content: "",
+            structuredContent: nil,
             processingState: .ready,
             processingError: "",
             createdAt: .now,
@@ -169,6 +262,10 @@ private struct ReturningUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
 
 private struct FailingUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
     func execute(id: String, title: String, author: String) async throws -> Source { fatalError("Not used") }
+}
+
+private struct FailingFetchSourcesUseCase: FetchSourcesUseCaseProtocol {
+    func execute(query: SourceListQuery) async throws -> SourceListResult { throw CancellationError() }
 }
 
 @MainActor

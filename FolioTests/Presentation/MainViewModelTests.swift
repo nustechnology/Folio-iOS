@@ -126,6 +126,8 @@ final class MainViewModelTests: XCTestCase {
             uploadSourceUseCase: EmptyUploadSourceUseCase(),
             fetchSourcesUseCase: EmptyFetchSourcesUseCase(),
             updateSourceUseCase: EmptyUpdateSourceUseCase(),
+            fetchSourceDetailUseCase: EmptyFetchSourceDetailUseCase(),
+            fetchSourcePreviewUseCase: EmptyFetchSourcePreviewUseCase(),
             initialSources: [
                 source(id: "turing", workspaceID: "dissertation-research"),
                 source(id: "arendt", workspaceID: "dissertation-research"),
@@ -324,4 +326,12 @@ private struct EmptyFetchSourcesUseCase: FetchSourcesUseCaseProtocol {
 
 private struct EmptyUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
     func execute(id: String, title: String, author: String) async throws -> Source { throw CancellationError() }
+}
+
+private struct EmptyFetchSourceDetailUseCase: FetchSourceDetailUseCaseProtocol {
+    func execute(id: String) async throws -> Source { throw CancellationError() }
+}
+
+private struct EmptyFetchSourcePreviewUseCase: FetchSourcePreviewUseCaseProtocol {
+    func execute(source: Source) async throws -> SourcePreview { throw CancellationError() }
 }

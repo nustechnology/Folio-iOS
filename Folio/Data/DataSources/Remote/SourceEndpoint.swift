@@ -40,6 +40,26 @@ struct UpdateSourceEndpoint: APIEndpoint {
     }
 }
 
+struct SourceDetailEndpoint: APIEndpoint {
+    let sourceId: String
+
+    var path: String { "/api/v1/sources/\(sourceId)" }
+    var method: HTTPMethod { .get }
+    var queryItems: [URLQueryItem]? { nil }
+    var body: Data? { nil }
+    var requiresAuthentication: Bool { true }
+}
+
+struct SourcePreviewEndpoint: APIEndpoint {
+    let sourceId: String
+
+    var path: String { "/api/v1/sources/\(sourceId)/preview" }
+    var method: HTTPMethod { .get }
+    var queryItems: [URLQueryItem]? { nil }
+    var body: Data? { nil }
+    var requiresAuthentication: Bool { true }
+}
+
 struct SourceFileUploadEndpoint: APIEndpoint {
     let spaceId: String
     let title: String?

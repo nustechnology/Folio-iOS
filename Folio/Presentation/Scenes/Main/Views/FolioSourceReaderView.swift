@@ -1,93 +1,421 @@
 import SwiftUI
 
 struct FolioSourceReaderView: View {
-    let source: FolioSource
-    let onBack: () -> Void
-    let onOpenAccountSettings: () -> Void
-    let userInitial: String
+    @StateObject private var viewModel: SourceReaderViewModel
+    @State private var webContentHeight: CGFloat = 300
+
+    private let passageID: String?
+    private let onBack: () -> Void
+    private var onAskSource: ((Source) -> Void)?
+    private var onDeleted: ((Source) -> Void)?
+
+    init(
+        source: Source,
+        fetchSourceDetailUseCase: any FetchSourceDetailUseCaseProtocol,
+        updateSourceUseCase: any UpdateSourceUseCaseProtocol,
+        uploadSourceUseCase: any UploadSourceUseCaseProtocol,
+        fetchSourcePreviewUseCase: any FetchSourcePreviewUseCaseProtocol,
+        passageID: String? = nil,
+        onBack: @escaping () -> Void,
+        onAskSource: ((Source) -> Void)? = nil,
+        onDeleted: ((Source) -> Void)? = nil
+    ) {
+        _viewModel = StateObject(wrappedValue: SourceReaderViewModel(
+            source: source,
+            fetchSourceDetailUseCase: fetchSourceDetailUseCase,
+            updateSourceUseCase: updateSourceUseCase,
+            uploadSourceUseCase: uploadSourceUseCase,
+            fetchSourcePreviewUseCase: fetchSourcePreviewUseCase,
+            onAskSource: onAskSource,
+            onDeleted: onDeleted
+        ))
+        self.passageID = passageID
+        self.onBack = onBack
+        self.onAskSource = onAskSource
+        self.onDeleted = onDeleted
+    }
 
     var body: some View {
+        ZStack {
+            Color.folioCanvas.ignoresSafeArea()
+            VStack(spacing: 0) {
+                SourceReaderHeader(
+                    source: viewModel.source,
+                    onBack: onBack,
+                    headerTrailing: { AnyView(menuButton) },
+                    infoTrailing: { AnyView(HStack(spacing: 8) {
+                        askSourceButton
+                        openOriginalButton
+                    }) }
+                )
+                contentCard
+            }
+        }
+        .task { viewModel.send(.appeared) }
+        .sheet(item: sheetBinding) { sheet in
+            switch sheet {
+            case .edit:
+                SourceReaderEditSheet(viewModel: viewModel)
+            case .share(let url):
+                FolioShareSheet(items: [url])
+            }
+        }
+        .alert(
+            String(localized: "Delete this source?"),
+            isPresented: Binding(
+                get: { viewModel.state.showDeleteConfirmation },
+                set: { if !$0 { viewModel.send(.cancelDelete) } }
+            )
+        ) {
+            Button(String(localized: "Cancel"), role: .cancel) { viewModel.send(.cancelDelete) }
+            Button(String(localized: "Delete"), role: .destructive) { viewModel.send(.deleteConfirmed) }
+        } message: {
+            Text(String(localized: "This permanently removes the source and its retrieval data."))
+        }
+        .folioToast(message: Binding(
+            get: { viewModel.state.toastMessage },
+            set: { _ in viewModel.send(.dismissToast) }
+        ))
+    }
+
+    // MARK: - Header
+
+    private var menuButton: some View {
+        Menu {
+            Button {
+                viewModel.send(.editTapped)
+            } label: {
+                Label(String(localized: "Edit"), systemImage: "pencil")
+            }
+            Button(role: .destructive) {
+                viewModel.send(.deleteTapped)
+            } label: {
+                Label(String(localized: "Delete"), systemImage: "trash")
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 14, weight: .semibold))
+                .rotationEffect(.degrees(90))
+                .foregroundStyle(Color.folioInk)
+                .frame(width: 36, height: 36)
+                .overlay(
+                    Circle()
+                        .stroke(Color.folioFieldBorder, lineWidth: 1)
+                )
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel(String(localized: "More options"))
+    }
+
+    // MARK: - Action buttons
+
+    private var askSourceButton: some View {
+        Button {
+            viewModel.send(.askThisSource)
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 11, weight: .semibold))
+                Text(String(localized: "Ask source"))
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .foregroundStyle(Color.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color.folioHomeHeader)
+            .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(String(localized: "Ask this source"))
+    }
+
+    private var openOriginalButton: some View {
+        Button {
+            viewModel.send(.openOriginalTapped)
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "arrow.up.right.square")
+                    .font(.system(size: 11, weight: .semibold))
+                Text(String(localized: "Open original"))
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .foregroundStyle(Color.folioOlive)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color.folioSurfaceStrong)
+            .overlay(
+                RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
+                    .stroke(Color.folioFieldBorder, lineWidth: 1.5)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(String(localized: "Open original"))
+    }
+
+    // MARK: - Content
+
+    private var contentCard: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                FolioTopBar(
-                    title: source.title,
-                    subtitle: source.subtitle,
-                    leading: AnyView(backButton),
-                    trailing: [AnyView(FolioAccountAvatarButton(initial: userInitial, size: 36, action: onOpenAccountSettings))]
-                )
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(source.chapterTitle)
-                        .font(.system(size: 30, weight: .regular, design: .serif))
-                        .foregroundStyle(Color.folioInk)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text(source.chapterText)
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundStyle(Color.folioInkMuted)
-                        .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 0) {
+                if viewModel.state.isLoading {
+                    ProgressView()
+                        .tint(Color.folioGold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
                 }
-                .padding(.horizontal, 18)
 
-                FolioCard(
-                    content: VStack(alignment: .leading, spacing: 12) {
-                        Text(source.calloutText)
-                            .font(.system(size: 15, weight: .regular))
-                            .foregroundStyle(Color.folioInk)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        HStack {
-                            FolioPill(title: "1", isSelected: true, tint: .folioGold)
-                            Spacer()
+                if let error = viewModel.state.errorMessage {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Color.folioDanger)
+                        Text(error)
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundStyle(Color.folioInkMuted)
+                            .lineLimit(2)
+                        Spacer()
+                        Button(String(localized: "Retry")) {
+                            viewModel.send(.retry)
                         }
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.folioOlive)
                     }
-                )
-                .padding(.horizontal, 18)
-
-                FolioCard(
-                    content: VStack(alignment: .leading, spacing: 10) {
-                        Text(source.citationTitle)
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(Color.folioInk)
-
-                        Text(source.citationDetail)
-                            .font(.system(size: 11, weight: .regular))
-                            .foregroundStyle(Color.folioInkSoft)
-
-                        Text(source.citationText)
-                            .font(.system(size: 14, weight: .regular))
-                            .foregroundStyle(Color.folioInk)
-                    }
-                )
-                .padding(.horizontal, 18)
-
-                HStack {
-                    Spacer()
-                    Text(source.pageLabel)
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundStyle(Color.folioInkSoft)
-                    Spacer()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.folioDanger.opacity(0.08))
                 }
-                .padding(.top, 2)
-                .padding(.bottom, 24)
+
+                ReaderWebContentView(
+                    html: SourceHTMLBuilder.fullHTML(for: viewModel.source),
+                    passageID: passageID,
+                    onHeightChange: { height in webContentHeight = height }
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: max(webContentHeight, 1))
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 32)
+        }
+        .background(Color.folioSurfaceStrong)
+        .clipShape(UnevenRoundedRectangle(
+            topLeadingRadius: 16,
+            bottomLeadingRadius: 0,
+            bottomTrailingRadius: 0,
+            topTrailingRadius: 16
+        ))
+        .padding(.horizontal, 18)
+        .ignoresSafeArea(edges: .bottom)
+    }
+
+    // MARK: - Sheets
+
+    private enum ReaderSheet: Identifiable {
+        case edit
+        case share(URL)
+
+        var id: String {
+            switch self {
+            case .edit: return "edit"
+            case .share: return "share"
             }
         }
     }
 
-    private var backButton: some View {
-        Button(action: onBack) {
-            Image(systemName: "chevron.left")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color.white)
-                .frame(width: 22, height: 22)
+    private var activeSheet: ReaderSheet? {
+        if viewModel.state.showEditSheet { return .edit }
+        if viewModel.state.showShareSheet, let url = viewModel.state.previewUrl { return .share(url) }
+        return nil
+    }
+
+    private var sheetBinding: Binding<ReaderSheet?> {
+        Binding(
+            get: { activeSheet },
+            set: { newValue in
+                if newValue == nil {
+                    viewModel.send(.cancelEdit)
+                    viewModel.send(.cancelDelete)
+                    viewModel.send(.dismissShareSheet)
+                }
+            }
+        )
+    }
+
+    // MARK: - Sheets
+}
+
+// MARK: - Edit sheet
+
+private struct SourceReaderEditSheet: View {
+    @ObservedObject var viewModel: SourceReaderViewModel
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case title
+        case author
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: FolioSpacing.xl) {
+            Text(String(localized: "Edit Source"))
+                .font(.system(size: FolioFontSize.heading, weight: .regular, design: .serif))
+                .foregroundStyle(Color.folioTextPrimary)
+                .padding(.top, FolioSpacing.xl5)
+                .padding(.bottom, FolioSpacing.sm)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(String(localized: "Title"))
+                    .font(.system(size: FolioFontSize.body, weight: .medium))
+                    .foregroundStyle(Color.folioInkSoft)
+                TextField(String(localized: "Title"), text: Binding(
+                    get: { viewModel.state.editTitle },
+                    set: { viewModel.send(.editTitleChanged($0)) }
+                ))
+                .font(.system(size: FolioFontSize.bodyLarge))
+                .padding(.horizontal, FolioSpacing.xl)
+                .frame(height: FolioSize.fieldHeightXs)
+                .background(.white)
+                .overlay(
+                    RoundedRectangle(cornerRadius: FolioRadius.md)
+                        .stroke(Color.folioBorderLight, lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
+                .focused($focusedField, equals: .title)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(String(localized: "Author / Publisher"))
+                    .font(.system(size: FolioFontSize.body, weight: .medium))
+                    .foregroundStyle(Color.folioInkSoft)
+                TextField(String(localized: "Author"), text: Binding(
+                    get: { viewModel.state.editAuthor },
+                    set: { viewModel.send(.editAuthorChanged($0)) }
+                ))
+                .font(.system(size: FolioFontSize.bodyLarge))
+                .padding(.horizontal, FolioSpacing.xl)
+                .frame(height: FolioSize.fieldHeightXs)
+                .background(.white)
+                .overlay(
+                    RoundedRectangle(cornerRadius: FolioRadius.md)
+                        .stroke(Color.folioBorderLight, lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
+                .focused($focusedField, equals: .author)
+            }
+
+            if let error = viewModel.state.editError {
+                Text(error)
+                    .font(.system(size: FolioFontSize.small))
+                    .foregroundStyle(Color.folioDanger)
+            }
+
+            HStack(spacing: FolioSpacing.lg) {
+                Button {
+                    focusedField = nil
+                    viewModel.send(.cancelEdit)
+                } label: {
+                    Text(String(localized: "Cancel"))
+                        .font(.system(size: FolioFontSize.bodyLarge, weight: .medium))
+                        .foregroundStyle(Color.folioTextSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 13)
+                        .background(Color.folioCanvas)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: FolioRadius.md)
+                                .stroke(Color.folioBorder, lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    focusedField = nil
+                    viewModel.send(.editConfirmed)
+                } label: {
+                    HStack(spacing: 6) {
+                        if viewModel.state.isEditing {
+                            ProgressView()
+                                .progressViewStyle(.circular)
+                                .tint(.white)
+                                .scaleEffect(0.8)
+                        }
+                        Text(String(localized: "Save"))
+                            .font(.system(size: FolioFontSize.bodyLarge, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .foregroundStyle(.white)
+                    .background(Color.folioOlive)
+                    .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
+                }
+                .buttonStyle(.plain)
+                .disabled(viewModel.state.isEditing)
+            }
         }
-        .buttonStyle(.plain)
-        .frame(minWidth: 44, minHeight: 44)
-        .contentShape(Rectangle())
-        .accessibilityLabel("Back")
+        .padding(.horizontal, FolioSpacing.xl3)
+        .padding(.bottom, FolioSpacing.xl4)
+        .padding(.top, FolioSpacing.lg)
+        .frame(maxWidth: .infinity)
+        .presentationBackground(Color.white)
+        .presentationDetents([.height(350)])
+        .presentationDragIndicator(.visible)
     }
 }
 
 #Preview {
-    FolioSourceReaderView(source: FolioDesignFixtures.sources[0], onBack: {}, onOpenAccountSettings: {}, userInitial: "A")
+    FolioSourceReaderView(
+        source: Source(
+            id: "preview-source",
+            researchSpaceId: "space",
+            sourceType: .file,
+            title: "Alan Turing: Computing Machinery",
+            author: "Alan Turing",
+            sourceUrl: "",
+            fileName: "turing.pdf",
+            fileSize: 0,
+            fileType: "application/pdf",
+            pageCount: 14,
+            characterCount: 0,
+            content: "",
+            structuredContent: nil,
+            processingState: .ready,
+            processingError: "",
+            createdAt: Date(),
+            updatedAt: Date()
+        ),
+        fetchSourceDetailUseCase: PreviewFetchSourceDetailUseCase(),
+        updateSourceUseCase: PreviewUpdateSourceUseCase(),
+        uploadSourceUseCase: PreviewUploadSourceUseCase(),
+        fetchSourcePreviewUseCase: PreviewFetchSourcePreviewUseCase(),
+        onBack: {},
+        onAskSource: { _ in },
+        onDeleted: { _ in }
+    )
+}
+
+private struct PreviewFetchSourceDetailUseCase: FetchSourceDetailUseCaseProtocol {
+    func execute(id: String) async throws -> Source { throw CancellationError() }
+}
+
+private struct PreviewUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
+    func execute(id: String, title: String, author: String) async throws -> Source {
+        Source(id: id, researchSpaceId: "", sourceType: .file, title: title, author: author, sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", structuredContent: nil, processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
+    }
+}
+
+private struct PreviewUploadSourceUseCase: UploadSourceUseCaseProtocol {
+    func uploadFile(spaceId: String, fileURL: URL, title: String?, author: String?) async throws -> Source { throw CancellationError() }
+    func uploadWeb(spaceId: String, url: String, title: String?, author: String?) async throws -> Source { throw CancellationError() }
+    func uploadManual(spaceId: String, content: String, title: String?, author: String?) async throws -> Source { throw CancellationError() }
+    func deleteSource(id: String) async throws {}
+    func retrySource(id: String) async throws -> Source { throw CancellationError() }
+    func sourceStatusStream() -> AsyncThrowingStream<SourceStatusEvent, Error> { AsyncThrowingStream { $0.finish() } }
+}
+
+private struct PreviewFetchSourcePreviewUseCase: FetchSourcePreviewUseCaseProtocol {
+    func execute(source: Source) async throws -> SourcePreview {
+        SourcePreview(url: "https://example.com/preview.pdf")
+    }
 }

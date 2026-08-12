@@ -20,6 +20,16 @@ final class SourceRepository: SourceRepositoryProtocol {
         return response.toDomain()
     }
 
+    func fetchSource(id: String) async throws -> Source {
+        let response: SourceResponseDTO = try await networkService.request(SourceDetailEndpoint(sourceId: id))
+        return response.data.source.toDomain()
+    }
+
+    func fetchSourcePreview(id: String) async throws -> SourcePreview {
+        let response: SourcePreviewResponseDTO = try await networkService.request(SourcePreviewEndpoint(sourceId: id))
+        return response.toDomain()
+    }
+
     func updateSource(id: String, title: String, author: String) async throws -> Source {
         let response: SourceResponseDTO = try await networkService.request(UpdateSourceEndpoint(sourceId: id, title: title, author: author))
         return response.data.source.toDomain()
