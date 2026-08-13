@@ -8,11 +8,13 @@ struct FolioAddSourceSheet: View {
 
     var onSourceOpened: ((Source) -> Void)?
     var onAskSource: ((Source) -> Void)?
+    var onSourceAdded: ((Source) -> Void)?
 
-    init(uploadUseCase: any UploadSourceUseCaseProtocol, spaceId: String, onSourceOpened: ((Source) -> Void)? = nil, onAskSource: ((Source) -> Void)? = nil) {
+    init(uploadUseCase: any UploadSourceUseCaseProtocol, spaceId: String, onSourceOpened: ((Source) -> Void)? = nil, onAskSource: ((Source) -> Void)? = nil, onSourceAdded: ((Source) -> Void)? = nil) {
         _viewModel = StateObject(wrappedValue: FolioAddSourceViewModel(uploadUseCase: uploadUseCase, spaceId: spaceId))
         self.onSourceOpened = onSourceOpened
         self.onAskSource = onAskSource
+        self.onSourceAdded = onSourceAdded
     }
 
     private func heightForTab(_ tab: FolioAddSourceViewModel.AddSourceTab) -> PresentationDetent {
@@ -54,6 +56,9 @@ struct FolioAddSourceSheet: View {
         .interactiveDismissDisabled(viewModel.isDismissalLocked)
         .presentationBackground(Color.folioHomeSheetBackground)
         .presentationCornerRadius(24)
+        .onAppear {
+            viewModel.onSourceAdded = onSourceAdded
+        }
         .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { dismiss() }
         }

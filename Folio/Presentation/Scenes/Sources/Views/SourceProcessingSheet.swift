@@ -7,6 +7,7 @@ struct SourceProcessingSheet: View {
     private let onDeleted: (Source) -> Void
     private let onStatusChanged: (Source) -> Void
     private let onSourceOpened: ((Source) -> Void)?
+    private let onAskSource: ((Source) -> Void)?
 
     init(
         source: Source,
@@ -14,7 +15,8 @@ struct SourceProcessingSheet: View {
         onDismiss: @escaping () -> Void,
         onDeleted: @escaping (Source) -> Void,
         onStatusChanged: @escaping (Source) -> Void,
-        onSourceOpened: ((Source) -> Void)? = nil
+        onSourceOpened: ((Source) -> Void)? = nil,
+        onAskSource: ((Source) -> Void)? = nil
     ) {
         _viewModel = StateObject(wrappedValue: SourceProcessingViewModel(
             source: source,
@@ -27,6 +29,7 @@ struct SourceProcessingSheet: View {
         self.onDeleted = onDeleted
         self.onStatusChanged = onStatusChanged
         self.onSourceOpened = onSourceOpened
+        self.onAskSource = onAskSource
     }
 
     var body: some View {
@@ -278,6 +281,16 @@ struct SourceProcessingSheet: View {
                 action: {
                     onStatusChanged(viewModel.state.source)
                     onSourceOpened?(viewModel.state.source)
+                    onDismiss()
+                }
+            )
+
+            FolioSecondaryButton(
+                title: String(localized: "Ask"),
+                iconName: "sparkles",
+                action: {
+                    onStatusChanged(viewModel.state.source)
+                    onAskSource?(viewModel.state.source)
                     onDismiss()
                 }
             )

@@ -24,12 +24,15 @@ struct FolioTopBar: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 30, weight: .regular, design: .serif))
+                    .font(.system(size: subtitle.isEmpty ? 22 : 30, weight: .regular, design: .serif))
                     .italic()
+                    .lineLimit(1)
                     .foregroundStyle(dark ? Color.white : Color.folioInk)
-                Text(subtitle)
-                    .font(.system(size: 14, weight: .regular, design: .serif))
-                    .foregroundStyle(dark ? Color.white.opacity(0.76) : Color.folioInkMuted)
+                if !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.system(size: 14, weight: .regular, design: .serif))
+                        .foregroundStyle(dark ? Color.white.opacity(0.76) : Color.folioInkMuted)
+                }
             }
 
             Spacer(minLength: 0)

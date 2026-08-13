@@ -16,6 +16,50 @@ struct MainView: View {
     @State private var sourceListViewModel: SourceListViewModel?
     @State private var noteListViewModel: NoteListViewModel?
     @State private var notebookViewModel: NotebookViewModel?
+    @State private var askConversationListViewModel: AskConversationListViewModel?
+    @State private var isAskConversationOpen = false
+    @StateObject private var askViewModel: FolioAskViewModel
+    private let fetchAskConversationsUseCase: any FetchAskConversationsUseCaseProtocol
+    private let deleteConversationUseCase: any DeleteConversationUseCaseProtocol
+    private let renameConversationUseCase: any RenameConversationUseCaseProtocol
+
+    init(
+        viewModel: MainViewModel,
+        fetchNotesUseCase: any FetchNotesUseCaseProtocol,
+        fetchNoteUseCase: any FetchNoteUseCaseProtocol,
+        updateNoteUseCase: any UpdateNoteUseCaseProtocol,
+        deleteNoteUseCase: any DeleteNoteUseCaseProtocol,
+        createNoteUseCase: (any CreateNoteUseCaseProtocol)?,
+        convertNoteToSourceUseCase: (any ConvertNoteToSourceUseCaseProtocol)?,
+        uploadSourceUseCase: (any UploadSourceUseCaseProtocol)?,
+        fetchAskSuggestionsUseCase: any FetchAskSuggestionsUseCaseProtocol,
+        streamAskAnswerUseCase: any StreamAskAnswerUseCaseProtocol,
+        fetchAskConversationsUseCase: any FetchAskConversationsUseCaseProtocol,
+        fetchAskConversationDetailUseCase: any FetchAskConversationDetailUseCaseProtocol,
+        sendFeedbackUseCase: any SendFeedbackUseCaseProtocol,
+        createSavedAnswerNoteUseCase: any CreateSavedAnswerNoteUseCaseProtocol,
+        deleteConversationUseCase: any DeleteConversationUseCaseProtocol,
+        renameConversationUseCase: any RenameConversationUseCaseProtocol
+    ) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+        self.fetchNotesUseCase = fetchNotesUseCase
+        self.fetchNoteUseCase = fetchNoteUseCase
+        self.updateNoteUseCase = updateNoteUseCase
+        self.deleteNoteUseCase = deleteNoteUseCase
+        self.createNoteUseCase = createNoteUseCase
+        self.convertNoteToSourceUseCase = convertNoteToSourceUseCase
+        self.uploadSourceUseCase = uploadSourceUseCase
+        self.fetchAskConversationsUseCase = fetchAskConversationsUseCase
+        self.deleteConversationUseCase = deleteConversationUseCase
+        self.renameConversationUseCase = renameConversationUseCase
+        _askViewModel = StateObject(wrappedValue: FolioAskViewModel(
+            fetchAskSuggestionsUseCase: fetchAskSuggestionsUseCase,
+            streamAskAnswerUseCase: streamAskAnswerUseCase,
+            fetchAskConversationDetailUseCase: fetchAskConversationDetailUseCase,
+            sendFeedbackUseCase: sendFeedbackUseCase,
+            createSavedAnswerNoteUseCase: createSavedAnswerNoteUseCase
+        ))
+    }
 
     var body: some View {
         ZStack {
@@ -23,6 +67,14 @@ struct MainView: View {
             content
         }
         .task { viewModel.handle(.onAppear) }
+        .onChange(of: viewModel.state.activeAskScope) { _, scopedSource in
+            askViewModel.handle(.scopeOptionSelected(sourceID: scopedSource?.id))
+        }
+        .onChange(of: viewModel.state.isAuthenticated) { _, isAuthenticated in
+            guard !isAuthenticated else { return }
+            askViewModel.handle(.newConversation)
+            askViewModel.updateSources([], spaceId: nil)
+        }
         .sheet(isPresented: $showAccountSheet) {
             AccountBottomSheet(
                 displayName: viewModel.state.userDisplayName ?? "User",
@@ -83,22 +135,19 @@ struct MainView: View {
     }
 
     private var appShellWithTab: some View {
-        let isMySpaces = viewModel.state.selectedTab == .sources
-            && selectedWorkspace == nil
-        let showTabBar = viewModel.state.activeReaderID == nil && !isMySpaces
-
-        return ZStack(alignment: .bottom) {
-            appShell
-                .padding(.bottom, showTabBar ? 84 : 0)
-
-            if showTabBar {
-                FolioBottomTabBar(selectedTab: viewModel.state.selectedTab) { tab in
-                    viewModel.handle(.selectTab(tab))
+        appShell
+            .safeAreaInset(edge: .bottom) {
+                let isMySpaces = viewModel.state.selectedTab == .sources
+                    && selectedWorkspace == nil
+                if viewModel.state.activeReaderID == nil && !isMySpaces {
+                    FolioBottomTabBar(selectedTab: viewModel.state.selectedTab) { tab in
+                        viewModel.handle(.selectTab(tab))
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 8)
                 }
-                .padding(.horizontal, 20)
             }
-        }
-        .ignoresSafeArea(.keyboard, edges: .bottom)
+            .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
     @ViewBuilder
@@ -134,6 +183,9 @@ struct MainView: View {
                         userInitial: currentUserInitial,
                         onSourceOpened: { source in
                             viewModel.handle(.addNewSource(source: source, workspaceID: workspace.id))
+                        },
+                        onAskSource: { source in
+                            viewModel.handle(.openAskForSource(source: source, kind: .file))
                         }
                     )
                 } else {
@@ -155,10 +207,58 @@ struct MainView: View {
                     )
                 }
             case .ask:
-                FolioAskView(
-                    onBackToSpaces: { showMySpaces() },
-                    scopedSource: viewModel.state.activeAskScope
-                )
+                if let workspace = selectedWorkspace,
+                    let askListVM = askConversationListViewModel,
+                    viewModel.state.activeAskScope == nil,
+                    !isAskConversationOpen {
+                    AskConversationListView(
+                        viewModel: askListVM,
+                        workspaceTitle: workspace.name,
+                        onBackToSpaces: { showMySpaces() },
+                        onNewConversation: {
+                            askViewModel.handle(.newConversation)
+                            isAskConversationOpen = true
+                        },
+                        onSelectConversation: { conversation in
+                            askViewModel.openExistingConversation(conversation, spaceId: workspace.id)
+                            isAskConversationOpen = true
+                        }
+                    )
+                } else {
+                    let canReturnToConversationList = selectedWorkspace != nil && viewModel.state.activeAskScope == nil
+                    let workspaceSources: [FolioSource] = {
+                        if let loadedSources = sourceListViewModel?.state.allSources, !loadedSources.isEmpty {
+                            return loadedSources.map { FolioSource(from: $0, workspaceID: selectedWorkspace?.id) }
+                        }
+                        return viewModel.state.sources.filter { $0.workspaceID == selectedWorkspace?.id }
+                    }()
+                    FolioAskView(
+                        viewModel: askViewModel,
+                        sources: workspaceSources,
+                        spaceId: selectedWorkspace?.id,
+                        workspaceTitle: selectedWorkspace?.name,
+                        onBackToSpaces: canReturnToConversationList
+                            ? { isAskConversationOpen = false }
+                            : { showMySpaces() },
+                        onOpenSource: { folioSource in
+                            Task {
+                                do {
+                                    let source = try await viewModel.fetchSourceDetailUseCase.execute(id: folioSource.id)
+                                    viewModel.handle(.openReader(source))
+                                } catch {
+                                    Logger.error("Failed to open source from citation: \(error)")
+                                    viewModel.toastMessage = .error(String(localized: "Unable to open source. Please try again."))
+                                }
+                            }
+                        },
+                        onSourceAdded: { source in
+                            viewModel.handle(.addNewSource(source: source, workspaceID: selectedWorkspace?.id))
+                        },
+                        uploadSourceUseCase: uploadSourceUseCase,
+                        userDisplayName: viewModel.state.userDisplayName,
+                        userEmail: viewModel.state.userEmail
+                    )
+                }
             case .notes:
                 if let workspace = selectedWorkspace, let noteVM = noteListViewModel {
                     NoteListView(
@@ -212,12 +312,14 @@ struct MainView: View {
     }
 
     private func openWorkspace(_ workspace: Workspace) {
-        sourceListViewModel = SourceListViewModel(
+        let sourceVM = SourceListViewModel(
             spaceId: workspace.id,
             fetchSourcesUseCase: viewModel.fetchSourcesUseCase,
             updateSourceUseCase: viewModel.updateSourceUseCase,
-            uploadSourceUseCase: viewModel.uploadSourceUseCase,
+            uploadSourceUseCase: viewModel.uploadSourceUseCase
         )
+        sourceVM.send(.appeared)
+        sourceListViewModel = sourceVM
         noteListViewModel = NoteListViewModel(
             spaceId: workspace.id,
             fetchNotesUseCase: fetchNotesUseCase,
@@ -236,6 +338,12 @@ struct MainView: View {
             saveNotebookUseCase: viewModel.saveNotebookUseCase
         )
         notebookViewModel?.configure(spaceId: workspace.id, spaceName: workspace.name)
+        askConversationListViewModel = AskConversationListViewModel(
+            spaceId: workspace.id,
+            fetchAskConversationsUseCase: fetchAskConversationsUseCase,
+            deleteConversationUseCase: deleteConversationUseCase,
+            renameConversationUseCase: renameConversationUseCase)
+        isAskConversationOpen = false
         selectedWorkspace = workspace
     }
 
@@ -245,6 +353,8 @@ struct MainView: View {
         sourceListViewModel = nil
         noteListViewModel = nil
         notebookViewModel = nil
+        askConversationListViewModel = nil
+        isAskConversationOpen = false
         viewModel.handle(.showSpaces)
     }
 
@@ -286,7 +396,66 @@ struct MainView: View {
     deleteNoteUseCase: PreviewDeleteNoteUseCase(),
     createNoteUseCase: PreviewCreateNoteUseCase(),
     convertNoteToSourceUseCase: nil,
-    uploadSourceUseCase: nil)
+    uploadSourceUseCase: nil,
+    fetchAskSuggestionsUseCase: PreviewFetchAskSuggestionsUseCase(),
+    streamAskAnswerUseCase: PreviewStreamAskAnswerUseCase(),
+    fetchAskConversationsUseCase: PreviewFetchAskConversationsUseCase(),
+    fetchAskConversationDetailUseCase: PreviewFetchAskConversationDetailUseCase(),
+    sendFeedbackUseCase: PreviewSendFeedbackUseCase(),
+    createSavedAnswerNoteUseCase: PreviewCreateSavedAnswerNoteUseCase(),
+    deleteConversationUseCase: PreviewDeleteConversationUseCase(),
+    renameConversationUseCase: PreviewRenameConversationUseCase())
+}
+
+private struct PreviewFetchAskSuggestionsUseCase: FetchAskSuggestionsUseCaseProtocol {
+    func execute(spaceId: String, scope: String, sourceId: String?) async throws -> AskSuggestionsResult {
+        AskSuggestionsResult(suggestions: [], isDynamic: false)
+    }
+}
+
+private struct PreviewStreamAskAnswerUseCase: StreamAskAnswerUseCaseProtocol {
+    func execute(
+        spaceId: String, question: String, scope: AskAnswerScope, sourceId: String?, conversationId: String?
+    ) -> AsyncThrowingStream<AskAnswerStreamEvent, Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+}
+
+private struct PreviewFetchAskConversationsUseCase: FetchAskConversationsUseCaseProtocol {
+    func execute(query: AskConversationListQuery) async throws -> AskConversationListResult {
+        AskConversationListResult(conversations: [], pagination: nil)
+    }
+}
+
+private struct PreviewFetchAskConversationDetailUseCase: FetchAskConversationDetailUseCaseProtocol {
+    func execute(spaceId: String, conversationId: String) async throws -> AskConversationDetail {
+        AskConversationDetail(
+            id: conversationId, researchSpaceId: spaceId, title: "", scope: AskConversationScope(type: "space", sourceId: nil),
+            messages: [], createdAt: Date(), updatedAt: Date())
+    }
+}
+
+private struct PreviewSendFeedbackUseCase: SendFeedbackUseCaseProtocol {
+    func execute(spaceId: String, conversationId: String, messageId: String, rating: String) async throws {}
+}
+
+private struct PreviewCreateSavedAnswerNoteUseCase: CreateSavedAnswerNoteUseCaseProtocol {
+    func execute(
+        spaceId: String, title: String, content: String, project: String?,
+        originConversationId: String?, originMessageId: String?,
+        citationCount: Int?, citations: [SavedAnswerCitationDTO]?
+    ) async throws -> Note {
+        Note(id: "preview", researchSpaceId: spaceId, title: title, originType: .savedAssistantAnswer,
+             content: content, createdAt: Date(), updatedAt: Date(), citationCount: citationCount)
+    }
+}
+
+private struct PreviewDeleteConversationUseCase: DeleteConversationUseCaseProtocol {
+    func execute(spaceId: String, conversationId: String) async throws {}
+}
+
+private struct PreviewRenameConversationUseCase: RenameConversationUseCaseProtocol {
+    func execute(spaceId: String, conversationId: String, title: String) async throws {}
 }
 
 final class PreviewWorkspaceRepository: WorkspaceRepositoryProtocol {

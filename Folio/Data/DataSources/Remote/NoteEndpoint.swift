@@ -35,15 +35,28 @@ struct NoteDetailEndpoint: APIEndpoint {
 
 struct CreateNoteEndpoint: APIEndpoint {
   let spaceId: String
-  let title: String
-  let content: String
+  let request: CreateNoteRequestDTO
 
   var path: String { "/api/v1/spaces/\(spaceId)/notes" }
   var method: HTTPMethod { .post }
   var queryItems: [URLQueryItem]? { nil }
   var requiresAuthentication: Bool { true }
   var body: Data? {
-    try? JSONEncoder().encode(CreateNoteRequestDTO(title: title, content: content))
+    let data = try? JSONEncoder().encode(request)
+    if let data, let json = String(data: data, encoding: .utf8) {
+      Logger.debug("CreateNoteEndpoint payload: \(json)")
+    }
+    return data
+  }
+
+  init(spaceId: String, title: String, content: String) {
+    self.spaceId = spaceId
+    self.request = CreateNoteRequestDTO(title: title, content: content)
+  }
+
+  init(spaceId: String, request: CreateNoteRequestDTO) {
+    self.spaceId = spaceId
+    self.request = request
   }
 }
 
