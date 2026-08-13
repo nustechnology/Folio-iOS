@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import UniformTypeIdentifiers
+import PDFKit
 
 @MainActor
 final class FolioAddSourceViewModel: ViewModelProtocol {
@@ -10,7 +11,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .files: return String(localized: "PDF")
+            case .files: return String(localized: "File")
             case .web: return String(localized: "Web")
             case .text: return String(localized: "Text")
             }
@@ -56,6 +57,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         var selectedFileURL: URL?
         var selectedFileName: String = ""
         var selectedFileSize: Int64 = 0
+        var selectedFilePageCount: Int?
         var fileError: String?
 
         var webURL: String = ""
@@ -89,6 +91,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     private let spaceId: String
     private var uploadTask: Task<Void, Never>?
     private var statusStreamTask: Task<Void, Never>?
+    private var pageCountTask: Task<Void, Never>?
     private var isFileAccessing = false
 
     init(uploadUseCase: any UploadSourceUseCaseProtocol, spaceId: String) {
@@ -102,6 +105,10 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         case .web: return validWebURL
         case .text: return validManualContent
         }
+    }
+
+    var isDismissalLocked: Bool {
+        state.isSubmitting || (state.isProcessing && !state.isProcessingComplete && !state.isProcessingFailed)
     }
 
     private var validWebURL: Bool {
@@ -127,7 +134,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             guard Self.supportedExtensions.contains(ext) else {
                 stopFileAccess()
                 state.fileError = String(localized: "Unsupported file format. Please upload supported files (.pdf, .docx, .txt, .md, .pptx, .xlsx, .csv, .epub).")
-                state.selectedFileURL = nil; state.selectedFileName = ""; state.selectedFileSize = 0
+                state.selectedFileURL = nil; state.selectedFileName = ""; state.selectedFileSize = 0; state.selectedFilePageCount = nil
                 return
             }
 
@@ -154,7 +161,9 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
                 state.selectedFileURL = url
                 state.selectedFileName = url.lastPathComponent
                 state.selectedFileSize = size
+                state.selectedFilePageCount = nil
                 state.fileError = nil
+                loadPageCount(for: url)
             } catch {
                 url.stopAccessingSecurityScopedResource()
                 state.fileError = String(localized: "Unable to access the selected file.")
@@ -162,7 +171,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
 
         case .removeFile:
             stopFileAccess()
-            state.selectedFileURL = nil; state.selectedFileName = ""; state.selectedFileSize = 0; state.fileError = nil
+            state.selectedFileURL = nil; state.selectedFileName = ""; state.selectedFileSize = 0; state.selectedFilePageCount = nil; state.fileError = nil
 
         case .webURLChanged(let v): state.webURL = v; state.webURLError = nil
         case .webTitleChanged(let v): if v.count <= Self.titleMax { state.webTitle = v }
@@ -418,7 +427,22 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     }
     private func resetState() { stopFileAccess(); state = State() }
 
+    private func loadPageCount(for url: URL) {
+        pageCountTask = Task.detached(priority: .userInitiated) { [weak self] in
+            let count = PDFDocument(url: url)?.pageCount
+            guard let self else { return }
+            await self.setPageCount(count, for: url)
+        }
+    }
+
+    private func setPageCount(_ count: Int?, for url: URL) {
+        guard state.selectedFileURL == url else { return }
+        state.selectedFilePageCount = count
+    }
+
     private func stopFileAccess() {
+        pageCountTask?.cancel()
+        pageCountTask = nil
         guard isFileAccessing else { return }
         isFileAccessing = false
         state.selectedFileURL?.stopAccessingSecurityScopedResource()

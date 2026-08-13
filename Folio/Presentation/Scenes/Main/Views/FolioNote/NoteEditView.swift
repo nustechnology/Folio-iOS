@@ -89,7 +89,7 @@ struct NoteEditView: View {
             FolioPrimaryButton(
                 title: String(localized: "Save"),
                 isLoading: viewModel.state.isSaving,
-                isDisabled: isSaveDisabled,
+                isEnabled: !isSaveDisabled,
                 action: { viewModel.handle(.editSaved(note)) }
             )
         }

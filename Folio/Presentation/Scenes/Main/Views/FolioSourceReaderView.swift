@@ -78,17 +78,16 @@ struct FolioSourceReaderView: View {
                 onOpen: { viewModel.send(.openOriginalConfirmed) }
             )
         }
-        .alert(
-            String(localized: "Delete this source?"),
-            isPresented: Binding(
-                get: { viewModel.state.showDeleteConfirmation },
-                set: { if !$0 { viewModel.send(.cancelDelete) } }
+        .sheet(isPresented: Binding(
+            get: { viewModel.state.showDeleteConfirmation },
+            set: { if !$0 { viewModel.send(.cancelDelete) } }
+        )) {
+            DeleteSourceBottomSheet(
+                title: String(localized: "Delete this source?"),
+                message: String(localized: "This permanently removes the source and its retrieval data."),
+                onCancel: { viewModel.send(.cancelDelete) },
+                onDelete: { viewModel.send(.deleteConfirmed) }
             )
-        ) {
-            Button(String(localized: "Cancel"), role: .cancel) { viewModel.send(.cancelDelete) }
-            Button(String(localized: "Delete"), role: .destructive) { viewModel.send(.deleteConfirmed) }
-        } message: {
-            Text(String(localized: "This permanently removes the source and its retrieval data."))
         }
         .folioToast(message: Binding(
             get: { viewModel.state.toastMessage },
