@@ -72,8 +72,8 @@ struct NoteListView: View {
                     FolioPill(
                         title: filter.title,
                         isSelected: viewModel.state.filter == filter,
-                        tint: .folioHomeTypeFileText,
-                        fontSize: 12,
+                        tint: .folioInk,
+                        fontSize: 13,
                         backgroundColor: .folioHomeTypeFileBackground
                     )
                 }
@@ -165,7 +165,8 @@ struct NoteListView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .frame(maxWidth: .infinity, minHeight: 420)
+            .frame(maxWidth: .infinity)
+            .containerRelativeFrame(.vertical)
         } else if viewModel.state.notes.isEmpty {
             VStack(spacing: FolioSpacing.xl) {
                 Image(systemName: "magnifyingglass")
@@ -181,7 +182,7 @@ struct NoteListView: View {
 
                 VStack(spacing: FolioSpacing.sm) {
                     Text(emptyFilterTitle)
-                        .font(.system(size: FolioFontSize.body, weight: .semibold))
+                        .font(.system(size: FolioFontSize.subheadline, weight: .semibold))
                         .foregroundStyle(Color.folioInk)
                 }
             }
@@ -246,6 +247,8 @@ struct NoteListView: View {
     @ViewBuilder
     private func sheetContent(_ sheet: NoteListViewModel.Sheet) -> some View {
         switch sheet {
+        case .create:
+            NoteCreateView(viewModel: viewModel)
         case .actions(let note):
             NoteActionSheet(
                 note: note,

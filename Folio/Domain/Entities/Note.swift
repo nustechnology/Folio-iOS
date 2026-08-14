@@ -1,5 +1,10 @@
 import Foundation
 
+enum NoteLimits {
+  static let maximumTitleLength = 150
+  static let maximumContentLength = 20_000
+}
+
 enum NoteSortOption: String, CaseIterable, Equatable, Hashable, Sendable, SortOptionProtocol {
   case recentlyUpdated = "recently-updated"
   case recentlyCreated = "recently-created"

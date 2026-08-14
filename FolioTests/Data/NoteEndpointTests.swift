@@ -46,4 +46,43 @@ final class NoteEndpointTests: XCTestCase {
         XCTAssertEqual(endpoint.method, .delete)
         XCTAssertTrue(endpoint.requiresAuthentication)
     }
+
+    func testCreateEndpointUsesSpaceScopedPostWithJSONBody() throws {
+        let endpoint = CreateNoteEndpoint(spaceId: "space-1", title: "New", content: "Body")
+
+        XCTAssertEqual(endpoint.path, "/api/v1/spaces/space-1/notes")
+        XCTAssertEqual(endpoint.method, .post)
+        XCTAssertTrue(endpoint.requiresAuthentication)
+
+        let body = try XCTUnwrap(endpoint.body)
+        let payload = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: body) as? [String: String]
+        )
+        XCTAssertEqual(payload["title"], "New")
+        XCTAssertEqual(payload["content"], "Body")
+        XCTAssertNil(payload["originType"])
+    }
+
+    func testCreateEndpointUsesNoteResponseEnvelope() throws {
+        let endpoint = CreateNoteEndpoint(spaceId: "space-1", title: "New", content: "Body")
+        let response = try JSONDecoder.noteTestDecoder.decode(
+            NoteResponseDTO.self,
+            from: Data(
+                """
+                {"status":"success","data":{"note":{"id":"note-1","researchSpaceId":"space-1","title":"New","originType":"UserCreated","content":"Body","createdAt":"2026-08-14T10:00:00Z","updatedAt":"2026-08-14T10:00:00Z","citationCount":0}}}
+                """.utf8
+            )
+        )
+
+        XCTAssertEqual(response.data.note.toDomain().originType, .userCreated)
+        XCTAssertEqual(endpoint.path, "/api/v1/spaces/space-1/notes")
+    }
+}
+
+private extension JSONDecoder {
+    static var noteTestDecoder: JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }
 }

@@ -6,6 +6,7 @@ struct MainView: View {
     let fetchNoteUseCase: any FetchNoteUseCaseProtocol
     let updateNoteUseCase: any UpdateNoteUseCaseProtocol
     let deleteNoteUseCase: any DeleteNoteUseCaseProtocol
+    let createNoteUseCase: (any CreateNoteUseCaseProtocol)?
     @State private var showAccountSheet = false
     @State private var showAccountSettings = false
     @State private var selectedWorkspace: Workspace?
@@ -174,7 +175,8 @@ struct MainView: View {
             fetchNotesUseCase: fetchNotesUseCase,
             fetchNoteUseCase: fetchNoteUseCase,
             updateNoteUseCase: updateNoteUseCase,
-            deleteNoteUseCase: deleteNoteUseCase
+            deleteNoteUseCase: deleteNoteUseCase,
+            createNoteUseCase: createNoteUseCase
         )
         selectedWorkspace = workspace
     }
@@ -202,7 +204,7 @@ struct MainView: View {
         updateSourceUseCase: PreviewUpdateSourceUseCase(),
         fetchSourceDetailUseCase: PreviewFetchSourceDetailUseCase(),
         fetchSourcePreviewUseCase: PreviewFetchSourcePreviewUseCase()
-    ), fetchNotesUseCase: PreviewFetchNotesUseCase(), fetchNoteUseCase: PreviewFetchNoteUseCase(), updateNoteUseCase: PreviewUpdateNoteUseCase(), deleteNoteUseCase: PreviewDeleteNoteUseCase())
+     ), fetchNotesUseCase: PreviewFetchNotesUseCase(), fetchNoteUseCase: PreviewFetchNoteUseCase(), updateNoteUseCase: PreviewUpdateNoteUseCase(), deleteNoteUseCase: PreviewDeleteNoteUseCase(), createNoteUseCase: PreviewCreateNoteUseCase())
 }
 
 final class PreviewWorkspaceRepository: WorkspaceRepositoryProtocol {
@@ -291,3 +293,4 @@ private struct PreviewFetchNotesUseCase: FetchNotesUseCaseProtocol { func execut
 private struct PreviewFetchNoteUseCase: FetchNoteUseCaseProtocol { func execute(spaceId: String, noteId: String) async throws -> Note { fatalError("Preview only") } }
 private struct PreviewUpdateNoteUseCase: UpdateNoteUseCaseProtocol { func execute(spaceId: String, noteId: String, title: String, content: String) async throws -> Note { fatalError("Preview only") } }
 private struct PreviewDeleteNoteUseCase: DeleteNoteUseCaseProtocol { func execute(spaceId: String, noteId: String) async throws {} }
+private struct PreviewCreateNoteUseCase: CreateNoteUseCaseProtocol { func execute(spaceId: String, title: String, content: String) async throws -> Note { fatalError("Preview only") } }

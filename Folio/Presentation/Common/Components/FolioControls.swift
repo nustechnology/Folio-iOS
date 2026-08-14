@@ -46,8 +46,8 @@ struct FolioPill: View {
 
     var body: some View {
         Text(title)
-            .font(.system(size: fontSize, weight: .medium))
-            .foregroundStyle(isSelected ? tint : Color.folioInkSoft)
+            .font(.system(size: fontSize))
+            .foregroundStyle(isSelected ? tint : Color.folioInk)
             .padding(.horizontal, FolioSpacing.lg2)
             .padding(.vertical, FolioSpacing.md)
             .background(isSelected ? selectedBackground : Color.folioSurface)
@@ -157,6 +157,27 @@ struct FolioDangerButton: View {
         }
         .buttonStyle(.plain)
         .disabled(isDisabled || isLoading)
+        .opacity(isDisabled ? 0.55 : 1)
+    }
+}
+
+struct FolioDestructiveFilledButton: View {
+    let title: String
+    var isDisabled: Bool = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 15, weight: .medium))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .foregroundStyle(Color.folioDanger)
+                .background(Color.folioDanger.opacity(0.16))
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
         .opacity(isDisabled ? 0.55 : 1)
     }
 }
