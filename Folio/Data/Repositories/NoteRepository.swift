@@ -11,6 +11,11 @@ final class NoteRepository: NoteRepositoryProtocol {
       NoteDetailEndpoint(spaceId: spaceId, noteId: noteId))
     return response.data.note.toDomain()
   }
+  func createNote(spaceId: String, title: String, content: String) async throws -> Note {
+    let response: NoteResponseDTO = try await networkService.request(
+      CreateNoteEndpoint(spaceId: spaceId, title: title, content: content))
+    return response.data.note.toDomain()
+  }
   func updateNote(spaceId: String, noteId: String, title: String, content: String) async throws
     -> Note
   {

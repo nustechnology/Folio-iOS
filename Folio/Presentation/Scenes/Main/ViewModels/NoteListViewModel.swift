@@ -32,6 +32,7 @@ final class NoteListViewModel: ViewModelProtocol {
   }
 
   enum Sheet: Identifiable, Equatable {
+    case create
     case detail(Note)
     case edit(Note)
     case convert(Note)
@@ -40,6 +41,8 @@ final class NoteListViewModel: ViewModelProtocol {
 
     var id: String {
       switch self {
+      case .create:
+        "create"
       case .detail(let note):
         "detail-\(note.id)"
       case .edit(let note):
@@ -71,6 +74,13 @@ final class NoteListViewModel: ViewModelProtocol {
     case deleteRequestedFromActionSheet(NoteSummary)
     case editStarted(Note)
     case editSaved(Note)
+    case createTitleChanged(String)
+    case createContentChanged(String)
+    case createSaveTapped
+    case createCancelTapped
+    case createDismissalAttempted
+    case createDiscardConfirmed
+    case createDiscardCancelled
     case deleteRequested(NoteSummary)
     case deleteConfirmed
     case dismissDeleteConfirmation
@@ -101,6 +111,12 @@ final class NoteListViewModel: ViewModelProtocol {
     var editTitle = ""
     var editContent = ""
     var isSaving = false
+    var createTitle = ""
+    var createContent = ""
+    var createTitleError: String?
+    var createContentError: String?
+    var isCreating = false
+    var isDiscardCreateDraftPresented = false
   }
 
   @Published private(set) var state = State()
@@ -108,6 +124,7 @@ final class NoteListViewModel: ViewModelProtocol {
   let spaceId: String
   private let fetchNotes: any FetchNotesUseCaseProtocol
   private let fetchNote: any FetchNoteUseCaseProtocol
+  private let createNote: (any CreateNoteUseCaseProtocol)?
   private let updateNote: any UpdateNoteUseCaseProtocol
   private let deleteNote: any DeleteNoteUseCaseProtocol
   private var didLoad = false
@@ -122,11 +139,13 @@ final class NoteListViewModel: ViewModelProtocol {
     fetchNotesUseCase: any FetchNotesUseCaseProtocol,
     fetchNoteUseCase: any FetchNoteUseCaseProtocol,
     updateNoteUseCase: any UpdateNoteUseCaseProtocol,
-    deleteNoteUseCase: any DeleteNoteUseCaseProtocol
+    deleteNoteUseCase: any DeleteNoteUseCaseProtocol,
+    createNoteUseCase: (any CreateNoteUseCaseProtocol)? = nil
   ) {
     self.spaceId = spaceId
     fetchNotes = fetchNotesUseCase
     fetchNote = fetchNoteUseCase
+    createNote = createNoteUseCase
     updateNote = updateNoteUseCase
     deleteNote = deleteNoteUseCase
 
@@ -144,13 +163,15 @@ final class NoteListViewModel: ViewModelProtocol {
       handleLoadingAction(action)
     case .searchChanged, .filterSelected, .sortTapped, .sortSelected:
       handleFilteringAction(action)
-    case .noteSelected, .noteActionsRequested, .viewRequested, .editRequestedFromActionSheet,
-      .editStarted, .editSaved:
+    case .newTapped, .noteSelected, .noteActionsRequested, .viewRequested,
+      .editRequestedFromActionSheet, .editStarted, .editSaved, .createTitleChanged,
+      .createContentChanged, .createSaveTapped, .createCancelTapped, .createDismissalAttempted,
+      .createDiscardConfirmed, .createDiscardCancelled:
       handleEditingAction(action)
     case .deleteRequested, .deleteRequestedFromActionSheet, .deleteConfirmed,
       .dismissDeleteConfirmation:
       handleDeletingAction(action)
-    case .newTapped, .convertTapped, .convertRequestedFromActionSheet, .convertConfirmed:
+    case .convertTapped, .convertRequestedFromActionSheet, .convertConfirmed:
       handleConversionAction(action)
     case .dismissSheet, .sheetDismissed, .dismissToast, .editTitleChanged, .editContentChanged:
       handleDismissalOrDraftAction(action)
@@ -195,6 +216,13 @@ extension NoteListViewModel {
 
   private func handleEditingAction(_ action: Action) {
     switch action {
+    case .newTapped:
+      state.createTitle = ""
+      state.createContent = ""
+      state.createTitleError = nil
+      state.createContentError = nil
+      state.isDiscardCreateDraftPresented = false
+      setSheet(.create)
     case .noteSelected(let note):
       showDetail(note)
     case .noteActionsRequested(let note):
@@ -209,6 +237,31 @@ extension NoteListViewModel {
       startEdit(note)
     case .editSaved(let note):
       saveEdit(note)
+    case .createTitleChanged(let title):
+      guard !state.isCreating else { return }
+      state.createTitle = title
+      state.createTitleError = title.count > NoteLimits.maximumTitleLength
+        ? String(localized: "Title cannot exceed 150 characters")
+        : nil
+    case .createContentChanged(let content):
+      guard !state.isCreating else { return }
+      state.createContent = content
+      state.createContentError = content.count > NoteLimits.maximumContentLength
+        ? String(localized: "Content exceeds maximum length of 20,000 characters")
+        : nil
+    case .createSaveTapped:
+      saveCreate()
+    case .createCancelTapped:
+      requestCreateDismissal()
+    case .createDismissalAttempted:
+      guard !state.isCreating else { return }
+      requestCreateDismissal()
+    case .createDiscardConfirmed:
+      state.isDiscardCreateDraftPresented = false
+      clearCreateDraft()
+      setSheet(nil)
+    case .createDiscardCancelled:
+      state.isDiscardCreateDraftPresented = false
     default:
       return
     }
@@ -232,7 +285,11 @@ extension NoteListViewModel {
   private func handleDismissalOrDraftAction(_ action: Action) {
     switch action {
     case .dismissSheet:
-      setSheet(nil)
+      if state.sheet == .create {
+        requestCreateDismissal()
+      } else {
+        setSheet(nil)
+      }
     case .sheetDismissed:
       confirmDeferredDelete()
     case .dismissToast:
@@ -248,8 +305,6 @@ extension NoteListViewModel {
 
   private func handleConversionAction(_ action: Action) {
     switch action {
-    case .newTapped:
-      state.toast = .error(String(localized: "Note creation is unavailable"))
     case .convertTapped(let note):
       Task { await openConversion(note) }
     case .convertRequestedFromActionSheet(let note):
@@ -350,6 +405,62 @@ extension NoteListViewModel {
 
     state.isSaving = true
     Task { await update(note, title: title, content: content) }
+  }
+
+  private func saveCreate() {
+    guard let createNote, !state.isCreating else {
+      if self.createNote == nil {
+        state.toast = .error(String(localized: "Note creation is unavailable"))
+      }
+      return
+    }
+
+    validateCreateDraft()
+    guard state.createTitleError == nil,
+      state.createContentError == nil
+    else { return }
+
+    let title = state.createTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    let resolvedTitle = title.isEmpty ? String(localized: "Untitled Note") : title
+    state.isCreating = true
+    Task { await create(note: createNote, title: resolvedTitle, content: state.createContent) }
+  }
+
+  private func validateCreateDraft() {
+    let title = state.createTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    let content = state.createContent.trimmingCharacters(in: .whitespacesAndNewlines)
+    state.createTitleError = state.createTitle.count > NoteLimits.maximumTitleLength
+      ? String(localized: "Title cannot exceed 150 characters")
+      : nil
+    if state.createContent.count > NoteLimits.maximumContentLength {
+      state.createContentError = String(localized: "Content exceeds maximum length of 20,000 characters")
+    } else if content.isEmpty {
+      state.createContentError = String(localized: "Content cannot be empty")
+    } else {
+      state.createContentError = nil
+    }
+    if title.isEmpty { state.createTitleError = nil }
+  }
+
+  private func requestCreateDismissal() {
+    guard hasCreateDraft else {
+      clearCreateDraft()
+      setSheet(nil)
+      return
+    }
+    state.isDiscardCreateDraftPresented = true
+  }
+
+  var hasCreateDraft: Bool {
+    !state.createTitle.isEmpty || !state.createContent.isEmpty
+  }
+
+  private func clearCreateDraft() {
+    state.createTitle = ""
+    state.createContent = ""
+    state.createTitleError = nil
+    state.createContentError = nil
+    state.isCreating = false
   }
 
   private func confirmDelete(_ note: NoteSummary) {
@@ -483,6 +594,24 @@ extension NoteListViewModel {
     } catch {
       state.toast = .error(String(localized: "Failed to update note. Please try again."))
       Logger.error("Failed to update note \(note.id): \(error)")
+    }
+  }
+
+  private func create(
+    note: any CreateNoteUseCaseProtocol,
+    title: String,
+    content: String
+  ) async {
+    defer { state.isCreating = false }
+
+    do {
+      _ = try await note.execute(spaceId: spaceId, title: title, content: content)
+      clearCreateDraft()
+      setSheet(nil)
+      state.toast = .success(String(localized: "Note saved"))
+      await loadPage(replace: true)
+    } catch {
+      state.toast = .error(String(localized: "Failed to create note. Please try again."))
     }
   }
 

@@ -68,3 +68,32 @@ struct UnusedFixtureUpdateUseCase: UpdateNoteUseCaseProtocol {
 struct UnusedFixtureDeleteUseCase: DeleteNoteUseCaseProtocol {
     func execute(spaceId: String, noteId: String) async throws {}
 }
+
+@MainActor
+final class FixtureCreateNoteUseCase: CreateNoteUseCaseProtocol {
+    private(set) var title: String?
+    private(set) var content: String?
+    private(set) var wasCalled = false
+
+    func execute(spaceId: String, title: String, content: String) async throws -> Note {
+        self.title = title
+        self.content = content
+        wasCalled = true
+        return Note(
+            id: "created-note",
+            researchSpaceId: spaceId,
+            title: title,
+            originType: .userCreated,
+            content: content,
+            createdAt: .now,
+            updatedAt: .now,
+            citationCount: nil
+        )
+    }
+
+    func waitUntilCalled() async {
+        while !wasCalled {
+            await Task.yield()
+        }
+    }
+}
