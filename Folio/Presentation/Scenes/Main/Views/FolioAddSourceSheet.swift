@@ -5,7 +5,6 @@ struct FolioAddSourceSheet: View {
     @StateObject private var viewModel: FolioAddSourceViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var isFileImporterPresented = false
-    @State private var sheetDetent: PresentationDetent = .height(464)
 
     var onSourceOpened: ((Source) -> Void)?
     var onAskSource: ((Source) -> Void)?
@@ -17,13 +16,26 @@ struct FolioAddSourceSheet: View {
     }
 
     private func heightForTab(_ tab: FolioAddSourceViewModel.AddSourceTab) -> PresentationDetent {
-        let staticHeight: CGFloat = 224
+        let staticHeight: CGFloat = 230
         let contentHeight: CGFloat = switch tab {
-        case .files: 240
-        case .web:   320
-        case .text:  460
+        case .files: 190
+        case .web:   305
+        case .text:  463
         }
         return .height(staticHeight + contentHeight)
+    }
+
+    private var currentDetent: PresentationDetent {
+        viewModel.state.isProcessing ? processingDetent : heightForTab(viewModel.state.selectedTab)
+    }
+
+    private var processingDetent: PresentationDetent {
+        .height(ProcessingLayout.sheetHeight)
+    }
+
+    private enum ProcessingLayout {
+        static let sheetHeight: CGFloat = 390
+        static let buttonHeight: CGFloat = 60
     }
 
     var body: some View {
@@ -35,17 +47,18 @@ struct FolioAddSourceSheet: View {
             }
         }
         .presentationDetents(
-            viewModel.state.isProcessing ? [.large] : [heightForTab(viewModel.state.selectedTab)],
-            selection: $sheetDetent
+            [currentDetent],
+            selection: Binding(get: { currentDetent }, set: { _ in })
         )
         .presentationDragIndicator(.visible)
-        .interactiveDismissDisabled(viewModel.state.isProcessing)
-        .presentationBackground(Color.white)
-        .onChange(of: viewModel.state.selectedTab) { _, tab in
-            sheetDetent = heightForTab(tab)
-        }
+        .interactiveDismissDisabled(viewModel.isDismissalLocked)
+        .presentationBackground(Color.folioHomeSheetBackground)
+        .presentationCornerRadius(24)
         .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { dismiss() }
+        }
+        .onDisappear {
+            viewModel.handle(.dismissProcessing)
         }
         .deleteConfirmationOverlay(
             isPresented: viewModel.state.showDeleteConfirmation,
@@ -59,50 +72,60 @@ struct FolioAddSourceSheet: View {
     private var formView: some View {
         VStack(spacing: 0) {
             headerBar
-            Divider().background(Color.folioLine)
             tabSelector
-            Divider().background(Color.folioLine)
             tabContent
             addSourceButton
         }
     }
 
     private var headerBar: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(String(localized: "Add Source"))
-                .font(.custom("CormorantGaramond-Medium", size: 24))
+        VStack(alignment: .leading, spacing: 6) {
+            Text(String(localized: "Add source"))
+                .font(.custom("CormorantGaramond-SemiBold", size: 28))
                 .foregroundStyle(Color.folioInk)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text(String(localized: "Bring PDFs, links and text into this space for grounded answers"))
-                .font(.system(size: 13, weight: .regular))
-                .foregroundStyle(Color.folioInkSoft)
+            Text(String(localized: "Bring files, links and text into this space for grounded answers."))
+                .font(.system(size: 14, weight: .regular))
+                .foregroundStyle(Color.black)
+                .lineLimit(2)
+                .truncationMode(.tail)
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 28)
-        .padding(.bottom, 12)
+        .padding(.horizontal, FolioSpacing.xl3)
+        .padding(.top, headerTopPadding)
+        .padding(.bottom, FolioSpacing.xl)
+    }
+
+    private var headerTopPadding: CGFloat {
+        viewModel.state.selectedTab == .text ? FolioSpacing.xl4 : FolioSpacing.xl
     }
 
     private var tabSelector: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: FolioSpacing.sm) {
             ForEach(FolioAddSourceViewModel.AddSourceTab.allCases) { tab in
+                let isSelected = viewModel.state.selectedTab == tab
                 Button {
                     viewModel.handle(.selectTab(tab))
                 } label: {
                     Text(tab.title)
-                        .font(.system(size: 13, weight: viewModel.state.selectedTab == tab ? .bold : .regular))
-                        .foregroundStyle(viewModel.state.selectedTab == tab ? Color.white : Color.folioInkMuted)
+                        .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
+                        .foregroundStyle(isSelected ? Color.white : Color.folioInkMuted)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(viewModel.state.selectedTab == tab ? Color.folioOlive : Color.folioSurface)
-                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .padding(.vertical, 12)
+                        .background(isSelected ? Color.folioOliveDark : Color.folioHomeSheetBackground)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: FolioRadius.md, style: .continuous)
+                                .stroke(isSelected ? Color.clear : Color.folioBorderLight, lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md, style: .continuous))
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
+        .padding(.horizontal, FolioSpacing.xl3)
+        .padding(.vertical, 6)
     }
 
     @ViewBuilder
@@ -120,38 +143,72 @@ struct FolioAddSourceSheet: View {
     }
 
     private var filesTab: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            if let url = viewModel.state.selectedFileURL, !viewModel.state.selectedFileName.isEmpty {
-                filePreviewCard(url: url)
-            } else {
-                fileUploadArea
-            }
-        }
-        .padding(20)
+        fileUploadArea
+            .padding(.horizontal, FolioSpacing.xl3)
+            .padding(.vertical, FolioSpacing.md)
+    }
+
+    private var selectedFileInfo: String {
+        let size = viewModel.state.selectedFileSize.fileSizeString
+        guard let pageCount = viewModel.state.selectedFilePageCount, pageCount > 0 else { return size }
+        let pageLabel = pageCount == 1 ? String(localized: "page") : String(localized: "pages")
+        return "\(size) • \(pageCount) \(pageLabel)"
     }
 
     private var fileUploadArea: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: FolioSpacing.lg) {
             Button {
                 isFileImporterPresented = true
             } label: {
-                VStack(spacing: 12) {
-                    Image(systemName: "doc.badge.plus")
-                        .font(.system(size: 32, weight: .light))
-                        .foregroundStyle(Color.folioGold)
+                VStack(spacing: FolioSpacing.md) {
+                    if viewModel.state.selectedFileURL != nil, !viewModel.state.selectedFileName.isEmpty {
+                        Image(systemName: "doc.text")
+                            .font(.system(size: 22, weight: .light))
+                            .foregroundStyle(Color.folioHomeUploadIcon)
 
-                    Text(String(localized: "Tap to select a file"))
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color.folioInkMuted)
+                        Text(String(localized: "Selected: \(viewModel.state.selectedFileName)"))
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(Color.folioInk)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+
+                        Text(selectedFileInfo)
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundStyle(Color.folioInkSoft)
+
+                        Text(String(localized: "Tap to choose a different file"))
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundStyle(Color.folioInkSoft)
+                    } else {
+                        Image(systemName: "doc.text")
+                            .font(.system(size: 22, weight: .light))
+                            .foregroundStyle(Color.folioHomeUploadIcon)
+
+                        Text(String(localized: "Tap to upload a file"))
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(Color.folioInkMuted)
+
+                        VStack(spacing: FolioSpacing.xs) {
+                            Text(String(localized: "PDF, DOCX, EPUB, MD, TXT, PPTX, XLSX, CSV"))
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundStyle(Color.folioInkSoft)
+                                .multilineTextAlignment(.center)
+
+                            Text(String(localized: "Max 50 MB per file"))
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundStyle(Color.folioInkSoft)
+                        }
+                        .padding(.top, FolioSpacing.md)
+                    }
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 40)
-                .background(Color.folioSurfaceStrong)
+                .padding(.vertical, 36)
+                .background(Color.folioHomeSheetBackground)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.folioLine, style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
+                    RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous)
+                        .stroke(Color.folioFieldBorder, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous))
             }
             .buttonStyle(.plain)
             .fileImporter(
@@ -167,17 +224,6 @@ struct FolioAddSourceSheet: View {
                 }
             }
 
-            VStack(spacing: 4) {
-                Text(String(localized: "Accepted formats: .pdf, .docx, .txt, .md, .pptx, .xlsx, .csv, .epub"))
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundStyle(Color.folioInkSoft)
-                    .multilineTextAlignment(.center)
-
-                Text(String(localized: "Max 50 MB"))
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundStyle(Color.folioInkSoft)
-            }
-
             if let error = viewModel.state.fileError {
                 Text(error)
                     .font(.system(size: 12, weight: .regular))
@@ -187,69 +233,14 @@ struct FolioAddSourceSheet: View {
         }
     }
 
-    private func filePreviewCard(url: URL) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: fileIconForExtension(url.pathExtension))
-                .font(.system(size: 28, weight: .light))
-                .foregroundStyle(Color.folioOlive)
-                .frame(width: 48, height: 48)
-                .background(Color.folioGold.opacity(0.18))
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(viewModel.state.selectedFileName)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.folioInk)
-                    .lineLimit(2)
-
-                Text(viewModel.state.selectedFileSize.fileSizeString)
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundStyle(Color.folioInkSoft)
-            }
-
-            Spacer()
-
-            Button {
-                viewModel.handle(.removeFile)
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.folioInkMuted)
-                    .frame(width: 28, height: 28)
-                    .background(Color.folioSurface)
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(String(localized: "Remove file"))
-        }
-        .padding(14)
-        .background(Color.folioSurfaceStrong)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(Color.folioLine, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-
-    private func fileIconForExtension(_ ext: String) -> String {
-        switch ext.lowercased() {
-        case "pdf": return "doc.richtext"
-        case "docx", "txt", "md": return "doc.text"
-        case "pptx": return "chart.bar.doc.horizontal"
-        case "xlsx", "csv": return "tablecells"
-        case "epub": return "book"
-        default: return "doc"
-        }
-    }
-
     private var webTab: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: FolioSpacing.lg) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(String(localized: "Article URL"))
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.folioInk)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.folioAmber)
 
-                TextField(String(localized: "https://example.com/article"), text: Binding(
+                TextField(String(localized: "https://example.org/care-technology-adoption"), text: Binding(
                     get: { viewModel.state.webURL },
                     set: { viewModel.handle(.webURLChanged($0)) }
                 ))
@@ -261,10 +252,10 @@ struct FolioAddSourceSheet: View {
                 .frame(height: 48)
                 .background(Color.folioSurfaceStrong)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(viewModel.state.webURLError != nil ? Color.folioDanger : Color.folioFieldBorder, lineWidth: 2)
+                    RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
+                        .stroke(viewModel.state.webURLError != nil ? Color.folioDanger : Color.folioAmber, lineWidth: 1.5)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
 
                 if let error = viewModel.state.webURLError {
                     Text(error)
@@ -274,12 +265,12 @@ struct FolioAddSourceSheet: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(String(localized: "Title"))
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.folioInk)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.folioAmber)
 
-                TextField(String(localized: "Enter article title (optional)"), text: Binding(
+                TextField(String(localized: "Care Technology Adoption Survey 2026"), text: Binding(
                     get: { viewModel.state.webTitle },
                     set: { viewModel.handle(.webTitleChanged($0)) }
                 ))
@@ -288,10 +279,10 @@ struct FolioAddSourceSheet: View {
                 .frame(height: 48)
                 .background(Color.folioSurfaceStrong)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.folioFieldBorder, lineWidth: 2)
+                    RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
+                        .stroke(Color.folioAmber, lineWidth: 1.5)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
 
                 HStack {
                     Spacer()
@@ -301,12 +292,12 @@ struct FolioAddSourceSheet: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(String(localized: "Author"))
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.folioInk)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.folioAmber)
 
-                TextField(String(localized: "Enter author name (optional)"), text: Binding(
+                TextField(String(localized: "Care Systems Association"), text: Binding(
                     get: { viewModel.state.webAuthor },
                     set: { viewModel.handle(.webAuthorChanged($0)) }
                 ))
@@ -315,10 +306,10 @@ struct FolioAddSourceSheet: View {
                 .frame(height: 48)
                 .background(Color.folioSurfaceStrong)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.folioFieldBorder, lineWidth: 2)
+                    RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
+                        .stroke(Color.folioAmber, lineWidth: 1.5)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
 
                 HStack {
                     Spacer()
@@ -328,17 +319,18 @@ struct FolioAddSourceSheet: View {
                 }
             }
         }
-        .padding(20)
+        .padding(.horizontal, FolioSpacing.xl3)
+        .padding(.vertical, FolioSpacing.md)
     }
 
     private var manualTab: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: FolioSpacing.lg) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(String(localized: "Title"))
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.folioInk)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.folioAmber)
 
-                TextField(String(localized: "Enter title (optional)"), text: Binding(
+                TextField(String(localized: "Provider workshop evidence"), text: Binding(
                     get: { viewModel.state.manualTitle },
                     set: { viewModel.handle(.manualTitleChanged($0)) }
                 ))
@@ -347,10 +339,10 @@ struct FolioAddSourceSheet: View {
                 .frame(height: 48)
                 .background(Color.folioSurfaceStrong)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.folioFieldBorder, lineWidth: 2)
+                    RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
+                        .stroke(Color.folioAmber, lineWidth: 1.5)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
 
                 HStack {
                     Spacer()
@@ -360,12 +352,12 @@ struct FolioAddSourceSheet: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(String(localized: "Author"))
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.folioInk)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.folioAmber)
 
-                TextField(String(localized: "Enter author name (optional)"), text: Binding(
+                TextField(String(localized: "Internal Research"), text: Binding(
                     get: { viewModel.state.manualAuthor },
                     set: { viewModel.handle(.manualAuthorChanged($0)) }
                 ))
@@ -374,10 +366,10 @@ struct FolioAddSourceSheet: View {
                 .frame(height: 48)
                 .background(Color.folioSurfaceStrong)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.folioFieldBorder, lineWidth: 2)
+                    RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
+                        .stroke(Color.folioAmber, lineWidth: 1.5)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
 
                 HStack {
                     Spacer()
@@ -387,42 +379,41 @@ struct FolioAddSourceSheet: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(String(localized: "Content"))
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.folioInk)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Color.folioAmber)
 
-                ZStack(alignment: .bottomTrailing) {
-                    ZStack(alignment: .topLeading) {
-                        if viewModel.state.manualContent.isEmpty {
-                            Text(String(localized: "Paste or type your text content here..."))
-                                .font(.system(size: 14, weight: .regular))
-                                .foregroundStyle(Color.folioInkSoft)
-                                .padding(.horizontal, 16)
-                                .padding(.top, 20)
-                        }
-
-                        TextEditor(text: Binding(
-                            get: { viewModel.state.manualContent },
-                            set: { viewModel.handle(.manualContentChanged($0)) }
-                        ))
-                        .font(.system(size: 14, weight: .regular))
-                        .scrollContentBackground(.hidden)
-                        .frame(minHeight: 180)
-                        .padding(12)
+                ZStack(alignment: .topLeading) {
+                    if viewModel.state.manualContent.isEmpty {
+                        Text(String(localized: "Frontline coordinators described repeated entry across scheduling, incident, and compliance systems."))
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundStyle(Color.folioInkSoft)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 20)
                     }
-                    .background(Color.folioSurfaceStrong)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(viewModel.state.manualContentError != nil ? Color.folioDanger : Color.folioFieldBorder, lineWidth: 2)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
+                    TextEditor(text: Binding(
+                        get: { viewModel.state.manualContent },
+                        set: { viewModel.handle(.manualContentChanged($0)) }
+                    ))
+                    .font(.system(size: 14, weight: .regular))
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 180)
+                    .padding(12)
+                }
+                .background(Color.folioSurfaceStrong)
+                .overlay(
+                    RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
+                        .stroke(viewModel.state.manualContentError != nil ? Color.folioDanger : Color.folioAmber, lineWidth: 1.5)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
+
+                HStack {
+                    Spacer()
                     Text("\(viewModel.state.manualContent.count)/100,000")
                         .font(.system(size: 10, weight: .regular))
                         .foregroundStyle(Color.folioInkSoft)
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 12)
                 }
 
                 if let error = viewModel.state.manualContentError {
@@ -433,62 +424,59 @@ struct FolioAddSourceSheet: View {
                 }
             }
         }
-        .padding(20)
+        .padding(.horizontal, FolioSpacing.xl3)
+        .padding(.vertical, FolioSpacing.md)
     }
 
     private var addSourceButton: some View {
         VStack(spacing: 0) {
-            Divider().background(Color.folioLine)
-
             if let error = viewModel.state.submitError {
                 Text(error)
                     .font(.system(size: 12, weight: .regular))
                     .foregroundStyle(Color.folioDanger)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 12)
+                    .padding(.horizontal, FolioSpacing.xl3)
+                    .padding(.top, FolioSpacing.lg)
             }
 
-            HStack(spacing: 12) {
+            HStack(spacing: FolioSpacing.lg) {
                 Button {
                     dismiss()
                 } label: {
                     Text(String(localized: "Cancel"))
                         .font(.system(size: 15, weight: .semibold))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, FolioSpacing.xl2)
                         .foregroundStyle(Color.folioInk)
-                        .background(Color.folioSurfaceStrong)
+                        .background(Color.folioHomeSheetBackground)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .stroke(Color.folioFieldBorder, lineWidth: 2)
+                            RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
+                                .stroke(Color.folioBorderLight, lineWidth: 1.5)
                         )
-                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .disabled(viewModel.state.isSubmitting)
 
                 FolioPrimaryButton(
                     title: String(localized: "Add source"),
+                    isEnabled: viewModel.isSubmitEnabled,
+                    verticalPadding: FolioSpacing.xl2,
                     action: { viewModel.handle(.addSource) }
                 )
-                .disabled(viewModel.state.isSubmitting)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
-            .padding(.bottom, 12)
+            .padding(.horizontal, FolioSpacing.xl3)
+            .padding(.top, FolioSpacing.md)
+            .padding(.bottom, 6)
         }
     }
 
     private var processingView: some View {
         VStack(spacing: 0) {
             processingHeader
-            Divider().background(Color.folioLine)
 
             ScrollView {
-                VStack(spacing: 20) {
-                    sourceTitleSection
-
+                VStack(spacing: FolioSpacing.xl3) {
                     processingStatusCard
 
                     if viewModel.state.isProcessingFailed {
@@ -496,13 +484,14 @@ struct FolioAddSourceSheet: View {
                         failureActions
                     }
                 }
-                .padding(20)
+                .padding(.horizontal, FolioSpacing.xl3)
+                .padding(.bottom, FolioSpacing.xl4)
             }
         }
     }
 
     private var processingStatusCard: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: FolioSpacing.xl5) {
             stageList
 
             if !viewModel.state.isProcessingFailed {
@@ -514,99 +503,66 @@ struct FolioAddSourceSheet: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(16)
-        .background(Color.white)
+        .padding(FolioSpacing.xl2)
+        .background(Color.folioSurfaceStrong)
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous)
                 .stroke(Color.folioLine, lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous))
     }
 
     private var processingHeader: some View {
-        HStack {
-            Button {
-                viewModel.handle(.dismissProcessing)
-                dismiss()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text(String(localized: "Back to sources"))
-                        .font(.system(size: 14, weight: .medium))
-                }
-                .foregroundStyle(Color.folioInk)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(String(localized: "Back to sources"))
-
-            Spacer()
-
-            Button {
-                viewModel.handle(.dismissProcessing)
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.folioInkMuted)
-                    .frame(width: 36, height: 36)
-                    .background(Color.folioSurface)
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(String(localized: "Close"))
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 20)
-        .padding(.bottom, 12)
-        .overlay(alignment: .center) {
+        VStack(alignment: .leading, spacing: FolioSpacing.sm) {
             Text(String(localized: "Processing"))
-                .font(.custom("CormorantGaramond-Medium", size: 20))
+                .font(.custom("CormorantGaramond-SemiBold", size: 28))
                 .foregroundStyle(Color.folioInk)
-        }
-    }
 
-    private var sourceTitleSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(viewModel.state.processingSourceTitle)
-                .font(.system(size: 22, weight: .regular, design: .serif))
-                .foregroundStyle(Color.folioInk)
-                .lineLimit(2)
+            Text(processingSubtitle)
+                .font(.system(size: FolioFontSize.body, weight: .regular))
+                .foregroundStyle(Color.folioInkMuted)
+                .lineLimit(1)
+                .truncationMode(.tail)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, FolioSpacing.xl3)
+        .padding(.top, FolioSpacing.xl3)
+        .padding(.bottom, FolioSpacing.xl3)
+    }
+
+    private var processingSubtitle: String {
+        if let source = viewModel.state.processingSource,
+           source.sourceType == .file, !source.fileName.isEmpty {
+            return source.fileName
+        }
+        let title = viewModel.state.processingSourceTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        return title.isEmpty ? String(localized: "Untitled Source") : title
     }
 
     private var progressSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(viewModel.state.isProcessingFailed ? String(localized: "Failed") : "\(Int(viewModel.state.processingProgress * 100))%")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(viewModel.state.isProcessingFailed ? Color.folioDanger : Color.folioInk)
-
-                Spacer()
-
-                if !viewModel.state.isProcessingFailed {
-                    Text(viewModel.state.isProcessingComplete ? String(localized: "Ready") : viewModel.state.processingStageLabel)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(viewModel.state.isProcessingComplete ? Color.folioSuccessStrong : Color.folioGold)
-                        .lineLimit(1)
-                }
-            }
+        VStack(alignment: .leading, spacing: FolioSpacing.md) {
+            Text("\(Int(displayProgress * 100))%")
+                .font(.system(size: FolioFontSize.bodySmall, weight: .semibold))
+                .foregroundStyle(Color.folioInk)
 
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    RoundedRectangle(cornerRadius: FolioRadius.xs, style: .continuous)
                         .fill(Color.folioLine.opacity(0.4))
-                        .frame(height: 8)
+                        .frame(height: FolioSize.progressBarHeight)
 
-                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    RoundedRectangle(cornerRadius: FolioRadius.xs, style: .continuous)
                         .fill(progressBarColor)
-                        .frame(width: geometry.size.width * CGFloat(viewModel.state.isProcessingFailed ? 0 : viewModel.state.processingProgress), height: 8)
-                        .animation(.easeInOut(duration: FolioDuration.normal), value: viewModel.state.processingProgress)
+                        .frame(width: geometry.size.width * displayProgress, height: FolioSize.progressBarHeight)
+                        .animation(.easeInOut(duration: FolioDuration.normal), value: displayProgress)
                 }
             }
-            .frame(height: 8)
+            .frame(height: FolioSize.progressBarHeight)
         }
+    }
+
+    private var displayProgress: Double {
+        viewModel.state.isProcessingComplete ? 1 : viewModel.state.processingProgress
     }
 
     private var progressBarColor: Color {
@@ -620,19 +576,36 @@ struct FolioAddSourceSheet: View {
     }
 
     private var stageList: some View {
-        VStack(spacing: 12) {
-            ForEach(Array(viewModel.state.processingStages.enumerated()), id: \.offset) { _, item in
-                HStack(spacing: 12) {
-                    stageIcon(for: item.status)
-                        .frame(width: 24, height: 24)
-
-                    Text(item.stage.title)
-                        .font(.system(size: 13, weight: item.status == .active ? .semibold : .regular))
-                        .foregroundStyle(stageTextColor(for: item.status))
-
-                    Spacer()
+        VStack(spacing: 0) {
+            ForEach(Array(viewModel.state.processingStages.enumerated()), id: \.offset) { index, item in
+                stageRow(item)
+                if index < viewModel.state.processingStages.count - 1 {
+                    stageConnector
                 }
             }
+        }
+    }
+
+    private func stageRow(_ item: (stage: FolioAddSourceViewModel.ProcessingStage, status: FolioAddSourceViewModel.StageStatus)) -> some View {
+        HStack(spacing: FolioSpacing.md) {
+            stageIcon(for: item.status)
+                .frame(width: FolioSize.iconXl, height: FolioSize.iconXl)
+
+            Text(item.stage.title)
+                .font(.system(size: FolioFontSize.bodyLarge, weight: item.status == .active ? .semibold : .regular))
+                .foregroundStyle(stageTextColor(for: item.status))
+
+            Spacer()
+        }
+    }
+
+    private var stageConnector: some View {
+        HStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.folioLine)
+                .frame(width: 2, height: FolioSpacing.lg)
+                .frame(width: FolioSize.iconXl)
+            Spacer()
         }
     }
 
@@ -642,19 +615,19 @@ struct FolioAddSourceSheet: View {
             case .pending:
                 Circle()
                     .stroke(Color.folioLine, lineWidth: 2)
-                    .frame(width: 20, height: 20)
+                    .frame(width: 24, height: 24)
             case .active:
                 ProgressView()
                     .progressViewStyle(.circular)
                     .tint(Color.folioGold)
-                    .scaleEffect(0.8)
+                    .scaleEffect(1.0)
             case .completed:
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 20))
+                    .font(.system(size: 24))
                     .foregroundStyle(Color.folioSuccessStrong)
             case .failed:
                 Image(systemName: "exclamationmark.circle.fill")
-                    .font(.system(size: 20))
+                    .font(.system(size: 24))
                     .foregroundStyle(Color.folioDanger)
             }
         }
@@ -728,7 +701,7 @@ struct FolioAddSourceSheet: View {
     }
 
     private var completionActions: some View {
-        VStack(spacing: 12) {
+        HStack(spacing: FolioSpacing.sm) {
             FolioPrimaryButton(
                 title: String(localized: "Open source"),
                 action: {
@@ -738,6 +711,8 @@ struct FolioAddSourceSheet: View {
                     dismiss()
                 }
             )
+            .frame(maxWidth: .infinity)
+            .frame(height: ProcessingLayout.buttonHeight)
 
             FolioSecondaryButton(
                 title: String(localized: "Ask"),
@@ -749,6 +724,8 @@ struct FolioAddSourceSheet: View {
                     dismiss()
                 }
             )
+            .frame(maxWidth: .infinity)
+            .frame(height: ProcessingLayout.buttonHeight)
         }
     }
 }

@@ -28,7 +28,7 @@ struct SourceActionSheet: View {
                         .foregroundStyle(Color.folioTextPrimary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 17)
-                        .background(Color.folioSurface)
+                        .background(Color.folioHomeSheetBackground)
                         .overlay(
                             RoundedRectangle(cornerRadius: FolioRadius.md)
                                 .stroke(Color.folioBorder, lineWidth: 1)
@@ -61,7 +61,7 @@ struct SourceActionSheet: View {
             .padding(.bottom, FolioSpacing.xl3)
         }
         .frame(maxWidth: .infinity)
-        .presentationBackground(Color.white)
+        .presentationBackground(Color.folioHomeSheetBackground)
         .presentationDetents([.height(236)])
         .presentationDragIndicator(.visible)
     }

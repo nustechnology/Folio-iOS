@@ -94,7 +94,7 @@ struct ConvertToSourceView: View {
 
       FolioPrimaryButton(
         title: String(localized: "Create source"),
-        isDisabled: sourceTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+        isEnabled: !sourceTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
         action: { onCreate(sourceTitle.trimmingCharacters(in: .whitespacesAndNewlines)) }
       )
     }

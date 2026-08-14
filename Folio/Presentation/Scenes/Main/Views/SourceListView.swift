@@ -48,17 +48,16 @@ struct SourceListView: View {
                 onDelete: { viewModel.send(.deleteTapped(source)) }
             )
         }
-        .alert(
-            String(localized: "Delete source?"),
-            isPresented: Binding(
-                get: { viewModel.state.deleteConfirmationSource != nil },
-                set: { if !$0 { viewModel.send(.cancelDelete) } }
+        .sheet(item: Binding(
+            get: { viewModel.state.deleteConfirmationSource },
+            set: { if $0 == nil { viewModel.send(.cancelDelete) } }
+        )) { _ in
+            DeleteSourceBottomSheet(
+                title: String(localized: "Delete source?"),
+                message: String(localized: "This permanently removes the source and its retrieval data."),
+                onCancel: { viewModel.send(.cancelDelete) },
+                onDelete: { viewModel.send(.deleteConfirmed) }
             )
-        ) {
-            Button(String(localized: "Cancel"), role: .cancel) { viewModel.send(.cancelDelete) }
-            Button(String(localized: "Delete"), role: .destructive) { viewModel.send(.deleteConfirmed) }
-        } message: {
-            Text(String(localized: "This permanently removes the source and its retrieval data."))
         }
         .folioToast(message: Binding(
             get: { viewModel.state.toastMessage },
@@ -77,7 +76,9 @@ struct SourceListView: View {
                     viewModel.send(.sourceUploaded)
                     onSourceOpened(source)
                 },
-                onAskSource: { _ in }
+                onAskSource: { _ in
+                    viewModel.send(.sourceUploaded)
+                }
             )
         case .editSource:
             EditSourceSheet(viewModel: viewModel)
@@ -192,13 +193,8 @@ struct SourceListView: View {
             )
         case .empty:
             emptyContent
-        case .noSearchResults(let query):
-            SourceMessageState(
-                title: String(localized: "No sources found matching \"\(query)\""),
-                systemImage: "magnifyingglass",
-                actionTitle: String(localized: "Clear search"),
-                action: { viewModel.send(.clearSearch) }
-            )
+        case .noSearchResults:
+            noSearchResultsContent
         case .loaded(let sources):
             sourceList(sources)
         }
@@ -250,6 +246,46 @@ struct SourceListView: View {
                 .stroke(Color.folioBorderLight, lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: FolioRadius.xl))
+    }
+
+    private var noSearchResultsContent: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 0) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundStyle(Color.folioInkSoft)
+                    .frame(width: 44, height: 44)
+                    .background(
+                        Circle()
+                            .fill(Color.folioSurfaceStrong)
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(Color.folioInkSoft, lineWidth: 1)
+                    )
+                    .clipShape(Circle())
+
+                Spacer().frame(height: FolioSpacing.xl3)
+
+                Text(String(localized: "No results found"))
+                    .font(.system(size: FolioFontSize.headline, weight: .semibold))
+                    .foregroundStyle(Color.folioTextPrimary)
+                    .multilineTextAlignment(.center)
+
+                Spacer().frame(height: FolioSpacing.sm)
+
+                Text(String(localized: "Try a different search term or clear your search."))
+                    .font(.system(size: FolioFontSize.body, weight: .regular))
+                    .foregroundStyle(Color.folioInkSoft)
+                    .multilineTextAlignment(.center)
+            }
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, FolioSpacing.xl3)
     }
 
     private var emptyContent: some View {

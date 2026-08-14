@@ -62,8 +62,11 @@ struct FolioPill: View {
 struct FolioPrimaryButton: View {
     let title: String
     var isLoading: Bool = false
-    var isDisabled: Bool = false
+    var isEnabled: Bool = true
+    var verticalPadding: CGFloat = 15
     let action: () -> Void
+
+    private var isDisabled: Bool { isLoading || !isEnabled }
 
     var body: some View {
         Button(action: action) {
@@ -78,19 +81,18 @@ struct FolioPrimaryButton: View {
                     .font(.system(size: 15, weight: .medium))
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 15)
-            .foregroundStyle(.white)
-            .background(Color.folioOliveDark)
+            .padding(.vertical, verticalPadding)
+            .foregroundStyle(isDisabled ? Color.white.opacity(0.55) : .white)
+            .background(isDisabled ? Color.folioInkSoft.opacity(0.45) : Color.folioOliveDark)
             .overlay(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(Color.folioGold.opacity(0.35), lineWidth: 1)
+                    .stroke(isDisabled ? Color.folioBorder : Color.folioGold.opacity(0.35), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .shadow(color: Color.black.opacity(0.08), radius: 12, y: 4)
+            .shadow(color: isDisabled ? .clear : Color.black.opacity(0.08), radius: 12, y: 4)
         }
         .buttonStyle(.plain)
-        .disabled(isDisabled || isLoading)
-        .opacity(isDisabled ? 0.55 : 1)
+        .disabled(isDisabled)
     }
 }
 

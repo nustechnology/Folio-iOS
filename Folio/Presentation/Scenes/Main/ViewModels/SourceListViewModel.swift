@@ -45,7 +45,7 @@ final class SourceListViewModel: ObservableObject {
         case loading
         case error(String)
         case empty
-        case noSearchResults(query: String)
+        case noSearchResults
         case loaded([Source])
     }
 
@@ -64,12 +64,12 @@ final class SourceListViewModel: ObservableObject {
         }
         if state.allSources.isEmpty {
             if !state.searchQuery.isEmpty {
-                return .noSearchResults(query: state.searchQuery)
+                return .noSearchResults
             }
             return .empty
         }
         if state.visibleSources.isEmpty {
-            return .noSearchResults(query: state.searchQuery)
+            return .noSearchResults
         }
         return .loaded(state.visibleSources)
     }
@@ -161,6 +161,8 @@ final class SourceListViewModel: ObservableObject {
             guard !isDeleting else { return }
             isDeleting = true
             let source = state.deleteConfirmationSource
+            state.deleteConfirmationSource = nil
+            state.editSource = nil
             invalidateInFlightLoads()
             Task { await performDelete(source) }
         case .cancelDelete:
