@@ -167,7 +167,7 @@ Config files in `Configuration/`:
 # Build
 xcodebuild -project Folio.xcodeproj -scheme Folio -configuration Debug build
 
-# Unit tests (none configured yet — use XCTest)
+# Unit tests
 xcodebuild -project Folio.xcodeproj -scheme Folio -configuration Debug test
 
 # Or: open Folio.xcodeproj → ⌘R to run, ⌘U to test
@@ -186,6 +186,12 @@ xcodebuild -project Folio.xcodeproj -scheme Folio -configuration Debug test
 
 ## Coding Rules
 
+### ViewModel Protocol Conformance
+
+- Every ViewModel must conform to `ViewModelProtocol`.
+- ViewModelProtocol defines `State`, `Action`, and `handle(_:)` — every ViewModel implements these.
+- Do not create a ViewModel that does not conform to ViewModelProtocol.
+
 ### Reuse and Component Design
 
 - Reuse existing shared components, extensions, design tokens, and modifiers before creating a new implementation.
@@ -194,7 +200,12 @@ xcodebuild -project Folio.xcodeproj -scheme Folio -configuration Debug test
 - Keep reusable components generic enough for their known use cases, but do not add speculative configuration or abstractions.
 - Prefer composition of small views over deeply nested, duplicated SwiftUI markup.
 - Put feature-specific UI in the feature scene. Promote it to `Presentation/Common` only when it is genuinely shared by multiple features.
-- Use `FolioTheme` and existing design-system values instead of introducing duplicate colors, fonts, spacing, corner radii, or control styles.
+
+### Localization and Design System
+
+- Every user-facing string, including validation and error text, belongs in Folio/Resources/Localizable.xcstrings
+- Never ship debug or placeholder production UI text such as "TODO" — even if it is localized — without a ticket; keep all user-facing strings in `Folio/Resources/Localizable.xcstrings`
+- Reuse `FolioTheme` and shared components before adding feature-specific colors, typography, spacing, or controls.
 
 ### Naming, Constants, and Readability
 
@@ -207,12 +218,6 @@ xcodebuild -project Folio.xcodeproj -scheme Folio -configuration Debug test
 - Avoid vague names such as `data`, `result`, `item`, `manager`, `helper`, or `process` when a domain-specific name is available.
 - Prefer small, intention-revealing functions. Split a function when it mixes validation, state mutation, networking, navigation, or formatting responsibilities.
 - Keep conditionals readable. Extract a named computed property or helper when a condition needs more than one line to understand.
-
-### Localization and Design System
-
-- Every user-facing string, including validation and error text, belongs in Folio/Resources/Localizable.xcstrings. Always append new localization entries to the end of the file. Do not insert, reorder, or modify existing entries unless explicitly required
-- Reuse `FolioTheme` and shared components before adding feature-specific colors, typography, spacing, or controls.
-- Do not use debug text, placeholder copy, or `print` statements as production UI behavior.
 
 ## Adding a New Feature
 
@@ -234,6 +239,6 @@ Follow dependency direction: define contracts in `Domain` first, implement in `D
 | Repository protocol | `Domain/RepositoryProtocols/` |
 | Repository impl | `Data/Repositories/` |
 | Network layer | `Data/DataSources/Remote/NetworkService.swift` |
-| Design tokens | `Assets.xcassets` (colors, icons) |
+| Design tokens | `FolioTheme` (`Presentation/Common/DesignSystem/FolioTheme.swift`) for colors, `FolioDuration` for animation timings |
 | Strings | `Resources/Localizable.xcstrings` |
 | Common patterns | `Presentation/Common/` (ViewState, ViewModelProtocol) |

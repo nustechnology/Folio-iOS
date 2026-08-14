@@ -12,7 +12,7 @@ struct FolioLogoMark: View {
 struct FolioTopBar: View {
     let title: String
     let subtitle: String
-    var leading: AnyView? = nil
+    var leading: AnyView?
     var trailing: [AnyView] = []
     var dark: Bool = true
 

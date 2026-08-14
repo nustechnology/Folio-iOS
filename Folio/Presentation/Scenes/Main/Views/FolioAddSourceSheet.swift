@@ -47,20 +47,13 @@ struct FolioAddSourceSheet: View {
         .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { dismiss() }
         }
-        .alert(
-            String(localized: "Are you sure you want to delete this source?"),
-            isPresented: Binding(
-                get: { viewModel.state.showDeleteConfirmation },
-                set: { if !$0 { viewModel.handle(.dismissDeleteConfirmation) } }
-            )
-        ) {
-            Button(String(localized: "Cancel"), role: .cancel) {
-                viewModel.handle(.dismissDeleteConfirmation)
-            }
-            Button(String(localized: "Delete"), role: .destructive) {
-                viewModel.handle(.deleteSourceConfirmed)
-            }
-        }
+        .deleteConfirmationOverlay(
+            isPresented: viewModel.state.showDeleteConfirmation,
+            title: String(localized: "Are you sure you want to delete this source?"),
+            message: String(localized: "This permanently removes the source and its retrieval data."),
+            onCancel: { viewModel.handle(.dismissDeleteConfirmation) },
+            onDelete: { viewModel.handle(.deleteSourceConfirmed) }
+        )
     }
 
     private var formView: some View {

@@ -53,19 +53,19 @@ struct WorkspaceListView: View {
         )) { sheet in
             sheetContent(sheet)
         }
-        .alert(
-            String(localized: "Delete space?"),
-            isPresented: Binding(
-                get: { viewModel.state.confirmationWorkspace != nil },
-                set: { if !$0 { viewModel.send(.dismissConfirmation) } }
+        .deleteConfirmationOverlay(
+            isPresented: viewModel.state.confirmationWorkspace != nil,
+            title: String(localized: "Delete space?"),
+            message: String(
+                localized: "This action cannot be undone. All sources, notes, and conversations inside this space will be permanently removed."
             ),
-            presenting: viewModel.state.confirmationWorkspace
-        ) { workspace in
-            Button(String(localized: "Cancel"), role: .cancel) { viewModel.send(.dismissConfirmation) }
-            Button(String(localized: "Delete"), role: .destructive) { viewModel.send(.deleteConfirmed(workspace)) }
-        } message: { _ in
-            Text(String(localized: "This action cannot be undone. All sources, notes, and conversations inside this space will be permanently removed."))
-        }
+            isDeleting: viewModel.state.isMutating,
+            onCancel: { viewModel.send(.dismissConfirmation) },
+            onDelete: {
+                guard let workspace = viewModel.state.confirmationWorkspace else { return }
+                viewModel.send(.deleteConfirmed(workspace))
+            }
+        )
         .folioToast(message: Binding(
             get: { viewModel.state.toastMessage },
             set: { _ in viewModel.send(.dismissToast) }
@@ -113,7 +113,7 @@ struct WorkspaceListView: View {
                 }
             )
         case .sortOptions:
-            SortOptionsSheet(
+            SortOptionsSheet<WorkspaceSortOption>(
                 title: String(localized: "Sort spaces"),
                 options: WorkspaceSortOption.allCases,
                 selectedValue: viewModel.state.sortOption,
@@ -126,13 +126,24 @@ struct WorkspaceListView: View {
     private var content: some View {
         switch viewModel.contentState {
         case .loading:
-            ProgressView().tint(Color.folioOlive).frame(maxHeight: .infinity)
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    ForEach(0..<5, id: \.self) { _ in
+                        WorkspaceCardSkeleton()
+                    }
+                }
+                .padding(18)
+            }
         case .error(let message):
             WorkspaceMessageState(title: message, actionTitle: String(localized: "Retry"), action: { viewModel.send(.retry) })
         case .empty:
             WorkspaceMessageState(title: String(localized: "No research spaces yet"), subtitle: String(localized: "Create your first space to start collecting sources and making notes."), actionTitle: String(localized: "Create Space"), action: { viewModel.send(.createTapped) })
-        case .noSearchResults(let searchQuery):
-            WorkspaceMessageState(title: String(localized: "No spaces found matching \"\(searchQuery)\""), systemImage: "magnifyingglass", actionTitle: String(localized: "Clear search"), action: { viewModel.send(.clearSearch) })
+        case .noSearchResults:
+            WorkspaceMessageState(
+                title: String(localized: "No results found"),
+                subtitle: String(localized: "Try a different search term or clear your search."),
+                systemImage: "magnifyingglass"
+            )
         case .loaded(let workspaces):
             ScrollView {
                 LazyVStack(spacing: 12) {
@@ -196,26 +207,34 @@ private struct WorkspaceMessageState: View {
     let title: String
     var subtitle: String?
     var systemImage: String?
-    let actionTitle: String
-    let action: () -> Void
+    var actionTitle: String?
+    var action: (() -> Void)?
     
     var body: some View {
         VStack(spacing: 12) {
             if let systemImage {
                 Image(systemName: systemImage)
-                    .font(.system(size: 32))
+                    .font(.system(size: 18, weight: .medium))
                     .foregroundStyle(Color.folioInkSoft)
+                    .frame(width: 48, height: 48)
+                    .background(Color.folioSurfaceStrong)
+                    .clipShape(Circle())
+                    .overlay {
+                        Circle().stroke(Color.folioBorder, lineWidth: 1)
+                    }
             }
-            Text(title).font(.system(size: 18, weight: .semibold)).foregroundStyle(Color.folioInk).multilineTextAlignment(.center)
+            Text(title).font(.system(size: 16, weight: .medium)).foregroundStyle(Color.folioInk).multilineTextAlignment(.center)
             if let subtitle { Text(subtitle).font(.system(size: 14)).foregroundStyle(Color.folioInkMuted).multilineTextAlignment(.center) }
-            Button(action: action) {
-                Text(actionTitle)
-                    .font(.system(size: 14, weight: .semibold))
+            if let actionTitle, let action {
+                Button(action: action) {
+                    Text(actionTitle)
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.folioOlive)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.folioOlive)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
