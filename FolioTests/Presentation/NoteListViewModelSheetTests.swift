@@ -3,6 +3,26 @@ import XCTest
 
 @MainActor
 final class NoteListViewModelSheetTests: XCTestCase {
+    func testProcessingSourceDeletionNotifiesSourceList() {
+        let viewModel = makeViewModel()
+        var sourceListRefreshCount = 0
+        viewModel.onSourcesChanged = { sourceListRefreshCount += 1 }
+
+        viewModel.handle(.processingSourceDeleted)
+
+        XCTAssertEqual(sourceListRefreshCount, 1)
+    }
+
+    func testProcessingSourceStatusChangeNotifiesSourceList() {
+        let viewModel = makeViewModel()
+        var sourceListRefreshCount = 0
+        viewModel.onSourcesChanged = { sourceListRefreshCount += 1 }
+
+        viewModel.handle(.processingSourceStatusChanged)
+
+        XCTAssertEqual(sourceListRefreshCount, 1)
+    }
+
     func testSelectingNoteLoadsFullDetailIntoSharedSheetState() async {
         let viewModel = NoteListViewModel(
             spaceId: "space-1",
@@ -122,6 +142,16 @@ final class NoteListViewModelSheetTests: XCTestCase {
         XCTAssertEqual(note.title, "Full title")
     }
 
+    private func makeViewModel() -> NoteListViewModel {
+        NoteListViewModel(
+            spaceId: "space-1",
+            fetchNotesUseCase: FixtureNotesUseCase(),
+            fetchNoteUseCase: UnusedFixtureNoteUseCase(),
+            updateNoteUseCase: UnusedFixtureUpdateUseCase(),
+            deleteNoteUseCase: UnusedFixtureDeleteUseCase()
+        )
+    }
+
     func testConvertingNoteFailureKeepsSheetClosedAndShowsError() async {
         let viewModel = NoteListViewModel(
             spaceId: "space-1",
@@ -147,6 +177,153 @@ final class NoteListViewModelSheetTests: XCTestCase {
 
         XCTAssertNil(viewModel.state.sheet)
         XCTAssertEqual(viewModel.state.toast?.text, String(localized: "Failed to fetch note. Please try again."))
+    }
+
+    func testBlankConversionTitleKeepsConversionSheetOpen() async {
+        let viewModel = NoteListViewModel(
+            spaceId: "space-1",
+            fetchNotesUseCase: FixtureNotesUseCase(),
+            fetchNoteUseCase: FixtureDetailNoteUseCase(),
+            updateNoteUseCase: UnusedFixtureUpdateUseCase(),
+            deleteNoteUseCase: UnusedFixtureDeleteUseCase()
+        )
+
+        viewModel.handle(.convertTapped(makeSummary()))
+        await Task.yield()
+        await Task.yield()
+        viewModel.handle(.convertConfirmed("   "))
+
+        guard case .convert = viewModel.state.sheet else {
+            return XCTFail("Expected the conversion form to remain open for a blank title")
+        }
+    }
+
+    func testConversionPresentsProcessingSheetForCreatedSource() async {
+        let conversion = FixtureConvertNoteToSourceUseCase()
+        let viewModel = NoteListViewModel(
+            spaceId: "space-1",
+            fetchNotesUseCase: FixtureNotesUseCase(),
+            fetchNoteUseCase: FixtureDetailNoteUseCase(),
+            updateNoteUseCase: UnusedFixtureUpdateUseCase(),
+            deleteNoteUseCase: UnusedFixtureDeleteUseCase(),
+            convertNoteToSourceUseCase: conversion,
+            uploadSourceUseCase: FixtureUploadSourceUseCase()
+        )
+
+        viewModel.handle(.convertTapped(makeSummary()))
+        await Task.yield()
+        await Task.yield()
+        viewModel.handle(.convertConfirmed("  Snapshot title  "))
+        await conversion.waitUntilCalled()
+        await Task.yield()
+
+        guard case .processing(let source) = viewModel.state.sheet else {
+            return XCTFail("Expected the returned source to open the processing sheet")
+        }
+        XCTAssertEqual(source.id, "source-1")
+        XCTAssertEqual(conversion.receivedTitle, "Snapshot title")
+        XCTAssertEqual(viewModel.state.toast, .success(String(localized: "Source created")))
+    }
+
+    func testSuccessfulConversionTriggersSourcesRefreshCallback() async {
+        let conversion = FixtureConvertNoteToSourceUseCase()
+        let viewModel = NoteListViewModel(
+            spaceId: "space-1",
+            fetchNotesUseCase: FixtureNotesUseCase(),
+            fetchNoteUseCase: FixtureDetailNoteUseCase(),
+            updateNoteUseCase: UnusedFixtureUpdateUseCase(),
+            deleteNoteUseCase: UnusedFixtureDeleteUseCase(),
+            convertNoteToSourceUseCase: conversion,
+            uploadSourceUseCase: FixtureUploadSourceUseCase()
+        )
+        let expectation = expectation(description: "Sources refresh callback invoked")
+        viewModel.onSourcesChanged = { expectation.fulfill() }
+
+        viewModel.handle(.convertTapped(makeSummary()))
+        await Task.yield()
+        await Task.yield()
+        viewModel.handle(.convertConfirmed("Snapshot title"))
+        await conversion.waitUntilCalled()
+        await Task.yield()
+
+        await fulfillment(of: [expectation], timeout: 1)
+    }
+
+    func testFailedConversionDoesNotTriggerSourcesRefreshCallback() async {
+        let conversion = FailingFixtureConvertNoteToSourceUseCase()
+        let viewModel = NoteListViewModel(
+            spaceId: "space-1",
+            fetchNotesUseCase: FixtureNotesUseCase(),
+            fetchNoteUseCase: FixtureDetailNoteUseCase(),
+            updateNoteUseCase: UnusedFixtureUpdateUseCase(),
+            deleteNoteUseCase: UnusedFixtureDeleteUseCase(),
+            convertNoteToSourceUseCase: conversion,
+            uploadSourceUseCase: FixtureUploadSourceUseCase()
+        )
+        var refreshCount = 0
+        viewModel.onSourcesChanged = { refreshCount += 1 }
+
+        viewModel.handle(.convertTapped(makeSummary()))
+        await Task.yield()
+        await Task.yield()
+        viewModel.handle(.convertConfirmed("Snapshot title"))
+        await conversion.waitUntilCalled()
+        await Task.yield()
+
+        XCTAssertEqual(refreshCount, 0)
+    }
+
+    func testConversionFailureKeepsConversionSheetOpenAndShowsError() async {
+        let conversion = FailingFixtureConvertNoteToSourceUseCase()
+        let viewModel = NoteListViewModel(
+            spaceId: "space-1",
+            fetchNotesUseCase: FixtureNotesUseCase(),
+            fetchNoteUseCase: FixtureDetailNoteUseCase(),
+            updateNoteUseCase: UnusedFixtureUpdateUseCase(),
+            deleteNoteUseCase: UnusedFixtureDeleteUseCase(),
+            convertNoteToSourceUseCase: conversion,
+            uploadSourceUseCase: FixtureUploadSourceUseCase()
+        )
+
+        viewModel.handle(.convertTapped(makeSummary()))
+        await Task.yield()
+        await Task.yield()
+        viewModel.handle(.convertConfirmed("Snapshot title"))
+        await conversion.waitUntilCalled()
+        await Task.yield()
+
+        guard case .convert = viewModel.state.sheet else {
+            return XCTFail("Expected the conversion form to remain open after an API failure")
+        }
+        XCTAssertEqual(
+            viewModel.state.toast,
+            .error(String(localized: "Failed to create source. Please try again."))
+        )
+    }
+
+    func testConversionFailureShowsServerMessageWhenAvailable() async {
+        let conversion = ConversionFailedFixtureConvertNoteToSourceUseCase()
+        let viewModel = NoteListViewModel(
+            spaceId: "space-1",
+            fetchNotesUseCase: FixtureNotesUseCase(),
+            fetchNoteUseCase: FixtureDetailNoteUseCase(),
+            updateNoteUseCase: UnusedFixtureUpdateUseCase(),
+            deleteNoteUseCase: UnusedFixtureDeleteUseCase(),
+            convertNoteToSourceUseCase: conversion,
+            uploadSourceUseCase: FixtureUploadSourceUseCase()
+        )
+
+        viewModel.handle(.convertTapped(makeSummary()))
+        await Task.yield()
+        await Task.yield()
+        viewModel.handle(.convertConfirmed("Snapshot title"))
+        await conversion.waitUntilCalled()
+        await Task.yield()
+
+        XCTAssertEqual(
+            viewModel.state.toast,
+            .error(NoteRepositoryError.conversionFailed("Source snapshot already exists").errorDescription!)
+        )
     }
 
     func testNewActionPresentsEmptyCreateSheet() {
@@ -428,4 +605,77 @@ private final class ControlledCreateNoteUseCase: CreateNoteUseCaseProtocol {
         continuation?.resume(throwing: NSError(domain: "test", code: 1))
         continuation = nil
     }
+}
+
+@MainActor
+private final class FixtureConvertNoteToSourceUseCase: ConvertNoteToSourceUseCaseProtocol {
+    private(set) var receivedTitle: String?
+
+    func execute(spaceId: String, noteId: String, title: String) async throws -> Source {
+        receivedTitle = title
+        return makeConvertedSource(spaceId: spaceId)
+    }
+
+    func waitUntilCalled() async {
+        while receivedTitle == nil {
+            await Task.yield()
+        }
+    }
+}
+
+@MainActor
+private final class FailingFixtureConvertNoteToSourceUseCase: ConvertNoteToSourceUseCaseProtocol {
+    private var called = false
+
+    func execute(spaceId: String, noteId: String, title: String) async throws -> Source {
+        called = true
+        throw NSError(domain: "test", code: 1)
+    }
+
+    func waitUntilCalled() async {
+        while !called {
+            await Task.yield()
+        }
+    }
+}
+
+private final class ConversionFailedFixtureConvertNoteToSourceUseCase: ConvertNoteToSourceUseCaseProtocol {
+    private var called = false
+
+    func execute(spaceId: String, noteId: String, title: String) async throws -> Source {
+        called = true
+        throw NoteRepositoryError.conversionFailed("Source snapshot already exists")
+    }
+
+    func waitUntilCalled() async {
+        while !called {
+            await Task.yield()
+        }
+    }
+}
+
+private struct FixtureUploadSourceUseCase: UploadSourceUseCaseProtocol {
+    func uploadFile(spaceId: String, fileURL: URL, title: String?, author: String?) async throws -> Source {
+        makeConvertedSource(spaceId: spaceId)
+    }
+    func uploadWeb(spaceId: String, url: String, title: String?, author: String?) async throws -> Source {
+        makeConvertedSource(spaceId: spaceId)
+    }
+    func uploadManual(spaceId: String, content: String, title: String?, author: String?) async throws -> Source {
+        makeConvertedSource(spaceId: spaceId)
+    }
+    func deleteSource(id: String) async throws {}
+    func retrySource(id: String) async throws -> Source { makeConvertedSource(spaceId: "space-1") }
+    func sourceStatusStream() -> AsyncThrowingStream<SourceStatusEvent, Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+}
+
+private func makeConvertedSource(spaceId: String) -> Source {
+    Source(
+        id: "source-1", researchSpaceId: spaceId, sourceType: .manual, title: "Snapshot title",
+        author: "", sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0,
+        characterCount: 0, content: "", structuredContent: nil, processingState: .added,
+        processingError: "", createdAt: .now, updatedAt: .now
+    )
 }

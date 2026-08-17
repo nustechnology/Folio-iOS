@@ -1,3 +1,5 @@
+import Foundation
+
 final class NoteRepository: NoteRepositoryProtocol {
   private let networkService: NetworkServiceProtocol
   init(networkService: NetworkServiceProtocol) { self.networkService = networkService }
@@ -15,6 +17,19 @@ final class NoteRepository: NoteRepositoryProtocol {
     let response: NoteResponseDTO = try await networkService.request(
       CreateNoteEndpoint(spaceId: spaceId, title: title, content: content))
     return response.data.note.toDomain()
+  }
+  func convertNoteToSource(spaceId: String, noteId: String, title: String) async throws -> Source {
+    do {
+      let response: SourceResponseDTO = try await networkService.request(
+        ConvertNoteToSourceEndpoint(spaceId: spaceId, noteId: noteId, title: title))
+      return response.data.source.toDomain()
+    } catch let error as NetworkError {
+      if let data = error.errorData,
+        let apiError = try? JSONDecoder().decode(ApiErrorResponse.self, from: data) {
+        throw NoteRepositoryError.conversionFailed(apiError.message)
+      }
+      throw NoteRepositoryError.conversionFailed(error.localizedDescription)
+    }
   }
   func updateNote(spaceId: String, noteId: String, title: String, content: String) async throws
     -> Note

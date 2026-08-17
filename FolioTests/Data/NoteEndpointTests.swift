@@ -63,6 +63,21 @@ final class NoteEndpointTests: XCTestCase {
         XCTAssertNil(payload["originType"])
     }
 
+    func testConvertToSourceEndpointUsesNoteScopedPostWithTitleBody() throws {
+        let endpoint = ConvertNoteToSourceEndpoint(
+            spaceId: "space-1", noteId: "note-42", title: "Snapshot title")
+
+        XCTAssertEqual(endpoint.path, "/api/v1/spaces/space-1/notes/note-42/convert-to-source")
+        XCTAssertEqual(endpoint.method, .post)
+        XCTAssertTrue(endpoint.requiresAuthentication)
+
+        let body = try XCTUnwrap(endpoint.body)
+        let payload = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: body) as? [String: String]
+        )
+        XCTAssertEqual(payload, ["title": "Snapshot title"])
+    }
+
     func testCreateEndpointUsesNoteResponseEnvelope() throws {
         let endpoint = CreateNoteEndpoint(spaceId: "space-1", title: "New", content: "Body")
         let response = try JSONDecoder.noteTestDecoder.decode(

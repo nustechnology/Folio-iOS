@@ -48,6 +48,30 @@ final class NoteRepositoryTests: XCTestCase {
         XCTAssertEqual(repository.receivedContent, "Body")
     }
 
+    func testConvertNoteToSourceMapsReturnedSource() async throws {
+        let service = NoteRepositoryNetworkService()
+        let repository = NoteRepository(networkService: service)
+
+        let source = try await repository.convertNoteToSource(
+            spaceId: "space-1", noteId: "note-1", title: "Snapshot")
+
+        XCTAssertEqual(source.id, "source-1")
+        XCTAssertEqual(source.title, "Snapshot")
+        XCTAssertEqual(source.processingState, .added)
+    }
+
+    func testConvertNoteToSourceUseCaseDelegatesToRepositoryContract() async throws {
+        let repository = CreateOnlyNoteRepository()
+        let useCase = ConvertNoteToSourceUseCase(repository: repository)
+
+        let source = try await useCase.execute(
+            spaceId: "space-1", noteId: "note-1", title: "Snapshot")
+
+        XCTAssertEqual(source.id, "source-1")
+        XCTAssertEqual(repository.receivedNoteId, "note-1")
+        XCTAssertEqual(repository.receivedSourceTitle, "Snapshot")
+    }
+
     func testUpdateNoteSendsRequestAndReturnsUpdatedNote() async throws {
         let service = NoteRepositoryNetworkService()
         let repository = NoteRepository(networkService: service)
@@ -99,6 +123,22 @@ private final class NoteRepositoryNetworkService: NetworkServiceProtocol {
             guard let typed = response as? T else { throw StubNetworkError.responseTypeMismatch }
             return typed
         case .post:
+            if endpoint.path.contains("convert-to-source") {
+                let response = SourceResponseDTO(
+                    status: "success",
+                    data: SourceDataDTO(
+                        source: SourceDTO(
+                            id: "source-1", researchSpaceId: "space-1", sourceType: "Manual",
+                            title: "Snapshot", author: "", sourceUrl: nil, fileName: nil,
+                            fileSize: nil, fileType: nil, pageCount: nil, characterCount: nil,
+                            content: nil, structuredContent: nil, processingState: "added",
+                            processingError: nil, createdAt: .now, updatedAt: .now
+                        )
+                    )
+                )
+                guard let typed = response as? T else { throw StubNetworkError.responseTypeMismatch }
+                return typed
+            }
             let response = NoteResponseDTO(
                 status: "success",
                 data: NoteDataDTO(
@@ -141,6 +181,8 @@ private final class NoteRepositoryNetworkService: NetworkServiceProtocol {
 private final class CreateOnlyNoteRepository: NoteRepositoryProtocol {
     private(set) var receivedSpaceId: String?
     private(set) var receivedContent: String?
+    private(set) var receivedNoteId: String?
+    private(set) var receivedSourceTitle: String?
 
     func createNote(spaceId: String, title: String, content: String) async throws -> Note {
         receivedSpaceId = spaceId
@@ -155,4 +197,15 @@ private final class CreateOnlyNoteRepository: NoteRepositoryProtocol {
     func fetchNote(spaceId: String, noteId: String) async throws -> Note { fatalError("Unused") }
     func updateNote(spaceId: String, noteId: String, title: String, content: String) async throws -> Note { fatalError("Unused") }
     func deleteNote(spaceId: String, noteId: String) async throws { fatalError("Unused") }
+    func convertNoteToSource(spaceId: String, noteId: String, title: String) async throws -> Source {
+        receivedSpaceId = spaceId
+        receivedNoteId = noteId
+        receivedSourceTitle = title
+        return Source(
+            id: "source-1", researchSpaceId: spaceId, sourceType: .manual, title: title,
+            author: "", sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0,
+            characterCount: 0, content: "", structuredContent: nil, processingState: .added,
+            processingError: "", createdAt: .now, updatedAt: .now
+        )
+    }
 }

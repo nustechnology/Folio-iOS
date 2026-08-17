@@ -7,6 +7,9 @@ protocol FetchNoteUseCaseProtocol {
 protocol CreateNoteUseCaseProtocol {
   func execute(spaceId: String, title: String, content: String) async throws -> Note
 }
+protocol ConvertNoteToSourceUseCaseProtocol {
+  func execute(spaceId: String, noteId: String, title: String) async throws -> Source
+}
 protocol UpdateNoteUseCaseProtocol {
   func execute(spaceId: String, noteId: String, title: String, content: String) async throws -> Note
 }
@@ -33,6 +36,14 @@ final class CreateNoteUseCase: CreateNoteUseCaseProtocol {
   init(repository: NoteRepositoryProtocol) { self.repository = repository }
   func execute(spaceId: String, title: String, content: String) async throws -> Note {
     try await repository.createNote(spaceId: spaceId, title: title, content: content)
+  }
+}
+
+final class ConvertNoteToSourceUseCase: ConvertNoteToSourceUseCaseProtocol {
+  private let repository: NoteRepositoryProtocol
+  init(repository: NoteRepositoryProtocol) { self.repository = repository }
+  func execute(spaceId: String, noteId: String, title: String) async throws -> Source {
+    try await repository.convertNoteToSource(spaceId: spaceId, noteId: noteId, title: title)
   }
 }
 

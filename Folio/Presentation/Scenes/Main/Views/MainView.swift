@@ -7,6 +7,8 @@ struct MainView: View {
     let updateNoteUseCase: any UpdateNoteUseCaseProtocol
     let deleteNoteUseCase: any DeleteNoteUseCaseProtocol
     let createNoteUseCase: (any CreateNoteUseCaseProtocol)?
+    let convertNoteToSourceUseCase: (any ConvertNoteToSourceUseCaseProtocol)?
+    let uploadSourceUseCase: (any UploadSourceUseCaseProtocol)?
     @State private var showAccountSheet = false
     @State private var showAccountSettings = false
     @State private var selectedWorkspace: Workspace?
@@ -135,7 +137,14 @@ struct MainView: View {
                 )
             case .notes:
                 if let workspace = selectedWorkspace, let noteVM = noteListViewModel {
-                    NoteListView(viewModel: noteVM, workspaceTitle: workspace.name, onBackToSpaces: showMySpaces)
+                    NoteListView(
+                        viewModel: noteVM,
+                        workspaceTitle: workspace.name,
+                        onBackToSpaces: showMySpaces,
+                        onSourceOpened: { source in
+                            viewModel.handle(.addNewSource(source: source, workspaceID: workspace.id))
+                        }
+                    )
                 } else {
                     FolioPlaceholderView(
                         title: String(localized: "Notes"),
@@ -176,8 +185,13 @@ struct MainView: View {
             fetchNoteUseCase: fetchNoteUseCase,
             updateNoteUseCase: updateNoteUseCase,
             deleteNoteUseCase: deleteNoteUseCase,
-            createNoteUseCase: createNoteUseCase
+            createNoteUseCase: createNoteUseCase,
+            convertNoteToSourceUseCase: convertNoteToSourceUseCase,
+            uploadSourceUseCase: uploadSourceUseCase
         )
+        noteListViewModel?.onSourcesChanged = {
+            self.sourceListViewModel?.send(.refresh)
+        }
         selectedWorkspace = workspace
     }
 
@@ -204,7 +218,7 @@ struct MainView: View {
         updateSourceUseCase: PreviewUpdateSourceUseCase(),
         fetchSourceDetailUseCase: PreviewFetchSourceDetailUseCase(),
         fetchSourcePreviewUseCase: PreviewFetchSourcePreviewUseCase()
-     ), fetchNotesUseCase: PreviewFetchNotesUseCase(), fetchNoteUseCase: PreviewFetchNoteUseCase(), updateNoteUseCase: PreviewUpdateNoteUseCase(), deleteNoteUseCase: PreviewDeleteNoteUseCase(), createNoteUseCase: PreviewCreateNoteUseCase())
+     ), fetchNotesUseCase: PreviewFetchNotesUseCase(), fetchNoteUseCase: PreviewFetchNoteUseCase(), updateNoteUseCase: PreviewUpdateNoteUseCase(), deleteNoteUseCase: PreviewDeleteNoteUseCase(), createNoteUseCase: PreviewCreateNoteUseCase(), convertNoteToSourceUseCase: nil, uploadSourceUseCase: nil)
 }
 
 final class PreviewWorkspaceRepository: WorkspaceRepositoryProtocol {

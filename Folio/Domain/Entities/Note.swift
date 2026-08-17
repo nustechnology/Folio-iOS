@@ -98,3 +98,13 @@ struct NoteListResult: Equatable, Sendable {
   let notes: [NoteSummary]
   let pagination: NotePagination?
 }
+
+enum NoteRepositoryError: LocalizedError, Equatable {
+  case conversionFailed(String)
+
+  var errorDescription: String? {
+    switch self {
+    case .conversionFailed(let message): return message
+    }
+  }
+}

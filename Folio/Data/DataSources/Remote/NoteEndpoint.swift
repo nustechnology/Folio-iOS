@@ -47,6 +47,20 @@ struct CreateNoteEndpoint: APIEndpoint {
   }
 }
 
+struct ConvertNoteToSourceEndpoint: APIEndpoint {
+  let spaceId: String
+  let noteId: String
+  let title: String
+
+  var path: String { "\(noteDetailPath(spaceId: spaceId, noteId: noteId))/convert-to-source" }
+  var method: HTTPMethod { .post }
+  var queryItems: [URLQueryItem]? { nil }
+  var requiresAuthentication: Bool { true }
+  var body: Data? {
+    try? JSONEncoder().encode(ConvertNoteRequestDTO(title: title))
+  }
+}
+
 struct UpdateNoteEndpoint: APIEndpoint {
   let spaceId: String
   let noteId: String
