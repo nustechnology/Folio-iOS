@@ -4,6 +4,7 @@ struct NoteDetailView: View {
     let note: Note
     let onEdit: () -> Void
     let onConvert: () -> Void
+    var showsActions: Bool = true
 
     @Environment(\.dismiss) private var dismiss
 
@@ -57,7 +58,9 @@ struct NoteDetailView: View {
                         height: 160
                     )
 
-                    actionButtons
+                    if showsActions {
+                        actionButtons
+                    }
                 }
                 .padding(.horizontal, FolioSpacing.xl3)
             }

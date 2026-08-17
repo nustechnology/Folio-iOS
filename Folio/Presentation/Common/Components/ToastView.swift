@@ -3,6 +3,7 @@ import SwiftUI
 enum ToastStyle: Equatable {
     case success
     case error
+    case info
 }
 
 struct ToastMessage: Equatable {
@@ -16,6 +17,10 @@ struct ToastMessage: Equatable {
     static func error(_ text: String) -> ToastMessage {
         ToastMessage(text: text, style: .error)
     }
+
+    static func info(_ text: String) -> ToastMessage {
+        ToastMessage(text: text, style: .info)
+    }
 }
 
 struct ToastView: View {
@@ -27,6 +32,7 @@ struct ToastView: View {
         switch style {
         case .success: Color.folioOliveDark
         case .error: Color.folioDanger
+        case .info: Color.folioOlive
         }
     }
 
@@ -34,6 +40,7 @@ struct ToastView: View {
         switch style {
         case .success: Color.folioGold.opacity(0.4)
         case .error: Color.folioDanger.opacity(0.5)
+        case .info: Color.folioGold.opacity(0.4)
         }
     }
 

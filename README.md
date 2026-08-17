@@ -35,8 +35,8 @@ Build configurations are managed via `.xcconfig` files:
 
 | Config | API Base URL | Bundle ID |
 |--------|-------------|-----------|
-| Debug | shale-crowd-satin.ngrok-free.dev | `com.nustechnology.Folio` |
-| Release | shale-crowd-satin.ngrok-free.dev | `com.nustechnology.Folio` |
+| Debug | folio.nustechnology.com | `com.nustechnology.Folio` |
+| Release | folio.nustechnology.com | `com.nustechnology.Folio` |
 
 ## Localization
 

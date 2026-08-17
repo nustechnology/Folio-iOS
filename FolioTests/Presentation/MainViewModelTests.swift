@@ -148,6 +148,8 @@ final class MainViewModelTests: XCTestCase {
             updateSourceUseCase: EmptyUpdateSourceUseCase(),
             fetchSourceDetailUseCase: EmptyFetchSourceDetailUseCase(),
             fetchSourcePreviewUseCase: EmptyFetchSourcePreviewUseCase(),
+            fetchNotebookUseCase: EmptyFetchNotebookUseCase(),
+            saveNotebookUseCase: EmptySaveNotebookUseCase(),
             initialSources: [
                 source(id: "turing", workspaceID: "dissertation-research"),
                 source(id: "arendt", workspaceID: "dissertation-research"),
@@ -356,4 +358,12 @@ private struct EmptyFetchSourceDetailUseCase: FetchSourceDetailUseCaseProtocol {
 
 private struct EmptyFetchSourcePreviewUseCase: FetchSourcePreviewUseCaseProtocol {
     func execute(source: Source) async throws -> SourcePreview { throw CancellationError() }
+}
+
+private struct EmptyFetchNotebookUseCase: FetchNotebookUseCaseProtocol {
+    func execute(spaceId: String) async throws -> NotebookFetchResult { throw CancellationError() }
+}
+
+private struct EmptySaveNotebookUseCase: SaveNotebookUseCaseProtocol {
+    func execute(entry: NotebookEntry) async throws {}
 }

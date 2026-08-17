@@ -51,6 +51,8 @@ final class MainViewModel: ViewModelProtocol {
     let uploadSourceUseCase: any UploadSourceUseCaseProtocol
     let fetchSourcesUseCase: any FetchSourcesUseCaseProtocol
     let updateSourceUseCase: any UpdateSourceUseCaseProtocol
+    let fetchNotebookUseCase: any FetchNotebookUseCaseProtocol
+    let saveNotebookUseCase: any SaveNotebookUseCaseProtocol
     private var profileRequestGeneration = 0
     private var sessionGeneration = 0
     private var signOutTask: Task<Void, Never>?
@@ -76,6 +78,8 @@ final class MainViewModel: ViewModelProtocol {
         updateSourceUseCase: any UpdateSourceUseCaseProtocol,
         fetchSourceDetailUseCase: any FetchSourceDetailUseCaseProtocol,
         fetchSourcePreviewUseCase: any FetchSourcePreviewUseCaseProtocol,
+        fetchNotebookUseCase: any FetchNotebookUseCaseProtocol,
+        saveNotebookUseCase: any SaveNotebookUseCaseProtocol,
         initialSources: [FolioSource] = []
     ) {
         self.fetchUsersUseCase = fetchUsersUseCase
@@ -94,6 +98,8 @@ final class MainViewModel: ViewModelProtocol {
         self.updateSourceUseCase = updateSourceUseCase
         self.fetchSourceDetailUseCase = fetchSourceDetailUseCase
         self.fetchSourcePreviewUseCase = fetchSourcePreviewUseCase
+        self.fetchNotebookUseCase = fetchNotebookUseCase
+        self.saveNotebookUseCase = saveNotebookUseCase
         state.sources = initialSources
 #if DEBUG
         if initialSources.isEmpty {

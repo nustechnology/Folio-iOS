@@ -149,6 +149,7 @@ final class MainViewModel: ViewModelProtocol {
 - String catalog: `Folio/Resources/Localizable.xcstrings`
 - Supported: English (`en`), Vietnamese (`vi`)
 - User-facing strings must go in `.xcstrings`, never hardcoded
+- When adding new strings manually, append them at the end of the `strings` object instead of inserting alphabetically — this keeps additions conflict-free when two branches add strings at the same time
 
 ## Build Configuration
 

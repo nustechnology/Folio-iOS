@@ -1,4 +1,4 @@
 #include "Shared.xcconfig"
 
-API_BASE_URL = https:/$()/shale-crowd-satin.ngrok-free.dev
+API_BASE_URL = https:/$()/folio.nustechnology.com
 INFOPLIST_KEY_CFBundleDisplayName = Folio Dev

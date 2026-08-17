@@ -32,6 +32,13 @@ extension Date {
         if hours < 24 * 7 { return String(localized: "Updated \(DateFormatter.workspaceWeekday.string(from: self))") }
         return String(localized: "Updated \(DateFormatter.workspaceDate.string(from: self))")
     }
+
+    var miniRelativeLabel: String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        formatter.dateTimeStyle = .named
+        return formatter.localizedString(for: self, relativeTo: Date())
+    }
 }
 
 extension Int {

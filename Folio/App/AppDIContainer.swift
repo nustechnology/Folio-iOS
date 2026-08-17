@@ -108,4 +108,16 @@ final class AppDIContainer {
     lazy var fetchSourcePreviewUseCase: any FetchSourcePreviewUseCaseProtocol = {
         FetchSourcePreviewUseCase(repository: sourceRepository)
     }()
+
+    lazy var notebookRepository: NotebookRepositoryProtocol = {
+        NotebookRepository(localStorage: localStorage, networkService: networkService)
+    }()
+
+    lazy var fetchNotebookUseCase: any FetchNotebookUseCaseProtocol = {
+        FetchNotebookUseCase(repository: notebookRepository)
+    }()
+
+    lazy var saveNotebookUseCase: any SaveNotebookUseCaseProtocol = {
+        SaveNotebookUseCase(repository: notebookRepository)
+    }()
 }
