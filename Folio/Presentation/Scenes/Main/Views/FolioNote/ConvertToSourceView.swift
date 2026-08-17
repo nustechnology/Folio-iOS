@@ -2,13 +2,15 @@ import SwiftUI
 
 struct ConvertToSourceView: View {
   let note: Note
+  let isCreating: Bool
   let onCreate: (String) -> Void
 
   @Environment(\.dismiss) private var dismiss
   @State private var sourceTitle: String
 
-  init(note: Note, onCreate: @escaping (String) -> Void) {
+  init(note: Note, isCreating: Bool = false, onCreate: @escaping (String) -> Void) {
     self.note = note
+    self.isCreating = isCreating
     self.onCreate = onCreate
     _sourceTitle = State(initialValue: note.title)
   }
@@ -89,11 +91,13 @@ struct ConvertToSourceView: View {
     HStack(spacing: FolioSpacing.lg) {
       FolioSecondaryButton(
         title: String(localized: "Cancel"),
+        isDisabled: isCreating,
         action: { dismiss() }
       )
 
       FolioPrimaryButton(
         title: String(localized: "Create source"),
+        isLoading: isCreating,
         isEnabled: !sourceTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
         action: { onCreate(sourceTitle.trimmingCharacters(in: .whitespacesAndNewlines)) }
       )

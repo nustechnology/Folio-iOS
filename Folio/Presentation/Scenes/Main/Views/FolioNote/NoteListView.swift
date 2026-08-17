@@ -4,6 +4,7 @@ struct NoteListView: View {
     @ObservedObject var viewModel: NoteListViewModel
     let workspaceTitle: String
     let onBackToSpaces: () -> Void
+    let onSourceOpened: (Source) -> Void
 
     static func showsFullError(errorMessage: String?, notes: [NoteSummary]) -> Bool {
         errorMessage != nil && notes.isEmpty
@@ -30,6 +31,7 @@ struct NoteListView: View {
             viewModel.handle(.sheetDismissed)
         }) { sheet in
             sheetContent(sheet)
+                .folioToast(message: toastBinding)
         }
         .deleteConfirmationOverlay(
             isPresented: viewModel.state.pendingDelete != nil,
@@ -268,8 +270,20 @@ struct NoteListView: View {
         case .convert(let note):
             ConvertToSourceView(
                 note: note,
+                isCreating: viewModel.state.isConverting,
                 onCreate: { title in viewModel.handle(.convertConfirmed(title)) }
             )
+        case .processing(let source):
+            if let uploadSourceUseCase = viewModel.uploadSourceUseCase {
+                SourceProcessingSheet(
+                    source: source,
+                    uploadSourceUseCase: uploadSourceUseCase,
+                    onDismiss: { viewModel.handle(.dismissSheet) },
+                    onDeleted: { _ in viewModel.handle(.processingSourceDeleted) },
+                    onStatusChanged: { _ in viewModel.handle(.processingSourceStatusChanged) },
+                    onSourceOpened: onSourceOpened
+                )
+            }
         case .sortOptions:
             SortOptionsSheet<NoteSortOption>(
                 title: String(localized: "Sort notes"),

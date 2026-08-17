@@ -66,3 +66,7 @@ struct UpdateNoteRequestDTO: Encodable {
   let title: String
   let content: String
 }
+
+struct ConvertNoteRequestDTO: Encodable {
+  let title: String
+}

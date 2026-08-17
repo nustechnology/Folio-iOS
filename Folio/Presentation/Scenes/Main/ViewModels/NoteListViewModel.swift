@@ -36,6 +36,7 @@ final class NoteListViewModel: ViewModelProtocol {
     case detail(Note)
     case edit(Note)
     case convert(Note)
+    case processing(Source)
     case actions(NoteSummary)
     case sortOptions
 
@@ -49,6 +50,8 @@ final class NoteListViewModel: ViewModelProtocol {
         "edit-\(note.id)"
       case .convert(let note):
         "convert-\(note.id)"
+      case .processing(let source):
+        "processing-\(source.id)"
       case .actions(let note):
         "actions-\(note.id)"
       case .sortOptions:
@@ -87,6 +90,8 @@ final class NoteListViewModel: ViewModelProtocol {
     case newTapped
     case convertTapped(NoteSummary)
     case convertConfirmed(String)
+    case processingSourceDeleted
+    case processingSourceStatusChanged
     case dismissSheet
     case sheetDismissed
     case dismissToast
@@ -117,6 +122,7 @@ final class NoteListViewModel: ViewModelProtocol {
     var createContentError: String?
     var isCreating = false
     var isDiscardCreateDraftPresented = false
+    var isConverting = false
   }
 
   @Published private(set) var state = State()
@@ -125,6 +131,9 @@ final class NoteListViewModel: ViewModelProtocol {
   private let fetchNotes: any FetchNotesUseCaseProtocol
   private let fetchNote: any FetchNoteUseCaseProtocol
   private let createNote: (any CreateNoteUseCaseProtocol)?
+  private let convertNoteToSource: (any ConvertNoteToSourceUseCaseProtocol)?
+  let uploadSourceUseCase: (any UploadSourceUseCaseProtocol)?
+  var onSourcesChanged: (() -> Void)?
   private let updateNote: any UpdateNoteUseCaseProtocol
   private let deleteNote: any DeleteNoteUseCaseProtocol
   private var didLoad = false
@@ -140,12 +149,16 @@ final class NoteListViewModel: ViewModelProtocol {
     fetchNoteUseCase: any FetchNoteUseCaseProtocol,
     updateNoteUseCase: any UpdateNoteUseCaseProtocol,
     deleteNoteUseCase: any DeleteNoteUseCaseProtocol,
-    createNoteUseCase: (any CreateNoteUseCaseProtocol)? = nil
+    createNoteUseCase: (any CreateNoteUseCaseProtocol)? = nil,
+    convertNoteToSourceUseCase: (any ConvertNoteToSourceUseCaseProtocol)? = nil,
+    uploadSourceUseCase: (any UploadSourceUseCaseProtocol)? = nil
   ) {
     self.spaceId = spaceId
     fetchNotes = fetchNotesUseCase
     fetchNote = fetchNoteUseCase
     createNote = createNoteUseCase
+    convertNoteToSource = convertNoteToSourceUseCase
+    self.uploadSourceUseCase = uploadSourceUseCase
     updateNote = updateNoteUseCase
     deleteNote = deleteNoteUseCase
 
@@ -173,6 +186,12 @@ final class NoteListViewModel: ViewModelProtocol {
       handleDeletingAction(action)
     case .convertTapped, .convertRequestedFromActionSheet, .convertConfirmed:
       handleConversionAction(action)
+    case .processingSourceDeleted:
+      setSheet(nil)
+      state.toast = .success(String(localized: "Source deleted"))
+      onSourcesChanged?()
+    case .processingSourceStatusChanged:
+      onSourcesChanged?()
     case .dismissSheet, .sheetDismissed, .dismissToast, .editTitleChanged, .editContentChanged:
       handleDismissalOrDraftAction(action)
     }
@@ -285,6 +304,7 @@ extension NoteListViewModel {
   private func handleDismissalOrDraftAction(_ action: Action) {
     switch action {
     case .dismissSheet:
+      guard !state.isConverting else { return }
       if state.sheet == .create {
         requestCreateDismissal()
       } else {
@@ -310,9 +330,8 @@ extension NoteListViewModel {
     case .convertRequestedFromActionSheet(let note):
       setSheet(nil)
       Task { await openConversion(note) }
-    case .convertConfirmed:
-      setSheet(nil)
-      state.toast = .error(String(localized: "Source conversion is unavailable"))
+    case .convertConfirmed(let title):
+      convertCurrentNote(title: title)
     default:
       return
     }
@@ -379,6 +398,21 @@ extension NoteListViewModel {
     if let note = await fetchLatestNote(summary) {
       setSheet(.convert(note))
     }
+  }
+
+  private func convertCurrentNote(title: String) {
+    guard case .convert(let note) = state.sheet, !state.isConverting else { return }
+
+    let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmedTitle.isEmpty else { return }
+    guard let convertNoteToSource, uploadSourceUseCase != nil else {
+      state.toast = .error(String(localized: "Source conversion is unavailable"))
+      return
+    }
+
+    state.isConverting = true
+    let limitedTitle = String(trimmedTitle.prefix(NoteLimits.maximumTitleLength))
+    Task { await convert(note: note, title: limitedTitle, using: convertNoteToSource) }
   }
 
   private func startEdit(_ note: Note) {
@@ -612,6 +646,27 @@ extension NoteListViewModel {
       await loadPage(replace: true)
     } catch {
       state.toast = .error(String(localized: "Failed to create note. Please try again."))
+    }
+  }
+
+  private func convert(
+    note: Note,
+    title: String,
+    using useCase: any ConvertNoteToSourceUseCaseProtocol
+  ) async {
+    defer { state.isConverting = false }
+
+    do {
+      let source = try await useCase.execute(spaceId: spaceId, noteId: note.id, title: title)
+      setSheet(.processing(source))
+      state.toast = .success(String(localized: "Source created"))
+      onSourcesChanged?()
+    } catch let error as NoteRepositoryError {
+      state.toast = .error(error.errorDescription ?? String(localized: "Failed to create source. Please try again."))
+      Logger.error("Failed to convert note \(note.id) to source: \(error)")
+    } catch {
+      state.toast = .error(String(localized: "Failed to create source. Please try again."))
+      Logger.error("Failed to convert note \(note.id) to source: \(error)")
     }
   }
 

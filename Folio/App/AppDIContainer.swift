@@ -63,6 +63,9 @@ final class AppDIContainer {
     lazy var fetchNotesUseCase: any FetchNotesUseCaseProtocol = { FetchNotesUseCase(repository: noteRepository) }()
     lazy var fetchNoteUseCase: any FetchNoteUseCaseProtocol = { FetchNoteUseCase(repository: noteRepository) }()
     lazy var createNoteUseCase: any CreateNoteUseCaseProtocol = { CreateNoteUseCase(repository: noteRepository) }()
+    lazy var convertNoteToSourceUseCase: any ConvertNoteToSourceUseCaseProtocol = {
+        ConvertNoteToSourceUseCase(repository: noteRepository)
+    }()
     lazy var updateNoteUseCase: any UpdateNoteUseCaseProtocol = { UpdateNoteUseCase(repository: noteRepository) }()
     lazy var deleteNoteUseCase: any DeleteNoteUseCaseProtocol = { DeleteNoteUseCase(repository: noteRepository) }()
 
