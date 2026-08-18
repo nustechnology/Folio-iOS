@@ -15,7 +15,7 @@ final class AuthRepository: AuthRepositoryProtocol {
                 AuthEndpoint.signUp(name: name, email: email, password: password, confirmPassword: password)
             )
             let token = response.toDomain()
-            saveSession(token)
+            try saveSession(token)
             return token
         } catch let error as NetworkError {
             throw mapAuthError(error)
@@ -28,7 +28,7 @@ final class AuthRepository: AuthRepositoryProtocol {
                 AuthEndpoint.signIn(email: email, password: password)
             )
             let token = response.toDomain()
-            saveSession(token)
+            try saveSession(token)
             return token
         } catch let error as NetworkError {
             throw mapAuthError(error)
@@ -41,21 +41,29 @@ final class AuthRepository: AuthRepositoryProtocol {
                 AuthEndpoint.refreshToken(refreshToken: refreshToken)
             )
             let token = response.toDomain()
-            saveSession(token)
+            try saveSession(token)
             return token
         } catch let error as NetworkError {
             throw mapAuthError(error)
         }
     }
 
-    func signOut() {
+    func signOut() throws {
+        do {
+            try localStorage.remove(forKey: StorageKey.authSession)
+        } catch {
+            throw AuthError.sessionRemovalFailed
+        }
         networkService.cancelPendingRefresh()
-        localStorage.remove(forKey: StorageKey.authSession)
     }
 
-    func signOutAwaitingCancellation() async {
+    func signOutAwaitingCancellation() async throws {
+        do {
+            try localStorage.remove(forKey: StorageKey.authSession)
+        } catch {
+            throw AuthError.sessionRemovalFailed
+        }
         await networkService.cancelPendingRefreshAndWait()
-        localStorage.remove(forKey: StorageKey.authSession)
     }
 
     func getCurrentSession() -> AuthToken? {
@@ -65,8 +73,17 @@ final class AuthRepository: AuthRepositoryProtocol {
         return session
     }
 
-    private func saveSession(_ token: AuthToken) {
-        try? localStorage.save(token.toDTO(), forKey: StorageKey.authSession)
+    private func saveSession(_ token: AuthToken) throws {
+        do {
+            try localStorage.save(token.toDTO(), forKey: StorageKey.authSession)
+        } catch {
+            do {
+                try localStorage.remove(forKey: StorageKey.authSession)
+            } catch {
+                throw AuthError.sessionPersistenceFailed
+            }
+            throw AuthError.sessionPersistenceFailed
+        }
     }
 
     private func loadSession() -> AuthToken? {

@@ -66,9 +66,13 @@ struct FolioSourcesView: View {
         ScrollView {
             VStack(spacing: 16) {
                 FolioTopBar(
-                    title: "Sources",
-                    subtitle: workspaceTitle ?? "Evidence library",
-                    leading: AnyView(Button(action: onBackToSpaces) { buttonIcon("chevron.left") }.buttonStyle(.plain).accessibilityLabel("Back to My Spaces")),
+                    title: String(localized: "Sources"),
+                    subtitle: workspaceTitle ?? String(localized: "Evidence library"),
+                    leading: AnyView(
+                        Button(action: onBackToSpaces) { buttonIcon("chevron.left") }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(String(localized: "Back to My Spaces"))
+                    ),
                     trailing: [
                         AnyView(Button(action: onSearch) { buttonIcon("magnifyingglass") }.buttonStyle(.plain)),
                         AnyView(Button(action: onMenu) { buttonIcon("ellipsis") }.buttonStyle(.plain)),
@@ -90,7 +94,10 @@ struct FolioSourcesView: View {
                                 } label: {
                                     FolioPill(
                                         title: filter.title,
-                                        isSelected: selectedFilter == filter
+                                        isSelected: selectedFilter == filter,
+                                        tint: .folioInk,
+                                        fontSize: 13,
+                                        backgroundColor: .folioHomeTypeFileBackground
                                     )
                                 }
                                 .buttonStyle(.plain)
@@ -106,7 +113,9 @@ struct FolioSourcesView: View {
                             VStack(spacing: 20) {
                                 FolioEmptyStateView(
                                     title: String(localized: "No sources yet"),
-                                    subtitle: String(localized: "Add your first source to start building your research archive."),
+                                    subtitle: String(
+                                        localized: "Add your first source to start building your research archive."
+                                    ),
                                     iconName: "doc.text"
                                 )
 
@@ -119,7 +128,7 @@ struct FolioSourcesView: View {
                             }
                             .padding(.vertical, 12)
                         } else {
-                            Text("No matching sources")
+                            Text(String(localized: "No matching sources"))
                                 .font(.system(size: 14))
                                 .foregroundStyle(Color.folioInkMuted)
                                 .frame(maxWidth: .infinity)
@@ -164,7 +173,7 @@ struct FolioSourcesView: View {
                 .shadow(color: Color.black.opacity(0.06), radius: 8, y: 3)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Add source")
+        .accessibilityLabel(String(localized: "Add source"))
     }
 
     private func buttonIcon(_ systemName: String) -> some View {

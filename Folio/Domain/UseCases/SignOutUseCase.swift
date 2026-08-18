@@ -1,8 +1,8 @@
 import Foundation
 
 protocol SignOutUseCaseProtocol {
-    func execute()
-    func executeAwaitingCancellation() async
+    func execute() throws
+    func executeAwaitingCancellation() async throws
 }
 
 final class SignOutUseCase: SignOutUseCaseProtocol {
@@ -12,15 +12,15 @@ final class SignOutUseCase: SignOutUseCaseProtocol {
         self.authRepository = authRepository
     }
 
-    func execute() {
-        authRepository.signOut()
+    func execute() throws {
+        try authRepository.signOut()
     }
 
-    func executeAwaitingCancellation() async {
-        await authRepository.signOutAwaitingCancellation()
+    func executeAwaitingCancellation() async throws {
+        try await authRepository.signOutAwaitingCancellation()
     }
 }
 
 extension SignOutUseCaseProtocol {
-    func executeAwaitingCancellation() async { execute() }
+    func executeAwaitingCancellation() async throws { try execute() }
 }

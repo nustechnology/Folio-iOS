@@ -22,7 +22,7 @@ struct FolioAccountAvatarButton: View {
         }
         .buttonStyle(.plain)
         .contentShape(Circle())
-        .accessibilityLabel("Account settings")
+        .accessibilityLabel(String(localized: "Account settings"))
         .overlay(
             Circle()
                 .stroke(Color.white, lineWidth: 1)
@@ -66,11 +66,11 @@ struct FolioAccountSettingsView: View {
                         .padding(.top, 16)
 
                         VStack(spacing: 12) {
-                            accountRow(title: "Profile settings", isDisabled: true) {}
-                            accountRow(title: "Security", isDisabled: true) {}
-                            accountRow(title: "Privacy & data", isDisabled: true) {}
-                            accountRow(title: "Export account data", isDisabled: true) {}
-                            accountRow(title: "Sign out", isDestructive: true) {
+                            accountRow(title: String(localized: "Profile settings"), isDisabled: true) {}
+                            accountRow(title: String(localized: "Security"), isDisabled: true) {}
+                            accountRow(title: String(localized: "Privacy & data"), isDisabled: true) {}
+                            accountRow(title: String(localized: "Export account data"), isDisabled: true) {}
+                            accountRow(title: String(localized: "Sign out"), isDestructive: true) {
                                 showSignOutConfirmation = true
                             }
                         }
@@ -110,7 +110,7 @@ struct FolioAccountSettingsView: View {
             .buttonStyle(.plain)
             .frame(width: 32, height: 32)
 
-            Text("Account settings")
+            Text(String(localized: "Account settings"))
                 .font(.custom("CormorantGaramond-Medium", size: 28))
                 .foregroundStyle(Color.folioInk)
 

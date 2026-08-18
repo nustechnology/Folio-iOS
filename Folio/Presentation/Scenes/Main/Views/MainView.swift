@@ -118,7 +118,10 @@ struct MainView: View {
                 } else {
                     WorkspaceListView(
                         viewModel: WorkspaceListViewModel(
-                            repository: viewModel.workspaceRepository,
+                            fetchWorkspaces: viewModel.fetchWorkspacesUseCase,
+                            createWorkspace: viewModel.createWorkspaceUseCase,
+                            updateWorkspace: viewModel.updateWorkspaceUseCase,
+                            deleteWorkspace: viewModel.deleteWorkspaceUseCase
                         ),
                         onSelectWorkspace: { openWorkspace($0) },
                         onWorkspaceCreated: { openWorkspace($0) },
@@ -157,8 +160,8 @@ struct MainView: View {
                 }
             case .notebook:
                 FolioPlaceholderView(
-                    title: "Notebook",
-                    subtitle: "Organize drafts, syntheses, and research threads here.",
+                    title: String(localized: "Notebook"),
+                    subtitle: String(localized: "Organize drafts, syntheses, and research threads here."),
                     iconName: "book",
                     onOpenAccountSettings: { showAccountSheet = true },
                     onBackToSpaces: { showMySpaces() },
@@ -207,12 +210,15 @@ struct MainView: View {
     MainView(viewModel: MainViewModel(
         fetchUsersUseCase: PreviewFetchUsersUseCase(),
         fetchMeUseCase: PreviewFetchMeUseCase(),
-        localStorage: UserDefaultsStorage(),
+        localStorage: PreviewStorage(),
         signUpUseCase: PreviewSignUpUseCase(),
         signInUseCase: PreviewSignInUseCase(),
         signOutUseCase: PreviewSignOutUseCase(),
         refreshTokenUseCase: PreviewRefreshTokenUseCase(),
-        workspaceRepository: PreviewWorkspaceRepository(),
+        fetchWorkspacesUseCase: FetchWorkspacesUseCase(repository: PreviewWorkspaceRepository()),
+        createWorkspaceUseCase: CreateWorkspaceUseCase(repository: PreviewWorkspaceRepository()),
+        updateWorkspaceUseCase: UpdateWorkspaceUseCase(repository: PreviewWorkspaceRepository()),
+        deleteWorkspaceUseCase: DeleteWorkspaceUseCase(repository: PreviewWorkspaceRepository()),
         uploadSourceUseCase: PreviewUploadSourceUseCase(),
         fetchSourcesUseCase: PreviewFetchSourcesUseCase(),
         updateSourceUseCase: PreviewUpdateSourceUseCase(),
@@ -225,8 +231,8 @@ final class PreviewWorkspaceRepository: WorkspaceRepositoryProtocol {
     func fetchWorkspaces(query: WorkspaceListQuery) async throws -> WorkspaceListResult {
         WorkspaceListResult(workspaces: [], pagination: nil)
     }
-    func createWorkspace(name: String, objective: String) async throws -> Workspace { fatalError("Preview only") }
-    func updateWorkspace(id: String, name: String, objective: String) async throws -> Workspace { fatalError("Preview only") }
+    func createWorkspace(name: String, objective: String) async throws -> Workspace { throw PreviewError.unavailable }
+    func updateWorkspace(id: String, name: String, objective: String) async throws -> Workspace { throw PreviewError.unavailable }
     func deleteWorkspace(id: String) async throws { }
 }
 
@@ -251,7 +257,7 @@ private struct PreviewSignInUseCase: SignInUseCaseProtocol {
 }
 
 private struct PreviewSignOutUseCase: SignOutUseCaseProtocol {
-    func execute() {}
+    func execute() throws {}
 }
 
 private struct PreviewRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
@@ -304,7 +310,7 @@ private struct PreviewFetchSourcePreviewUseCase: FetchSourcePreviewUseCaseProtoc
 }
 
 private struct PreviewFetchNotesUseCase: FetchNotesUseCaseProtocol { func execute(query: NoteListQuery) async throws -> NoteListResult { NoteListResult(notes: [], pagination: nil) } }
-private struct PreviewFetchNoteUseCase: FetchNoteUseCaseProtocol { func execute(spaceId: String, noteId: String) async throws -> Note { fatalError("Preview only") } }
-private struct PreviewUpdateNoteUseCase: UpdateNoteUseCaseProtocol { func execute(spaceId: String, noteId: String, title: String, content: String) async throws -> Note { fatalError("Preview only") } }
+private struct PreviewFetchNoteUseCase: FetchNoteUseCaseProtocol { func execute(spaceId: String, noteId: String) async throws -> Note { throw PreviewError.unavailable } }
+private struct PreviewUpdateNoteUseCase: UpdateNoteUseCaseProtocol { func execute(spaceId: String, noteId: String, title: String, content: String) async throws -> Note { throw PreviewError.unavailable } }
 private struct PreviewDeleteNoteUseCase: DeleteNoteUseCaseProtocol { func execute(spaceId: String, noteId: String) async throws {} }
-private struct PreviewCreateNoteUseCase: CreateNoteUseCaseProtocol { func execute(spaceId: String, title: String, content: String) async throws -> Note { fatalError("Preview only") } }
+private struct PreviewCreateNoteUseCase: CreateNoteUseCaseProtocol { func execute(spaceId: String, title: String, content: String) async throws -> Note { throw PreviewError.unavailable } }

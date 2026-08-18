@@ -13,8 +13,8 @@ struct FolioAskView: View {
         ScrollView {
             VStack(spacing: 16) {
                 FolioContentHeader(
-                    title: "Ask",
-                    subtitle: "Private research assistant",
+                    title: String(localized: "Ask"),
+                    subtitle: String(localized: "Private research assistant"),
                     onBackToSpaces: onBackToSpaces,
                     onPlusTapped: nil,
                     searchText: .constant("")
@@ -25,7 +25,7 @@ struct FolioAskView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Ask across your sources with grounded citations and traceable evidence.")
+                    Text(String(localized: "Ask across your sources with grounded citations and traceable evidence."))
                         .font(.system(size: 22, weight: .regular, design: .serif))
                         .foregroundStyle(Color.folioInk)
 
@@ -62,7 +62,7 @@ struct FolioAskView: View {
                 .padding(.horizontal, 18)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Quick prompts")
+                    Text(String(localized: "Quick prompts"))
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.folioInkSoft)
                         .textCase(.uppercase)
@@ -85,7 +85,7 @@ struct FolioAskView: View {
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(Color.folioOliveDark)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Scoping to this source")
+                Text(String(localized: "Scoping to this source"))
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.folioInkMuted)
                 Text(source.title)

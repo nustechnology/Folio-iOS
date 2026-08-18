@@ -10,7 +10,7 @@ struct ErrorView: View {
                 .font(.system(size: 48))
                 .foregroundColor(Color.folioGold)
 
-            Text("Something went wrong")
+            Text(String(localized: "Something went wrong"))
                 .font(.headline)
 
             Text(message)
@@ -22,7 +22,7 @@ struct ErrorView: View {
                 Button(action: retryAction) {
                     HStack {
                         Image(systemName: "arrow.clockwise")
-                        Text("Retry")
+                        Text(String(localized: "Retry"))
                     }
                 }
                 .buttonStyle(.bordered)

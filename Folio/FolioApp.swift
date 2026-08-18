@@ -6,6 +6,7 @@ struct FolioApp: App {
     private let diContainer = AppDIContainer()
 
     init() {
+        UserDefaults.standard.removeObject(forKey: StorageKey.authSession)
         FolioApp.registerFonts()
     }
 
@@ -14,12 +15,15 @@ struct FolioApp: App {
             MainView(viewModel: MainViewModel(
                 fetchUsersUseCase: diContainer.fetchUsersUseCase,
                 fetchMeUseCase: diContainer.fetchMeUseCase,
-                localStorage: diContainer.localStorage,
+                localStorage: diContainer.sessionStorage,
                 signUpUseCase: diContainer.signUpUseCase,
                 signInUseCase: diContainer.signInUseCase,
                 signOutUseCase: diContainer.signOutUseCase,
                 refreshTokenUseCase: diContainer.refreshTokenUseCase,
-                workspaceRepository: diContainer.workspaceRepository,
+                fetchWorkspacesUseCase: diContainer.fetchWorkspacesUseCase,
+                createWorkspaceUseCase: diContainer.createWorkspaceUseCase,
+                updateWorkspaceUseCase: diContainer.updateWorkspaceUseCase,
+                deleteWorkspaceUseCase: diContainer.deleteWorkspaceUseCase,
                 uploadSourceUseCase: diContainer.uploadSourceUseCase,
                 fetchSourcesUseCase: diContainer.fetchSourcesUseCase,
                 updateSourceUseCase: diContainer.updateSourceUseCase,

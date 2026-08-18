@@ -341,7 +341,11 @@ final class NetworkService: NetworkServiceProtocol {
             if case NetworkError.httpError(let statusCode, _) = refreshError,
                statusCode == 401 || statusCode == 403 {
                 await tokenRefreshActor.cancel(tokenProvider: tokenProvider)
-                tokenProvider.invalidateSession()
+                do {
+                    try tokenProvider.invalidateSession()
+                } catch {
+                    Logger.error("Failed to invalidate session after token refresh returned \(statusCode): \(error)")
+                }
             }
             throw refreshError
         }
@@ -350,7 +354,11 @@ final class NetworkService: NetworkServiceProtocol {
             return try await perform(endpoint, allowTokenRefresh: false)
         } catch let retryError as NetworkError {
             if case .httpError(let statusCode, _) = retryError, statusCode == 401 {
-                tokenProvider.invalidateSession()
+                do {
+                    try tokenProvider.invalidateSession()
+                } catch {
+                    Logger.error("Failed to invalidate session after retry returned \(statusCode): \(error)")
+                }
             }
             throw retryError
         }
@@ -472,21 +480,21 @@ enum NetworkError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "Invalid URL"
+            return String(localized: "Invalid URL")
         case .insecureURL:
-            return "Non-HTTPS connections are not permitted"
+            return String(localized: "Non-HTTPS connections are not permitted")
         case .invalidResponse:
-            return "Invalid response from server"
+            return String(localized: "Invalid response from server")
         case .httpError(let statusCode, let data):
             if let data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let message = json["message"] as? String {
                 return message
             }
-            return "HTTP error with status code \(statusCode)"
+            return String(format: String(localized: "HTTP error with status code %lld"), statusCode)
         case .decodingError(let error):
-            return "Failed to decode response: \(error.localizedDescription)"
+            return String(format: String(localized: "Failed to decode response: %@"), error.localizedDescription)
         case .missingAuthenticationToken:
-            return "Authentication token is missing"
+            return String(localized: "Authentication token is missing")
         case .tokenRefreshUnavailable:
             return String(localized: "Authentication refresh is unavailable")
         case .circuitBreakerOpen:

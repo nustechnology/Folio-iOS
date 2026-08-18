@@ -82,6 +82,22 @@ final class MainViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.state.isAuthenticated)
     }
 
+    func testSignOutFailureKeepsAuthenticatedState() async {
+        let viewModel = makeViewModel(
+            localStorage: SessionLocalStorage(session: validSession()),
+            signOutUseCase: FailingSignOutUseCase()
+        )
+
+        viewModel.handle(.onAppear)
+        XCTAssertTrue(viewModel.state.isAuthenticated)
+
+        viewModel.handle(.signOut)
+        for _ in 0..<10 { await Task.yield() }
+
+        XCTAssertTrue(viewModel.state.isAuthenticated)
+        XCTAssertEqual(viewModel.toastMessage, .error(AuthError.sessionRemovalFailed.errorDescription!))
+    }
+
     func testRepeatedSessionChecksStartOnlyOneRefresh() async {
         let refreshToken = BlockingRefreshTokenUseCase()
         let viewModel = makeViewModel(
@@ -112,7 +128,8 @@ final class MainViewModelTests: XCTestCase {
     private func makeViewModel(
         fetchMeUseCase: any FetchMeUseCaseProtocol = EmptyFetchMeUseCase(),
         localStorage: LocalStorageProtocol = EmptyLocalStorage(),
-        refreshTokenUseCase: any RefreshTokenUseCaseProtocol = EmptyRefreshTokenUseCase()
+        refreshTokenUseCase: any RefreshTokenUseCaseProtocol = EmptyRefreshTokenUseCase(),
+        signOutUseCase: any SignOutUseCaseProtocol = EmptySignOutUseCase()
     ) -> MainViewModel {
         MainViewModel(
             fetchUsersUseCase: EmptyFetchUsersUseCase(),
@@ -120,9 +137,12 @@ final class MainViewModelTests: XCTestCase {
             localStorage: localStorage,
             signUpUseCase: EmptySignUpUseCase(),
             signInUseCase: EmptySignInUseCase(),
-            signOutUseCase: EmptySignOutUseCase(),
+            signOutUseCase: signOutUseCase,
             refreshTokenUseCase: refreshTokenUseCase,
-            workspaceRepository: EmptyWorkspaceRepository(),
+            fetchWorkspacesUseCase: FetchWorkspacesUseCase(repository: EmptyWorkspaceRepository()),
+            createWorkspaceUseCase: CreateWorkspaceUseCase(repository: EmptyWorkspaceRepository()),
+            updateWorkspaceUseCase: UpdateWorkspaceUseCase(repository: EmptyWorkspaceRepository()),
+            deleteWorkspaceUseCase: DeleteWorkspaceUseCase(repository: EmptyWorkspaceRepository()),
             uploadSourceUseCase: EmptyUploadSourceUseCase(),
             fetchSourcesUseCase: EmptyFetchSourcesUseCase(),
             updateSourceUseCase: EmptyUpdateSourceUseCase(),
@@ -227,16 +247,14 @@ private final class SessionLocalStorage: LocalStorageProtocol {
         session as? T
     }
 
-    func remove(forKey key: String) {}
+    func remove(forKey key: String) throws {}
 
-    func clear() {}
 }
 
 private final class EmptyLocalStorage: LocalStorageProtocol {
     func save<T>(_ value: T, forKey key: String) throws where T: Codable {}
     func load<T>(forKey key: String) throws -> T? where T: Codable { nil }
-    func remove(forKey key: String) {}
-    func clear() {}
+    func remove(forKey key: String) throws {}
 }
 
 private struct EmptySignUpUseCase: SignUpUseCaseProtocol {
@@ -248,7 +266,11 @@ private struct EmptySignInUseCase: SignInUseCaseProtocol {
 }
 
 private struct EmptySignOutUseCase: SignOutUseCaseProtocol {
-    func execute() {}
+    func execute() throws {}
+}
+
+private struct FailingSignOutUseCase: SignOutUseCaseProtocol {
+    func execute() throws { throw AuthError.sessionRemovalFailed }
 }
 
 private struct EmptyRefreshTokenUseCase: RefreshTokenUseCaseProtocol {

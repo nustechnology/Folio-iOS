@@ -7,6 +7,8 @@ enum AuthError: LocalizedError, Equatable {
     case passwordsDoNotMatch
     case invalidCredentials
     case sessionExpired
+    case sessionPersistenceFailed
+    case sessionRemovalFailed
     case networkError(String)
 
     var errorDescription: String? {
@@ -23,6 +25,10 @@ enum AuthError: LocalizedError, Equatable {
             return String(localized: "Invalid email or password. Please try again.")
         case .sessionExpired:
             return String(localized: "Session expired. Please sign in again.")
+        case .sessionPersistenceFailed:
+            return String(localized: "Unable to save your session. Please try again.")
+        case .sessionRemovalFailed:
+            return String(localized: "Unable to sign out securely. Please try again.")
         case .networkError(let message):
             return message
         }

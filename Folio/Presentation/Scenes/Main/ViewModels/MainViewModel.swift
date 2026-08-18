@@ -44,7 +44,10 @@ final class MainViewModel: ViewModelProtocol {
     private let signInUseCase: any SignInUseCaseProtocol
     private let signOutUseCase: any SignOutUseCaseProtocol
     private let refreshTokenUseCase: any RefreshTokenUseCaseProtocol
-    let workspaceRepository: WorkspaceRepositoryProtocol
+    let fetchWorkspacesUseCase: any FetchWorkspacesUseCaseProtocol
+    let createWorkspaceUseCase: any CreateWorkspaceUseCaseProtocol
+    let updateWorkspaceUseCase: any UpdateWorkspaceUseCaseProtocol
+    let deleteWorkspaceUseCase: any DeleteWorkspaceUseCaseProtocol
     let uploadSourceUseCase: any UploadSourceUseCaseProtocol
     let fetchSourcesUseCase: any FetchSourcesUseCaseProtocol
     let updateSourceUseCase: any UpdateSourceUseCaseProtocol
@@ -64,7 +67,10 @@ final class MainViewModel: ViewModelProtocol {
         signInUseCase: any SignInUseCaseProtocol,
         signOutUseCase: any SignOutUseCaseProtocol,
         refreshTokenUseCase: any RefreshTokenUseCaseProtocol,
-        workspaceRepository: WorkspaceRepositoryProtocol,
+        fetchWorkspacesUseCase: any FetchWorkspacesUseCaseProtocol,
+        createWorkspaceUseCase: any CreateWorkspaceUseCaseProtocol,
+        updateWorkspaceUseCase: any UpdateWorkspaceUseCaseProtocol,
+        deleteWorkspaceUseCase: any DeleteWorkspaceUseCaseProtocol,
         uploadSourceUseCase: any UploadSourceUseCaseProtocol,
         fetchSourcesUseCase: any FetchSourcesUseCaseProtocol,
         updateSourceUseCase: any UpdateSourceUseCaseProtocol,
@@ -79,7 +85,10 @@ final class MainViewModel: ViewModelProtocol {
         self.signInUseCase = signInUseCase
         self.signOutUseCase = signOutUseCase
         self.refreshTokenUseCase = refreshTokenUseCase
-        self.workspaceRepository = workspaceRepository
+        self.fetchWorkspacesUseCase = fetchWorkspacesUseCase
+        self.createWorkspaceUseCase = createWorkspaceUseCase
+        self.updateWorkspaceUseCase = updateWorkspaceUseCase
+        self.deleteWorkspaceUseCase = deleteWorkspaceUseCase
         self.uploadSourceUseCase = uploadSourceUseCase
         self.fetchSourcesUseCase = fetchSourcesUseCase
         self.updateSourceUseCase = updateSourceUseCase
@@ -139,7 +148,18 @@ final class MainViewModel: ViewModelProtocol {
             signOutTask = Task { [weak self] in
                 guard let self else { return }
                 await refreshTask?.value
-                await signOutUseCase.executeAwaitingCancellation()
+                do {
+                    try await signOutUseCase.executeAwaitingCancellation()
+                } catch let error as AuthError {
+                    toastMessage = .error(error.errorDescription ?? error.localizedDescription)
+                    signOutTask = nil
+                    return
+                } catch {
+                    Logger.error("Sign-out failed: \(error)")
+                    toastMessage = .error(String(localized: "Unable to sign out securely. Please try again."))
+                    signOutTask = nil
+                    return
+                }
                 invalidateProfileRequest()
                 state.isAuthenticated = false
                 state.userDisplayName = nil
@@ -335,7 +355,11 @@ final class MainViewModel: ViewModelProtocol {
             applySession(newToken)
         } catch {
             guard generation == sessionGeneration else { return }
-            await signOutUseCase.executeAwaitingCancellation()
+            do {
+                try await signOutUseCase.executeAwaitingCancellation()
+            } catch {
+                Logger.error("Failed to clear expired session: \(error)")
+            }
             invalidateProfileRequest()
             state.isAuthenticated = false
             state.userDisplayName = nil

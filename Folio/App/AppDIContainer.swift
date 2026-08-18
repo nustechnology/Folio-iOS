@@ -9,11 +9,15 @@ final class AppDIContainer {
     }()
 
     lazy var accessTokenProvider: AccessTokenProvider = {
-        SessionAccessTokenProvider(localStorage: localStorage, baseURL: AppConfiguration.apiBaseURL)
+        SessionAccessTokenProvider(localStorage: sessionStorage, baseURL: AppConfiguration.apiBaseURL)
     }()
 
     lazy var localStorage: LocalStorageProtocol = {
         UserDefaultsStorage()
+    }()
+
+    lazy var sessionStorage: LocalStorageProtocol = {
+        KeychainStorage()
     }()
 
     lazy var userRepository: UserRepositoryProtocol = {
@@ -29,7 +33,7 @@ final class AppDIContainer {
     }()
 
     lazy var authRepository: AuthRepositoryProtocol = {
-        AuthRepository(networkService: networkService, localStorage: localStorage)
+        AuthRepository(networkService: networkService, localStorage: sessionStorage)
     }()
 
     lazy var signUpUseCase: any SignUpUseCaseProtocol = {
@@ -50,6 +54,22 @@ final class AppDIContainer {
 
     lazy var workspaceRepository: WorkspaceRepositoryProtocol = {
         RemoteWorkspaceRepository(networkService: networkService)
+    }()
+
+    lazy var fetchWorkspacesUseCase: any FetchWorkspacesUseCaseProtocol = {
+        FetchWorkspacesUseCase(repository: workspaceRepository)
+    }()
+
+    lazy var createWorkspaceUseCase: any CreateWorkspaceUseCaseProtocol = {
+        CreateWorkspaceUseCase(repository: workspaceRepository)
+    }()
+
+    lazy var updateWorkspaceUseCase: any UpdateWorkspaceUseCaseProtocol = {
+        UpdateWorkspaceUseCase(repository: workspaceRepository)
+    }()
+
+    lazy var deleteWorkspaceUseCase: any DeleteWorkspaceUseCaseProtocol = {
+        DeleteWorkspaceUseCase(repository: workspaceRepository)
     }()
 
     lazy var sourceRepository: SourceRepositoryProtocol = {

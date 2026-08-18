@@ -26,7 +26,7 @@ Folio/
 ## Tech Stack
 
 - **Swift 5.0** / **SwiftUI** / **Combine**
-- iOS 17.0+
+- iOS 26.5+
 - Zero external dependencies
 
 ## Configuration
@@ -35,8 +35,8 @@ Build configurations are managed via `.xcconfig` files:
 
 | Config | API Base URL | Bundle ID |
 |--------|-------------|-----------|
-| Debug | jsonplaceholder.typicode.com | `com.nustechnology.Folio` |
-| Release | jsonplaceholder.typicode.com | `com.nustechnology.Folio` |
+| Debug | shale-crowd-satin.ngrok-free.dev | `com.nustechnology.Folio` |
+| Release | shale-crowd-satin.ngrok-free.dev | `com.nustechnology.Folio` |
 
 ## Localization
 
@@ -46,11 +46,14 @@ String catalog: `Folio/Resources/Localizable.xcstrings`
 
 ## Getting Started
 
-1. Open `Folio.xcodeproj` in Xcode 16+
+1. Open `Folio.xcodeproj` in Xcode 26.5+
 2. Select scheme **Folio**
 3. Build & Run (`⌘R`)
 
 ## Code style
 
-Formatting and import-order rules are defined in `.swiftlint.yml`. See
-[`Docs/CodeStyle.md`](Docs/CodeStyle.md) for installation and lint commands.
+Formatting and import-order rules are defined in `.swiftlint.yml`.
+
+`API_BASE_URL` must be an explicit HTTPS URL in the active `.xcconfig` file.
+The application fails fast when the value is missing or invalid; it never falls
+back to an embedded development endpoint.

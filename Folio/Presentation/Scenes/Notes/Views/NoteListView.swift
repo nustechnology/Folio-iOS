@@ -147,10 +147,10 @@ struct NoteListView: View {
 
                 VStack(spacing: FolioSpacing.sm) {
                     Text(String(localized: "No notes yet"))
-                        .font(.system(size: FolioFontSize.body, weight: .semibold))
+                        .font(.system(size: FolioFontSize.headline, weight: .semibold))
                         .foregroundStyle(Color.folioInk)
                     Text(String(localized: "Create a note or save an answer from the chat."))
-                        .font(.system(size: FolioFontSize.bodySmall, weight: .regular))
+                        .font(.system(size: FolioFontSize.body, weight: .regular))
                         .foregroundStyle(Color.folioInkSoft)
                         .multilineTextAlignment(.center)
                 }
@@ -159,10 +159,10 @@ struct NoteListView: View {
                     viewModel.handle(.newTapped)
                 } label: {
                     Text(String(localized: "Add note"))
-                        .font(.system(size: FolioFontSize.bodySmall, weight: .semibold))
+                        .font(.system(size: FolioFontSize.body, weight: .semibold))
                         .foregroundStyle(.white)
-                        .frame(width: 92, height: 35)
-                        .background(Color.folioOliveDark)
+                        .frame(width: 100, height: 38)
+                        .background(Color.folioOlive)
                         .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
                 }
                 .buttonStyle(.plain)
@@ -184,7 +184,7 @@ struct NoteListView: View {
 
                 VStack(spacing: FolioSpacing.sm) {
                     Text(emptyFilterTitle)
-                        .font(.system(size: FolioFontSize.subheadline, weight: .semibold))
+                        .font(.system(size: FolioFontSize.headline, weight: .semibold))
                         .foregroundStyle(Color.folioInk)
                 }
             }

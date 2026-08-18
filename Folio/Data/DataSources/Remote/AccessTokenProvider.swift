@@ -4,7 +4,7 @@ protocol AccessTokenProvider: Sendable {
     var accessToken: String? { get }
     func refreshToken() async throws -> String
     nonisolated func cancelRefresh()
-    func invalidateSession()
+    func invalidateSession() throws
 }
 
 extension AccessTokenProvider {
@@ -13,16 +13,26 @@ extension AccessTokenProvider {
     }
 
     nonisolated func cancelRefresh() {}
-    func invalidateSession() {}
+    func invalidateSession() throws {}
 }
 
 struct SessionAccessTokenProvider: AccessTokenProvider {
     private let localStorage: LocalStorageProtocol
     private let baseURL: URL
+    private let urlSession: URLSession
 
-    init(localStorage: LocalStorageProtocol, baseURL: URL) {
+    init(localStorage: LocalStorageProtocol, baseURL: URL, session: URLSession? = nil) {
         self.localStorage = localStorage
         self.baseURL = baseURL
+        if let session {
+            self.urlSession = session
+        } else {
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.timeoutIntervalForRequest = 10
+            configuration.timeoutIntervalForResource = 15
+            configuration.waitsForConnectivity = true
+            self.urlSession = URLSession(configuration: configuration)
+        }
     }
 
     var accessToken: String? {
@@ -43,11 +53,7 @@ struct SessionAccessTokenProvider: AccessTokenProvider {
         request.httpBody = try JSONEncoder().encode(["refreshToken": session.refreshToken])
         request.timeoutInterval = 10
 
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.timeoutIntervalForRequest = 10
-        configuration.timeoutIntervalForResource = 15
-        configuration.waitsForConnectivity = true
-        let (data, response) = try await URLSession(configuration: configuration).data(
+        let (data, response) = try await urlSession.data(
             for: request,
             delegate: RedirectDelegate(allowedOrigin: request.url!)
         )
@@ -57,7 +63,11 @@ struct SessionAccessTokenProvider: AccessTokenProvider {
         }
         guard (200...299).contains(httpResponse.statusCode) else {
             if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
-                localStorage.remove(forKey: StorageKey.authSession)
+                do {
+                    try removeSession()
+                } catch {
+                    Logger.error("Failed to remove session after refresh returned \(httpResponse.statusCode): \(error)")
+                }
             }
             throw NetworkError.httpError(statusCode: httpResponse.statusCode, data: data)
         }
@@ -71,7 +81,15 @@ struct SessionAccessTokenProvider: AccessTokenProvider {
 
     nonisolated func cancelRefresh() {}
 
-    func invalidateSession() {
-        localStorage.remove(forKey: StorageKey.authSession)
+    func invalidateSession() throws {
+        try removeSession()
+    }
+
+    private func removeSession() throws {
+        do {
+            try localStorage.remove(forKey: StorageKey.authSession)
+        } catch {
+            throw AuthError.sessionRemovalFailed
+        }
     }
 }

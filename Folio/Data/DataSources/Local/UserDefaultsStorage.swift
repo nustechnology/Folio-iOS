@@ -29,9 +29,4 @@ final class UserDefaultsStorage: LocalStorageProtocol {
         defaults.removeObject(forKey: key)
     }
 
-    func clear() {
-        guard let domain = Bundle.main.bundleIdentifier else { return }
-        defaults.removePersistentDomain(forName: domain)
-        defaults.synchronize()
-    }
 }

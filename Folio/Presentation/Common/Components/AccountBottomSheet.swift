@@ -47,7 +47,7 @@ struct AccountBottomSheet: View {
             .buttonStyle(.plain)
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
-            .accessibilityLabel("Settings")
+            .accessibilityLabel(String(localized: "Settings"))
         }
         .padding(.horizontal, 18)
         .padding(.bottom, 20)

@@ -101,6 +101,46 @@ final class NetworkResilienceTests: XCTestCase {
         XCTAssertFalse(provider.didInvalidateSession)
     }
 
+    func testUnauthorizedTokenRefreshPreservesServerErrorWhenSessionInvalidationFails() async {
+        let provider = UnauthorizedRefreshTokenProvider()
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [AlwaysUnauthorizedURLProtocol.self]
+        let service = NetworkService(
+            baseURL: URL(string: "https://example.com")!,
+            session: URLSession(configuration: configuration),
+            accessTokenProvider: provider,
+            retryPolicy: RetryPolicy(maxRetries: 0)
+        )
+
+        do {
+            let _: WorkspaceResponseDTO = try await service.request(WorkspaceEndpoint.list(query: .initial))
+            XCTFail("Expected token refresh to fail")
+        } catch NetworkError.httpError(statusCode: 401, _) {
+        } catch {
+            XCTFail("Expected an unauthorized response, got \(error)")
+        }
+    }
+
+    func testUnauthorizedRetryPreservesServerErrorWhenSessionInvalidationFails() async {
+        let provider = FailingInvalidationTokenProvider()
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [AlwaysUnauthorizedURLProtocol.self]
+        let service = NetworkService(
+            baseURL: URL(string: "https://example.com")!,
+            session: URLSession(configuration: configuration),
+            accessTokenProvider: provider,
+            retryPolicy: RetryPolicy(maxRetries: 0)
+        )
+
+        do {
+            let _: WorkspaceResponseDTO = try await service.request(WorkspaceEndpoint.list(query: .initial))
+            XCTFail("Expected the retried request to fail")
+        } catch NetworkError.httpError(statusCode: 401, _) {
+        } catch {
+            XCTFail("Expected an unauthorized response, got \(error)")
+        }
+    }
+
     func testUnauthorizedRetryInvalidatesSessionAfterRefresh() async {
         let provider = SuccessfulRefreshTokenProvider()
         let configuration = URLSessionConfiguration.ephemeral
@@ -363,6 +403,28 @@ private final class FailingRefreshTokenProvider: AccessTokenProvider {
 
     func invalidateSession() {
         lock.withLock { _didInvalidateSession = true }
+    }
+}
+
+private struct UnauthorizedRefreshTokenProvider: AccessTokenProvider {
+    let accessToken: String? = "old-token"
+
+    func refreshToken() async throws -> String {
+        throw NetworkError.httpError(statusCode: 401)
+    }
+
+    func invalidateSession() throws {
+        throw AuthError.sessionRemovalFailed
+    }
+}
+
+private struct FailingInvalidationTokenProvider: AccessTokenProvider {
+    let accessToken: String? = "old-token"
+
+    func refreshToken() async throws -> String { "new-token" }
+
+    func invalidateSession() throws {
+        throw AuthError.sessionRemovalFailed
     }
 }
 
