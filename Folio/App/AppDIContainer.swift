@@ -48,6 +48,10 @@ final class AppDIContainer {
         RefreshTokenUseCase(authRepository: authRepository)
     }()
 
+    lazy var passwordResetUseCase: any RequestPasswordResetUseCaseProtocol = {
+        RequestPasswordResetUseCase(authRepository: authRepository)
+    }()
+
     lazy var signOutUseCase: any SignOutUseCaseProtocol = {
         SignOutUseCase(authRepository: authRepository)
     }()

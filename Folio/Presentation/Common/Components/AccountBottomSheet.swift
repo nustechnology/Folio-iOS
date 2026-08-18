@@ -4,6 +4,7 @@ struct AccountBottomSheet: View {
     let displayName: String
     let emailAddress: String
     let onOpenSettings: () -> Void
+    let onSignOut: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,57 +33,61 @@ struct AccountBottomSheet: View {
 
             Spacer()
 
-            Button(action: onOpenSettings) {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.folioInk)
+            Button(action: onSignOut) {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.folioDanger)
                     .frame(width: 34, height: 34)
-                    .background(Color.folioSurfaceStrong)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(Color.folioRowBorder, lineWidth: 1)
-                    )
+                    .background(Color.folioDanger.opacity(0.08))
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
             .buttonStyle(.plain)
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
-            .accessibilityLabel(String(localized: "Settings"))
+            .accessibilityLabel("Sign out")
         }
         .padding(.horizontal, 18)
         .padding(.bottom, 20)
     }
 
     private var accountCard: some View {
-        HStack(spacing: 14) {
-            Text(displayName.firstLetter.capitalized)
-                .foregroundStyle(Color.white)
-                .frame(width: 40, height: 40)
-                .background(Color.folioHomeSearchField)
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
-                )
-                .shadow(color: Color.black.opacity(0.06), radius: 8, y: 3)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(displayName)
-                    .font(.system(size: 16, weight: .semibold))
+        Button(action: onOpenSettings) {
+            HStack(spacing: 14) {
+                Text(displayName.firstLetter.capitalized)
                     .foregroundStyle(Color.white)
+                    .frame(width: 40, height: 40)
+                    .background(Color.folioHomeSearchField)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.06), radius: 8, y: 3)
 
-                Text(emailAddress)
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundStyle(Color.white.opacity(0.68))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(displayName)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color.white)
+
+                    Text(emailAddress)
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(Color.white.opacity(0.68))
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.6))
             }
-
-            Spacer(minLength: 0)
+            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, minHeight: 72)
+            .background(Color.folioHomeHeader)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .shadow(color: Color.black.opacity(0.12), radius: 12, y: 5)
         }
-        .padding(.horizontal, 16)
-        .frame(maxWidth: .infinity, minHeight: 72)
-        .background(Color.folioHomeHeader)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .shadow(color: Color.black.opacity(0.12), radius: 12, y: 5)
+        .buttonStyle(.plain)
         .padding(.horizontal, 18)
+        .accessibilityLabel("Profile settings")
     }
 }

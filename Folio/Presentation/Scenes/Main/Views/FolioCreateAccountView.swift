@@ -15,97 +15,111 @@ struct FolioCreateAccountView: View {
     @State private var confirmPasswordError: String? = nil
 
     var body: some View {
-        ScrollView {
-            VStack {
-                HStack {
-                    FolioBackButton(title: String(localized: "Folio"))
-                    Spacer()
+        GeometryReader { proxy in
+            ScrollView {
+                VStack(spacing: 0) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Folio")
+                            .font(.custom("CormorantGaramond-Medium", size: 40))
+                            .foregroundStyle(Color.folioInk)
+
+                        Text("PRIVATE ARCHIVE")
+                            .font(.system(size: 10, weight: .semibold))
+                            .tracking(1.6)
+                            .foregroundStyle(Color.folioGold)
+                            .padding(.top, 6)
+
+                        Text("Create your private archive.")
+                            .font(.custom("CormorantGaramond-Medium", size: 34))
+                            .foregroundStyle(Color.folioInk)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 14)
+
+                        Text("Start with a secure workspace for sources, citations and notes.")
+                            .font(.system(size: 14, weight: .regular))
+                            .foregroundStyle(Color.folioInkMuted)
+                            .lineSpacing(4)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 8)
+                    }
+                    .padding(.top, 32)
+                    .padding(.bottom, 28)
+
+                    VStack(spacing: 16) {
+                        FolioTextField(
+                            label: String(localized: "Name"),
+                            placeholder: "Jordan Lee",
+                            text: $name,
+                            error: nameError,
+                            fieldBackground: Color.folioLoginBackground
+                        )
+
+                        FolioTextField(
+                            label: String(localized: "Email"),
+                            placeholder: "jordan@folio.app",
+                            text: $email,
+                            error: emailError,
+                            keyboardType: .emailAddress,
+                            fieldBackground: Color.folioLoginBackground
+                        )
+
+                        FolioTextField(
+                            label: String(localized: "Password"),
+                            placeholder: "••••••••••",
+                            text: $password,
+                            isSecure: true,
+                            error: passwordError,
+                            fieldBackground: Color.folioLoginBackground
+                        )
+
+                        FolioTextField(
+                            label: String(localized: "Confirm password"),
+                            placeholder: "••••••••••",
+                            text: $confirmPassword,
+                            isSecure: true,
+                            error: confirmPasswordError,
+                            fieldBackground: Color.folioLoginBackground
+                        )
+                    }
+
+                    VStack(spacing: 16) {
+                        FolioPrimaryButton(
+                            title: String(localized: "Create account"),
+                            isLoading: viewModel.state.authLoading,
+                            action: { submitSignUp() }
+                        )
+
+                        #if DEBUG
+                        FolioSecondaryButton(
+                            title: String(localized: "Continue with Apple"),
+                            iconName: "applelogo",
+                            action: { viewModel.handle(.signInWithApple) }
+                        )
+                        #endif
+                    }
+                    .padding(.top, 28)
+
+                    Spacer(minLength: 28)
+
+                    Button {
+                        dismiss()
+                    } label: {
+                        (
+                            Text(String(localized: "Already have an account? "))
+                                .foregroundStyle(Color.folioInkSoft)
+                            + Text(String(localized: "Sign in"))
+                                .fontWeight(.semibold)
+                                .foregroundStyle(Color.folioInk)
+                        )
+                        .font(.system(size: 14, weight: .regular))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.bottom, 28)
                 }
-                .padding(.top, 16)
-                .padding(.bottom, 2)
-
-                Text(String(localized: "PRIVATE ARCHIVE"))
-                    .font(.system(size: 10, weight: .semibold))
-                    .tracking(1.2)
-                    .foregroundStyle(Color.folioInkSoft)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                VStack(spacing: 8) {
-                    Text(String(localized: "Create your private archive."))
-                        .font(.custom("CormorantGaramond-Medium", size: 28))
-                        .foregroundStyle(Color.folioInk)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, 56)
-
-                    Text(String(localized: "Start with a secure workspace for sources, citation and notes"))
-                        .font(.system(size: 16, weight: .regular))
-                        .foregroundStyle(Color.folioInkMuted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.bottom, 20)
-                }
-
-                VStack(spacing: 16) {
-                    FolioTextField(
-                        label: String(localized: "Name"),
-                        placeholder: String(localized: "Alex Morgan"),
-                        text: $name,
-                        error: nameError
-                    )
-
-                    FolioTextField(
-                        label: String(localized: "Email"),
-                        placeholder: String(localized: "researcher@folio.app"),
-                        text: $email,
-                        error: emailError,
-                        keyboardType: .emailAddress
-                    )
-
-                    FolioTextField(
-                        label: String(localized: "Password"),
-                        placeholder: "••••••••••",
-                        text: $password,
-                        isSecure: true,
-                        error: passwordError
-                    )
-
-                    FolioTextField(
-                        label: String(localized: "Confirm Password"),
-                        placeholder: "••••••••••",
-                        text: $confirmPassword,
-                        isSecure: true,
-                        error: confirmPasswordError
-                    )
-
-                    FolioPrimaryButton(
-                        title: String(localized: "Create Account"),
-                        isLoading: viewModel.state.authLoading,
-                        action: { submitSignUp() }
-                    )
-                    .padding(.top, 16)
-
-                    #if DEBUG
-                    FolioSecondaryButton(
-                        title: String(localized: "Sign in with Apple"),
-                        iconName: "applelogo",
-                        action: { viewModel.handle(.signInWithApple) }
-                    )
-                    #endif
-                }
-                .padding(.vertical, 13)
-
-                Spacer(minLength: 27)
-
-                Button {
-                    dismiss()
-                } label: {
-                    Text(String(localized: "Already have an account? Sign in"))
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundStyle(Color.folioInkSoft)
-                }
-                .buttonStyle(.plain)
+                .padding(.horizontal, 34)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: proxy.size.height)
             }
-            .padding(.horizontal, 34)
-            .frame(maxWidth: .infinity)
         }
     }
 
@@ -170,11 +184,12 @@ struct FolioCreateAccountView: View {
             FolioCreateAccountView(viewModel: MainViewModel(
                 fetchUsersUseCase: PreviewAuthFetchUsersUseCase(),
                 fetchMeUseCase: PreviewAuthFetchMeUseCase(),
-                localStorage: PreviewStorage(),
+                localStorage: UserDefaultsStorage(),
                 signUpUseCase: PreviewAuthSignUpUseCase(),
                 signInUseCase: PreviewAuthSignInUseCase(),
                 signOutUseCase: PreviewAuthSignOutUseCase(),
                 refreshTokenUseCase: PreviewAuthRefreshTokenUseCase(),
+                passwordResetUseCase: PreviewAuthPasswordResetUseCase(),
                 fetchWorkspacesUseCase: FetchWorkspacesUseCase(repository: PreviewWorkspaceRepository()),
                 createWorkspaceUseCase: CreateWorkspaceUseCase(repository: PreviewWorkspaceRepository()),
                 updateWorkspaceUseCase: UpdateWorkspaceUseCase(repository: PreviewWorkspaceRepository()),
@@ -211,7 +226,7 @@ private struct PreviewAuthSignInUseCase: SignInUseCaseProtocol {
 }
 
 private struct PreviewAuthSignOutUseCase: SignOutUseCaseProtocol {
-    func execute() throws {}
+    func execute() {}
 }
 
 private struct PreviewAuthRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
@@ -220,29 +235,33 @@ private struct PreviewAuthRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
     }
 }
 
+private struct PreviewAuthPasswordResetUseCase: RequestPasswordResetUseCaseProtocol {
+    func execute(email: String) async throws {}
+}
+
 private struct PreviewAuthUploadSourceUseCase: UploadSourceUseCaseProtocol {
-    func uploadFile(spaceId: String, fileURL: URL, title: String?, author: String?) async throws -> Source { throw PreviewError.unavailable }
-    func uploadWeb(spaceId: String, url: String, title: String?, author: String?) async throws -> Source { throw PreviewError.unavailable }
-    func uploadManual(spaceId: String, content: String, title: String?, author: String?) async throws -> Source { throw PreviewError.unavailable }
-    func deleteSource(id: String) async throws { throw PreviewError.unavailable }
-    func retrySource(id: String) async throws -> Source { throw PreviewError.unavailable }
+    func uploadFile(spaceId: String, fileURL: URL, title: String?, author: String?) async throws -> Source { fatalError("Preview") }
+    func uploadWeb(spaceId: String, url: String, title: String?, author: String?) async throws -> Source { fatalError("Preview") }
+    func uploadManual(spaceId: String, content: String, title: String?, author: String?) async throws -> Source { fatalError("Preview") }
+    func deleteSource(id: String) async throws { fatalError("Preview") }
+    func retrySource(id: String) async throws -> Source { fatalError("Preview") }
     func sourceStatusStream() -> AsyncThrowingStream<SourceStatusEvent, Error> { AsyncThrowingStream { $0.finish() } }
 }
 
 private struct PreviewAuthFetchSourcesUseCase: FetchSourcesUseCaseProtocol {
-    func execute(query: SourceListQuery) async throws -> SourceListResult { throw PreviewError.unavailable }
+    func execute(query: SourceListQuery) async throws -> SourceListResult { fatalError("Preview") }
 }
 
 private struct PreviewAuthUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
-    func execute(id: String, title: String, author: String) async throws -> Source { throw PreviewError.unavailable }
+    func execute(id: String, title: String, author: String) async throws -> Source { fatalError("Preview") }
 }
 
 private struct PreviewAuthFetchSourceDetailUseCase: FetchSourceDetailUseCaseProtocol {
-    func execute(id: String) async throws -> Source { throw PreviewError.unavailable }
+    func execute(id: String) async throws -> Source { fatalError("Preview") }
 }
 
 private struct PreviewAuthFetchSourcePreviewUseCase: FetchSourcePreviewUseCaseProtocol {
-    func execute(source: Source) async throws -> SourcePreview { throw PreviewError.unavailable }
+    func execute(source: Source) async throws -> SourcePreview { fatalError("Preview") }
 }
 
 private struct PreviewAuthFetchNotebookUseCase: FetchNotebookUseCaseProtocol {

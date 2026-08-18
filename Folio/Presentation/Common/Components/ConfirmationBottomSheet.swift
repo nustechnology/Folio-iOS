@@ -1,10 +1,12 @@
 import SwiftUI
 
-struct DeleteSourceBottomSheet: View {
+struct ConfirmationBottomSheet: View {
     let title: String
     let message: String
+    var cancelTitle: String = String(localized: "Cancel")
+    var confirmTitle: String
     let onCancel: () -> Void
-    let onDelete: () -> Void
+    let onConfirm: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -24,7 +26,7 @@ struct DeleteSourceBottomSheet: View {
 
             HStack(spacing: 10) {
                 Button(action: onCancel) {
-                    Text(String(localized: "Cancel"))
+                    Text(cancelTitle)
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(Color.folioTextPrimary)
                         .frame(maxWidth: .infinity)
@@ -38,8 +40,8 @@ struct DeleteSourceBottomSheet: View {
                 }
                 .buttonStyle(.plain)
 
-                Button(action: onDelete) {
-                    Text(String(localized: "Delete"))
+                Button(action: onConfirm) {
+                    Text(confirmTitle)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.folioDanger)
                         .frame(maxWidth: .infinity)

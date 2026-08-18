@@ -196,6 +196,7 @@ struct FolioTextField: View {
     var isSecure: Bool = false
     var error: String?
     var keyboardType: UIKeyboardType = .default
+    var fieldBackground: Color = Color.folioSurfaceStrong
     var focused: FocusState<Bool>.Binding?
 
     @State private var isPasswordVisible = false
@@ -283,7 +284,7 @@ struct FolioTextField: View {
         }
         .padding(.horizontal, 16)
         .frame(height: 52)
-        .fieldStyle(error: error)
+        .fieldStyle(error: error, background: fieldBackground)
     }
 
     private func multilineField(minHeight: CGFloat, maxHeight: CGFloat) -> some View {
@@ -306,7 +307,7 @@ struct FolioTextField: View {
             }
         }
         .frame(minHeight: minHeight, maxHeight: maxHeight)
-        .fieldStyle(error: error)
+        .fieldStyle(error: error, background: fieldBackground)
     }
 
     @ViewBuilder
@@ -320,8 +321,8 @@ struct FolioTextField: View {
 }
 
 private extension View {
-    func fieldStyle(error: String?) -> some View {
-        background(Color.folioSurfaceStrong)
+    func fieldStyle(error: String?, background: Color) -> some View {
+        self.background(background)
             .overlay(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(error != nil ? Color.folioDanger : Color.folioFieldBorder, lineWidth: 2)

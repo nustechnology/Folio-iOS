@@ -82,11 +82,12 @@ struct FolioSourceReaderView: View {
             get: { viewModel.state.showDeleteConfirmation },
             set: { if !$0 { viewModel.send(.cancelDelete) } }
         )) {
-            DeleteSourceBottomSheet(
+            ConfirmationBottomSheet(
                 title: String(localized: "Delete this source?"),
                 message: String(localized: "This permanently removes the source and its retrieval data."),
+                confirmTitle: String(localized: "Delete"),
                 onCancel: { viewModel.send(.cancelDelete) },
-                onDelete: { viewModel.send(.deleteConfirmed) }
+                onConfirm: { viewModel.send(.deleteConfirmed) }
             )
         }
         .folioToast(message: Binding(

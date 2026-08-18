@@ -83,15 +83,20 @@ struct FolioAccountSettingsView: View {
                 .padding(.bottom, 24)
             }
         }
-        .alert(
-            "Are you sure you want to sign out?",
-            isPresented: $showSignOutConfirmation
-        ) {
-            Button("Cancel", role: .cancel) {}
-            Button("Sign Out", role: .destructive) {
-                onSignOut()
-                dismiss()
-            }
+        .sheet(isPresented: $showSignOutConfirmation) {
+            ConfirmationBottomSheet(
+                title: String(localized: "Sign out?"),
+                message: String(localized: "You will need to sign in again to access your spaces."),
+                confirmTitle: String(localized: "Sign Out"),
+                onCancel: {
+                    showSignOutConfirmation = false
+                },
+                onConfirm: {
+                    showSignOutConfirmation = false
+                    onSignOut()
+                    dismiss()
+                }
+            )
         }
     }
 
@@ -110,8 +115,9 @@ struct FolioAccountSettingsView: View {
             .buttonStyle(.plain)
             .frame(width: 32, height: 32)
 
-            Text(String(localized: "Account settings"))
-                .font(.custom("CormorantGaramond-Medium", size: 28))
+            Text("Account settings")
+                .font(.custom("CormorantGaramond-Medium", size: 34))
+                .transformEffect(CGAffineTransform(a: 1, b: 0, c: -0.2, d: 1, tx: 4, ty: 0))
                 .foregroundStyle(Color.folioInk)
 
             Spacer()
@@ -135,7 +141,7 @@ struct FolioAccountSettingsView: View {
                     .foregroundStyle(isDisabled ? Color.folioInkSoft : Color.folioInk)
             }
             .padding(.horizontal, 16)
-            .frame(height: 48)
+            .frame(height: 50)
             .background(isDisabled ? Color.white : Color.folioSurfaceStrong)
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
