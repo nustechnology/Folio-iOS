@@ -64,7 +64,7 @@ struct SourceReaderHeader: View {
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Color.folioInk)
                     .lineLimit(1)
-                Text("·")
+                Text(String(localized: "·"))
                     .font(.system(size: 13, weight: .regular))
                     .foregroundStyle(Color.folioInkSoft)
                 Text(addedLabel)

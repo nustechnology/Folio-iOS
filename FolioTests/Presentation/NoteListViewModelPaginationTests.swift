@@ -153,6 +153,47 @@ final class NoteListViewModelPaginationTests: XCTestCase {
         XCTAssertEqual(viewModel.state.notes.map(\.id), ["p1"])
     }
 
+    func testClearingSearchReloadsImmediatelyWithoutWaitingForDebounce() async {
+        let fetch = GatedSearchNotesUseCase()
+        let viewModel = NoteListViewModel(
+            spaceId: "space-1",
+            fetchNotesUseCase: fetch,
+            fetchNoteUseCase: UnusedFixtureNoteUseCase(),
+            updateNoteUseCase: UnusedFixtureUpdateUseCase(),
+            deleteNoteUseCase: UnusedFixtureDeleteUseCase()
+        )
+
+        viewModel.handle(.onAppear)
+        await waitForTasks()
+
+        XCTAssertEqual(viewModel.state.notes.map(\.id), ["n1"])
+
+        viewModel.handle(.searchChanged("nomatch"))
+        try? await Task.sleep(nanoseconds: 350_000_000)
+        await waitForTasks()
+
+        XCTAssertTrue(viewModel.state.notes.isEmpty)
+        XCTAssertEqual(viewModel.state.searchQuery, "nomatch")
+
+        fetch.gateEnabled = true
+        viewModel.handle(.searchChanged(""))
+        await Task.yield()
+
+        XCTAssertTrue(fetch.clearLoadStarted)
+        XCTAssertTrue(viewModel.state.isLoading)
+
+        fetch.gateEnabled = false
+        fetch.release()
+        await waitForTasks()
+
+        XCTAssertEqual(viewModel.state.notes.map(\.id), ["n1"])
+        XCTAssertEqual(viewModel.state.searchQuery, "")
+    }
+
+    private func waitForTasks() async {
+        for _ in 0..<20 { await Task.yield() }
+    }
+
     func testRefreshFailureWithExistingNotesDoesNotUseFullErrorState() {
         XCTAssertTrue(NoteListView.showsFullError(errorMessage: "Failed to load notes", notes: []))
         XCTAssertFalse(
@@ -219,6 +260,38 @@ private struct ThrowingNotesUseCase: FetchNotesUseCaseProtocol {
     let error: Error
     func execute(query: NoteListQuery) async throws -> NoteListResult {
         throw error
+    }
+}
+
+@MainActor
+private final class GatedSearchNotesUseCase: FetchNotesUseCaseProtocol {
+    private(set) var clearLoadStarted = false
+    var gateEnabled = false
+    private var resume: CheckedContinuation<Void, Never>?
+
+    func execute(query: NoteListQuery) async throws -> NoteListResult {
+        if query.search == nil {
+            if gateEnabled {
+                clearLoadStarted = true
+                await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                    resume = continuation
+                }
+                resume = nil
+            }
+            return NoteListResult(
+                notes: [NoteSummary(
+                    id: "n1", researchSpaceId: "space-1", title: "Note",
+                    originType: .userCreated, contentPreview: "",
+                    createdAt: .now, updatedAt: .now, citationCount: nil
+                )],
+                pagination: nil
+            )
+        }
+        return NoteListResult(notes: [], pagination: nil)
+    }
+
+    func release() {
+        resume?.resume()
     }
 }
 

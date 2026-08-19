@@ -370,7 +370,11 @@ extension NoteListViewModel {
     guard value != state.searchQuery else { return }
     latestLoadRequestID += 1
     state.searchQuery = value
-    searchSubject.send()
+    if value.isEmpty {
+      Task { await loadPage(replace: true) }
+    } else {
+      searchSubject.send()
+    }
   }
 
   private func setFilter(_ value: Filter) {

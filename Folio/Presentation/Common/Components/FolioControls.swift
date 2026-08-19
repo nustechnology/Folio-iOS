@@ -48,7 +48,7 @@ struct FolioPill: View {
         Text(title)
             .font(.system(size: fontSize))
             .foregroundStyle(isSelected ? tint : Color.folioInk)
-            .padding(.horizontal, FolioSpacing.lg2)
+            .padding(.horizontal, FolioSpacing.xl)
             .padding(.vertical, FolioSpacing.md)
             .background(isSelected ? selectedBackground : Color.folioSurface)
             .overlay(
@@ -274,7 +274,11 @@ struct FolioTextField: View {
                         .foregroundStyle(Color.folioInkSoft)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(isPasswordVisible ? "Hide password" : "Show password")
+                .accessibilityLabel(
+                    isPasswordVisible
+                        ? String(localized: "Hide password")
+                        : String(localized: "Show password")
+                )
             }
         }
         .padding(.horizontal, 16)

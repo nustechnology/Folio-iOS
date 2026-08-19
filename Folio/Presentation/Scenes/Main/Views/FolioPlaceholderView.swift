@@ -48,8 +48,8 @@ struct FolioPlaceholderView: View {
 
 #Preview {
     FolioPlaceholderView(
-        title: "Notes",
-        subtitle: "Capture and review",
+        title: String(localized: "Notes"),
+        subtitle: String(localized: "Capture and review"),
         iconName: "note.text",
         onOpenAccountSettings: {},
         onBackToSpaces: {},

@@ -16,12 +16,12 @@ struct FolioLoginView: View {
                     .padding(.top, 24)
 
                 VStack(spacing: 8) {
-                    Text("Folio")
+                    Text(String(localized: "Folio"))
                         .padding(.top, 16)
                         .font(.custom("CormorantGaramond-Medium", size: 40))
                         .foregroundStyle(Color.folioInk)
 
-                    Text("PRIVATE RESEARCH. GROUNDED ANSWERS.")
+                    Text(String(localized: "PRIVATE RESEARCH. GROUNDED ANSWERS."))
                         .font(.system(size: 10, weight: .semibold))
                         .tracking(1.2)
                         .foregroundStyle(Color.folioGold)
@@ -33,7 +33,7 @@ struct FolioLoginView: View {
                     .frame(width: 145, height: 1)
                     .padding(.bottom, 27)
 
-                Text("Your sources, notes and citations in one private archive.")
+                Text(String(localized: "Your sources, notes and citations in one private archive."))
                     .font(.system(size: 14, weight: .regular))
                     .foregroundStyle(Color.folioInkMuted)
                     .multilineTextAlignment(.center)
@@ -41,7 +41,7 @@ struct FolioLoginView: View {
 
                 VStack(spacing: 14) {
                     FolioTextField(
-                        placeholder: "researcher@folio.app",
+                        placeholder: String(localized: "researcher@folio.app"),
                         text: $email,
                         error: emailError,
                         keyboardType: .emailAddress
@@ -56,7 +56,7 @@ struct FolioLoginView: View {
                     )
 
                     FolioPrimaryButton(
-                        title: "Sign in",
+                        title: String(localized: "Sign in"),
                         isLoading: viewModel.state.authLoading,
                         action: { submitSignIn() }
                     )
@@ -66,7 +66,7 @@ struct FolioLoginView: View {
                         Rectangle()
                             .fill(Color.folioLine)
                             .frame(height: 1)
-                        Text("or continue with")
+                        Text(String(localized: "or continue with"))
                             .font(.system(size: 13, weight: .regular))
                             .foregroundStyle(Color.folioInkSoft)
                         Rectangle()
@@ -76,7 +76,7 @@ struct FolioLoginView: View {
                     .padding(.vertical, 4)
 
                     FolioSecondaryButton(
-                        title: "Sign in with Apple",
+                        title: String(localized: "Sign in with Apple"),
                         iconName: "applelogo",
                         action: { viewModel.handle(.signInWithApple) }
                     )
@@ -88,13 +88,13 @@ struct FolioLoginView: View {
                 Button {
                     showCreateAccount = true
                 } label: {
-                    Text("Don't have an account? Create an account")
+                    Text(String(localized: "Don't have an account? Create an account"))
                         .font(.system(size: 12, weight: .regular))
                         .foregroundStyle(Color.folioInkSoft)
                 }
                 .buttonStyle(.plain)
 
-                Text("Private by default. Your archive stays yours.")
+                Text(String(localized: "Private by default. Your archive stays yours."))
                     .font(.system(size: 12, weight: .regular))
                     .foregroundStyle(Color.folioInkSoft)
                     .padding(.bottom, 20)
@@ -145,12 +145,15 @@ struct FolioLoginView: View {
             FolioLoginView(viewModel: MainViewModel(
                 fetchUsersUseCase: PreviewFetchUsersUseCase(),
                 fetchMeUseCase: PreviewFetchMeUseCase(),
-                localStorage: UserDefaultsStorage(),
+                localStorage: PreviewStorage(),
                 signUpUseCase: PreviewSignUpUseCase(),
                 signInUseCase: PreviewSignInUseCase(),
                 signOutUseCase: PreviewSignOutUseCase(),
                 refreshTokenUseCase: PreviewRefreshTokenUseCase(),
-                workspaceRepository: PreviewWorkspaceRepository(),
+                fetchWorkspacesUseCase: FetchWorkspacesUseCase(repository: PreviewWorkspaceRepository()),
+                createWorkspaceUseCase: CreateWorkspaceUseCase(repository: PreviewWorkspaceRepository()),
+                updateWorkspaceUseCase: UpdateWorkspaceUseCase(repository: PreviewWorkspaceRepository()),
+                deleteWorkspaceUseCase: DeleteWorkspaceUseCase(repository: PreviewWorkspaceRepository()),
                 uploadSourceUseCase: PreviewUploadSourceUseCase(),
                 fetchSourcesUseCase: PreviewLoginFetchSourcesUseCase(),
                 updateSourceUseCase: PreviewLoginUpdateSourceUseCase(),
@@ -181,7 +184,7 @@ private struct PreviewSignInUseCase: SignInUseCaseProtocol {
 }
 
 private struct PreviewSignOutUseCase: SignOutUseCaseProtocol {
-    func execute() {}
+    func execute() throws {}
 }
 
 private struct PreviewRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
@@ -191,26 +194,26 @@ private struct PreviewRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
 }
 
 private struct PreviewUploadSourceUseCase: UploadSourceUseCaseProtocol {
-    func uploadFile(spaceId: String, fileURL: URL, title: String?, author: String?) async throws -> Source { fatalError("Preview") }
-    func uploadWeb(spaceId: String, url: String, title: String?, author: String?) async throws -> Source { fatalError("Preview") }
-    func uploadManual(spaceId: String, content: String, title: String?, author: String?) async throws -> Source { fatalError("Preview") }
-    func deleteSource(id: String) async throws { fatalError("Preview") }
-    func retrySource(id: String) async throws -> Source { fatalError("Preview") }
+    func uploadFile(spaceId: String, fileURL: URL, title: String?, author: String?) async throws -> Source { throw PreviewError.unavailable }
+    func uploadWeb(spaceId: String, url: String, title: String?, author: String?) async throws -> Source { throw PreviewError.unavailable }
+    func uploadManual(spaceId: String, content: String, title: String?, author: String?) async throws -> Source { throw PreviewError.unavailable }
+    func deleteSource(id: String) async throws { throw PreviewError.unavailable }
+    func retrySource(id: String) async throws -> Source { throw PreviewError.unavailable }
     func sourceStatusStream() -> AsyncThrowingStream<SourceStatusEvent, Error> { AsyncThrowingStream { $0.finish() } }
 }
 
 private struct PreviewLoginFetchSourcesUseCase: FetchSourcesUseCaseProtocol {
-    func execute(query: SourceListQuery) async throws -> SourceListResult { fatalError("Preview") }
+    func execute(query: SourceListQuery) async throws -> SourceListResult { throw PreviewError.unavailable }
 }
 
 private struct PreviewLoginUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
-    func execute(id: String, title: String, author: String) async throws -> Source { fatalError("Preview") }
+    func execute(id: String, title: String, author: String) async throws -> Source { throw PreviewError.unavailable }
 }
 
 private struct PreviewLoginFetchSourceDetailUseCase: FetchSourceDetailUseCaseProtocol {
-    func execute(id: String) async throws -> Source { fatalError("Preview") }
+    func execute(id: String) async throws -> Source { throw PreviewError.unavailable }
 }
 
 private struct PreviewLoginFetchSourcePreviewUseCase: FetchSourcePreviewUseCaseProtocol {
-    func execute(source: Source) async throws -> SourcePreview { fatalError("Preview") }
+    func execute(source: Source) async throws -> SourcePreview { throw PreviewError.unavailable }
 }

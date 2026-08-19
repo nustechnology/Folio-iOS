@@ -154,8 +154,8 @@ final class MainViewModel: ViewModelProtocol {
 
 | Config | API Base URL | Display Name | Bundle ID |
 |--------|-------------|-------------|-----------|
-| Debug | jsonplaceholder.typicode.com | Folio Dev | `com.nustechnology.Folio` |
-| Release | jsonplaceholder.typicode.com | Folio | `com.nustechnology.Folio` |
+| Debug | shale-crowd-satin.ngrok-free.dev | Folio Dev | `com.nustechnology.Folio` |
+| Release | shale-crowd-satin.ngrok-free.dev | Folio | `com.nustechnology.Folio` |
 
 Config files in `Configuration/`:
 - `Shared.xcconfig` — deployment target

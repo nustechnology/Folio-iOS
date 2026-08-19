@@ -97,15 +97,6 @@ final class WorkspaceListViewModel: ObservableObject {
     private var searchTask: Task<Void, Never>?
 
     init(
-        repository: WorkspaceRepositoryProtocol
-    ) {
-        self.fetchWorkspaces = FetchWorkspacesUseCase(repository: repository)
-        self.createWorkspace = CreateWorkspaceUseCase(repository: repository)
-        self.updateWorkspace = UpdateWorkspaceUseCase(repository: repository)
-        self.deleteWorkspace = DeleteWorkspaceUseCase(repository: repository)
-    }
-
-    init(
         fetchWorkspaces: FetchWorkspacesUseCaseProtocol,
         createWorkspace: CreateWorkspaceUseCaseProtocol,
         updateWorkspace: UpdateWorkspaceUseCaseProtocol,

@@ -139,31 +139,18 @@ struct SourceListView: View {
                 isSortActive: viewModel.state.sortOption != .recentlyAdded
             )
 
-            HStack(spacing: FolioSpacing.md) {
+            HStack {
                 ForEach(viewModel.state.filters) { filter in
                     Button {
                         viewModel.send(.selectFilter(filter))
                     } label: {
-                        Text(filter.displayTitle)
-                            .font(.system(size: FolioFontSize.body, weight: .medium))
-                            .foregroundStyle(Color.folioTextSecondary)
-                            .padding(.horizontal, FolioSpacing.xl2)
-                            .frame(height: FolioSize.chipHeight)
-                            .background(
-                                viewModel.state.selectedFilter == filter
-                                    ? Color.folioAccentBg
-                                    : Color.folioCardBg
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: FolioRadius.chip)
-                                    .stroke(
-                                        viewModel.state.selectedFilter == filter
-                                            ? Color.folioAccentBorder
-                                            : Color.folioBorder,
-                                        lineWidth: 1
-                                    )
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: FolioRadius.chip))
+                        FolioPill(
+                            title: filter.displayTitle,
+                            isSelected: viewModel.state.selectedFilter == filter,
+                            tint: .folioInk,
+                            fontSize: 13,
+                            backgroundColor: .folioHomeTypeFileBackground
+                        )
                     }
                     .buttonStyle(.plain)
                     .accessibilityAddTraits(
@@ -293,10 +280,10 @@ struct SourceListView: View {
             Spacer()
 
             VStack(spacing: 0) {
-                Image(systemName: "doc.text")
+                Image(systemName: "doc.fill")
                     .font(.system(size: 18, weight: .regular))
                     .foregroundStyle(Color.folioInkSoft)
-                    .frame(width: 44, height: 44)
+                    .frame(width: FolioSize.fieldHeightSm, height: FolioSize.fieldHeightSm)
                     .background(
                         Circle()
                             .fill(Color.folioSurfaceStrong)
@@ -418,7 +405,7 @@ private struct SourceCard: View {
                         .foregroundStyle(Color.folioInkSoft)
                         .lineLimit(1)
 
-                    Text("·")
+                    Text(String(localized: "·"))
                         .font(.system(size: FolioFontSize.caption2))
                         .foregroundStyle(Color.folioInkSoft)
 
@@ -449,7 +436,7 @@ private struct SourceCard: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(String(localized: "More options for \(source.title)"))
+                .accessibilityLabel(String(format: String(localized: "More options for %@"), source.title))
                 .padding(.trailing, -4)
             }
         }
