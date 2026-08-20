@@ -28,7 +28,9 @@ struct FolioApp: App {
                 fetchSourcesUseCase: diContainer.fetchSourcesUseCase,
                 updateSourceUseCase: diContainer.updateSourceUseCase,
                 fetchSourceDetailUseCase: diContainer.fetchSourceDetailUseCase,
-                fetchSourcePreviewUseCase: diContainer.fetchSourcePreviewUseCase
+                fetchSourcePreviewUseCase: diContainer.fetchSourcePreviewUseCase,
+                fetchNotebookUseCase: diContainer.fetchNotebookUseCase,
+                saveNotebookUseCase: diContainer.saveNotebookUseCase
             ),
             fetchNotesUseCase: diContainer.fetchNotesUseCase,
             fetchNoteUseCase: diContainer.fetchNoteUseCase,

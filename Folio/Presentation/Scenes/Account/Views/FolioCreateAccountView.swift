@@ -183,7 +183,9 @@ struct FolioCreateAccountView: View {
                 fetchSourcesUseCase: PreviewAuthFetchSourcesUseCase(),
                 updateSourceUseCase: PreviewAuthUpdateSourceUseCase(),
                 fetchSourceDetailUseCase: PreviewAuthFetchSourceDetailUseCase(),
-                fetchSourcePreviewUseCase: PreviewAuthFetchSourcePreviewUseCase()
+                fetchSourcePreviewUseCase: PreviewAuthFetchSourcePreviewUseCase(),
+                fetchNotebookUseCase: PreviewAuthFetchNotebookUseCase(),
+                saveNotebookUseCase: PreviewAuthSaveNotebookUseCase()
             ))
         }
 }
@@ -241,4 +243,16 @@ private struct PreviewAuthFetchSourceDetailUseCase: FetchSourceDetailUseCaseProt
 
 private struct PreviewAuthFetchSourcePreviewUseCase: FetchSourcePreviewUseCaseProtocol {
     func execute(source: Source) async throws -> SourcePreview { throw PreviewError.unavailable }
+}
+
+private struct PreviewAuthFetchNotebookUseCase: FetchNotebookUseCaseProtocol {
+    func execute(spaceId: String) async throws -> NotebookFetchResult {
+        NotebookFetchResult(
+            entry: NotebookEntry(id: "", researchSpaceId: spaceId, content: "", createdAt: Date(), updatedAt: Date()),
+            preservedOfflineDraft: false)
+    }
+}
+
+private struct PreviewAuthSaveNotebookUseCase: SaveNotebookUseCaseProtocol {
+    func execute(entry: NotebookEntry) async throws {}
 }

@@ -158,7 +158,9 @@ struct FolioLoginView: View {
                 fetchSourcesUseCase: PreviewLoginFetchSourcesUseCase(),
                 updateSourceUseCase: PreviewLoginUpdateSourceUseCase(),
                 fetchSourceDetailUseCase: PreviewLoginFetchSourceDetailUseCase(),
-                fetchSourcePreviewUseCase: PreviewLoginFetchSourcePreviewUseCase()
+                fetchSourcePreviewUseCase: PreviewLoginFetchSourcePreviewUseCase(),
+                fetchNotebookUseCase: PreviewLoginFetchNotebookUseCase(),
+                saveNotebookUseCase: PreviewLoginSaveNotebookUseCase()
             ))
         }
 }
@@ -216,4 +218,16 @@ private struct PreviewLoginFetchSourceDetailUseCase: FetchSourceDetailUseCasePro
 
 private struct PreviewLoginFetchSourcePreviewUseCase: FetchSourcePreviewUseCaseProtocol {
     func execute(source: Source) async throws -> SourcePreview { throw PreviewError.unavailable }
+}
+
+private struct PreviewLoginFetchNotebookUseCase: FetchNotebookUseCaseProtocol {
+    func execute(spaceId: String) async throws -> NotebookFetchResult {
+        NotebookFetchResult(
+            entry: NotebookEntry(id: "", researchSpaceId: spaceId, content: "", createdAt: Date(), updatedAt: Date()),
+            preservedOfflineDraft: false)
+    }
+}
+
+private struct PreviewLoginSaveNotebookUseCase: SaveNotebookUseCaseProtocol {
+    func execute(entry: NotebookEntry) async throws {}
 }

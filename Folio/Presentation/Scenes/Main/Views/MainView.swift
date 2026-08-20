@@ -14,6 +14,7 @@ struct MainView: View {
     @State private var selectedWorkspace: Workspace?
     @State private var sourceListViewModel: SourceListViewModel?
     @State private var noteListViewModel: NoteListViewModel?
+    @State private var notebookViewModel: NotebookViewModel?
 
     var body: some View {
         ZStack {
@@ -42,6 +43,11 @@ struct MainView: View {
                         emailAddress: viewModel.state.userEmail ?? "",
                         onSignOut: {
                             showAccountSettings = false
+                            notebookViewModel?.flushPendingSave()
+                            selectedWorkspace = nil
+                            sourceListViewModel = nil
+                            noteListViewModel = nil
+                            notebookViewModel = nil
                             viewModel.handle(.signOut)
                         }
                     )
@@ -159,14 +165,26 @@ struct MainView: View {
                     )
                 }
             case .notebook:
-                FolioPlaceholderView(
-                    title: String(localized: "Notebook"),
-                    subtitle: String(localized: "Organize drafts, syntheses, and research threads here."),
-                    iconName: "book",
-                    onOpenAccountSettings: { showAccountSheet = true },
-                    onBackToSpaces: { showMySpaces() },
-                    userInitial: userInitial
-                )
+                if let vm = notebookViewModel, let workspace = selectedWorkspace {
+                    FolioNotebookView(
+                        viewModel: vm,
+                        noteListViewModel: noteListViewModel,
+                        workspaceTitle: workspace.name,
+                        onBackToSpaces: { showMySpaces() },
+                        onNavigateToNotes: {
+                            viewModel.handle(.selectTab(.notes))
+                        }
+                    )
+                } else {
+                    FolioPlaceholderView(
+                        title: String(localized: "Notebook"),
+                        subtitle: String(localized: "Select a Research Space from Sources to open its notebook."),
+                        iconName: "book",
+                        onOpenAccountSettings: { showAccountSheet = true },
+                        onBackToSpaces: { showMySpaces() },
+                        userInitial: userInitial
+                    )
+                }
             }
         }
     }
@@ -195,13 +213,20 @@ struct MainView: View {
         noteListViewModel?.onSourcesChanged = {
             self.sourceListViewModel?.send(.refresh)
         }
+        notebookViewModel = NotebookViewModel(
+            fetchNotebookUseCase: viewModel.fetchNotebookUseCase,
+            saveNotebookUseCase: viewModel.saveNotebookUseCase
+        )
+        notebookViewModel?.configure(spaceId: workspace.id, spaceName: workspace.name)
         selectedWorkspace = workspace
     }
 
     private func showMySpaces() {
+        notebookViewModel?.flushPendingSave()
         selectedWorkspace = nil
         sourceListViewModel = nil
         noteListViewModel = nil
+        notebookViewModel = nil
         viewModel.handle(.showSpaces)
     }
 }
@@ -223,8 +248,17 @@ struct MainView: View {
         fetchSourcesUseCase: PreviewFetchSourcesUseCase(),
         updateSourceUseCase: PreviewUpdateSourceUseCase(),
         fetchSourceDetailUseCase: PreviewFetchSourceDetailUseCase(),
-        fetchSourcePreviewUseCase: PreviewFetchSourcePreviewUseCase()
-     ), fetchNotesUseCase: PreviewFetchNotesUseCase(), fetchNoteUseCase: PreviewFetchNoteUseCase(), updateNoteUseCase: PreviewUpdateNoteUseCase(), deleteNoteUseCase: PreviewDeleteNoteUseCase(), createNoteUseCase: PreviewCreateNoteUseCase(), convertNoteToSourceUseCase: nil, uploadSourceUseCase: nil)
+        fetchSourcePreviewUseCase: PreviewFetchSourcePreviewUseCase(),
+        fetchNotebookUseCase: PreviewFetchNotebookUseCase(),
+        saveNotebookUseCase: PreviewSaveNotebookUseCase()
+    ),
+    fetchNotesUseCase: PreviewFetchNotesUseCase(),
+    fetchNoteUseCase: PreviewFetchNoteUseCase(),
+    updateNoteUseCase: PreviewUpdateNoteUseCase(),
+    deleteNoteUseCase: PreviewDeleteNoteUseCase(),
+    createNoteUseCase: PreviewCreateNoteUseCase(),
+    convertNoteToSourceUseCase: nil,
+    uploadSourceUseCase: nil)
 }
 
 final class PreviewWorkspaceRepository: WorkspaceRepositoryProtocol {
@@ -314,3 +348,15 @@ private struct PreviewFetchNoteUseCase: FetchNoteUseCaseProtocol { func execute(
 private struct PreviewUpdateNoteUseCase: UpdateNoteUseCaseProtocol { func execute(spaceId: String, noteId: String, title: String, content: String) async throws -> Note { throw PreviewError.unavailable } }
 private struct PreviewDeleteNoteUseCase: DeleteNoteUseCaseProtocol { func execute(spaceId: String, noteId: String) async throws {} }
 private struct PreviewCreateNoteUseCase: CreateNoteUseCaseProtocol { func execute(spaceId: String, title: String, content: String) async throws -> Note { throw PreviewError.unavailable } }
+
+private struct PreviewFetchNotebookUseCase: FetchNotebookUseCaseProtocol {
+    func execute(spaceId: String) async throws -> NotebookFetchResult {
+        NotebookFetchResult(
+            entry: NotebookEntry(id: "", researchSpaceId: spaceId, content: "", createdAt: Date(), updatedAt: Date()),
+            preservedOfflineDraft: false)
+    }
+}
+
+private struct PreviewSaveNotebookUseCase: SaveNotebookUseCaseProtocol {
+    func execute(entry: NotebookEntry) async throws {}
+}
