@@ -1,6 +1,27 @@
 import SwiftUI
 
 struct RichTextToolbar: View {
+    enum Configuration: Equatable {
+        case notebook
+        case notes
+    }
+
+    struct ActiveFormats {
+        let isBold: Bool
+        let isItalic: Bool
+        let isUnorderedList: Bool
+        let isOrderedList: Bool
+        let hasLink: Bool
+
+        static let inactive = ActiveFormats(
+            isBold: false,
+            isItalic: false,
+            isUnorderedList: false,
+            isOrderedList: false,
+            hasLink: false
+        )
+    }
+
     let onBold: () -> Void
     let onItalic: () -> Void
     let onHeading1: () -> Void
@@ -9,11 +30,15 @@ struct RichTextToolbar: View {
     let onUnorderedList: () -> Void
     let onOrderedList: () -> Void
     let onBlockquote: () -> Void
+    let onHyperlink: () -> Void
     let onUndo: () -> Void
     let onRedo: () -> Void
     let canUndo: Bool
     let canRedo: Bool
     let saveStatus: SaveStatus
+    let configuration: Configuration
+    let activeFormats: ActiveFormats
+    let isEmbedded: Bool
 
     enum SaveStatus: Equatable {
         case saved
@@ -21,62 +46,114 @@ struct RichTextToolbar: View {
         case failed
     }
 
+    init(
+        onBold: @escaping () -> Void,
+        onItalic: @escaping () -> Void,
+        onHeading1: @escaping () -> Void,
+        onHeading2: @escaping () -> Void,
+        onHeading3: @escaping () -> Void,
+        onUnorderedList: @escaping () -> Void,
+        onOrderedList: @escaping () -> Void,
+        onBlockquote: @escaping () -> Void,
+        onHyperlink: @escaping () -> Void = {},
+        onUndo: @escaping () -> Void,
+        onRedo: @escaping () -> Void,
+        canUndo: Bool,
+        canRedo: Bool,
+        saveStatus: SaveStatus,
+        configuration: Configuration = .notebook,
+        activeFormats: ActiveFormats = .inactive,
+        isEmbedded: Bool = false
+    ) {
+        self.onBold = onBold
+        self.onItalic = onItalic
+        self.onHeading1 = onHeading1
+        self.onHeading2 = onHeading2
+        self.onHeading3 = onHeading3
+        self.onUnorderedList = onUnorderedList
+        self.onOrderedList = onOrderedList
+        self.onBlockquote = onBlockquote
+        self.onHyperlink = onHyperlink
+        self.onUndo = onUndo
+        self.onRedo = onRedo
+        self.canUndo = canUndo
+        self.canRedo = canRedo
+        self.saveStatus = saveStatus
+        self.configuration = configuration
+        self.activeFormats = activeFormats
+        self.isEmbedded = isEmbedded
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 4) {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 4) {
-                        UndoRedoButton(
-                            iconName: "arrow.uturn.backward",
-                            label: String(localized: "Undo"),
-                            isEnabled: canUndo,
-                            action: onUndo
-                        )
+                        if configuration == .notebook {
+                            UndoRedoButton(
+                                iconName: "arrow.uturn.backward",
+                                label: String(localized: "Undo"),
+                                isEnabled: canUndo,
+                                action: onUndo
+                            )
 
-                        UndoRedoButton(
-                            iconName: "arrow.uturn.forward",
-                            label: String(localized: "Redo"),
-                            isEnabled: canRedo,
-                            action: onRedo
-                        )
+                            UndoRedoButton(
+                                iconName: "arrow.uturn.forward",
+                                label: String(localized: "Redo"),
+                                isEnabled: canRedo,
+                                action: onRedo
+                            )
 
-                        Color.folioLine.opacity(0.5)
-                            .frame(width: 1, height: 20)
+                            toolbarDivider
+                        }
 
-                        FormatButton(glyph: "B", accessibilityText: String(localized: "Bold"), action: onBold)
+                        FormatButton(glyph: "B", accessibilityText: String(localized: "Bold"), isActive: activeFormats.isBold, action: onBold)
 
-                        FormatButton(glyph: "I", accessibilityText: String(localized: "Italic"), action: onItalic)
+                        FormatButton(glyph: "I", accessibilityText: String(localized: "Italic"), isActive: activeFormats.isItalic, action: onItalic)
 
-                        Color.folioLine.opacity(0.5)
-                            .frame(width: 1, height: 20)
+                        if configuration == .notebook {
+                            toolbarDivider
 
-                        FormatButton(glyph: "H1", accessibilityText: String(localized: "Heading 1"), action: onHeading1)
+                            FormatButton(glyph: "H1", accessibilityText: String(localized: "Heading 1"), action: onHeading1)
 
-                        FormatButton(glyph: "H2", accessibilityText: String(localized: "Heading 2"), action: onHeading2)
+                            FormatButton(glyph: "H2", accessibilityText: String(localized: "Heading 2"), action: onHeading2)
 
-                        FormatButton(glyph: "H3", accessibilityText: String(localized: "Heading 3"), action: onHeading3)
+                            FormatButton(glyph: "H3", accessibilityText: String(localized: "Heading 3"), action: onHeading3)
 
-                        Color.folioLine.opacity(0.5)
-                            .frame(width: 1, height: 20)
+                            toolbarDivider
+                        }
 
-                        FormatButton(glyph: "•", accessibilityText: String(localized: "Unordered list"), action: onUnorderedList)
+                        FormatButton(systemImage: "list.bullet", accessibilityText: String(localized: "Unordered list"), isActive: activeFormats.isUnorderedList, action: onUnorderedList)
 
-                        FormatButton(glyph: "1.", accessibilityText: String(localized: "Ordered list"), action: onOrderedList)
+                        FormatButton(systemImage: "list.number", accessibilityText: String(localized: "Ordered list"), isActive: activeFormats.isOrderedList, action: onOrderedList)
 
-                        FormatButton(glyph: "\u{201C}", accessibilityText: String(localized: "Blockquote"), action: onBlockquote)
+                        if configuration == .notes {
+                            FormatButton(glyph: "\u{1F517}", accessibilityText: String(localized: "Hyperlink"), isActive: activeFormats.hasLink, action: onHyperlink)
+                        } else {
+                            FormatButton(glyph: "\u{201C}", accessibilityText: String(localized: "Blockquote"), action: onBlockquote)
+                        }
                     }
                     .padding(.horizontal, 8)
                 }
 
-                saveStatusBadge
-                    .padding(.trailing, 8)
+                if configuration == .notebook {
+                    saveStatusBadge
+                        .padding(.trailing, 8)
+                }
             }
             .frame(height: 44)
 
-            Divider()
-                .background(Color.folioLine)
+            if !isEmbedded {
+                Divider()
+                    .background(Color.folioLine)
+            }
         }
         .background(Color.folioSurfaceStrong)
+    }
+
+    private var toolbarDivider: some View {
+        Color.folioLine.opacity(0.5)
+            .frame(width: 1, height: 20)
     }
 
     private var saveStatusBadge: some View {
@@ -113,21 +190,56 @@ struct RichTextToolbar: View {
 }
 
 private struct FormatButton: View {
-    let glyph: String
+    let glyph: String?
+    let systemImage: String?
     let accessibilityText: String
+    var isActive = false
     let action: () -> Void
+
+    init(
+        glyph: String,
+        accessibilityText: String,
+        isActive: Bool = false,
+        action: @escaping () -> Void
+    ) {
+        self.glyph = glyph
+        self.systemImage = nil
+        self.accessibilityText = accessibilityText
+        self.isActive = isActive
+        self.action = action
+    }
+
+    init(
+        systemImage: String,
+        accessibilityText: String,
+        isActive: Bool = false,
+        action: @escaping () -> Void
+    ) {
+        self.glyph = nil
+        self.systemImage = systemImage
+        self.accessibilityText = accessibilityText
+        self.isActive = isActive
+        self.action = action
+    }
 
     var body: some View {
         Button(action: action) {
-            Text(glyph)
+            Group {
+                if let systemImage {
+                    Image(systemName: systemImage)
+                } else if let glyph {
+                    Text(glyph)
+                }
+            }
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.folioInk)
+                .foregroundStyle(isActive ? Color.folioGold : Color.folioInk)
                 .frame(width: 36, height: 36)
-                .background(Color.folioCanvas.opacity(0.4))
+                .background(isActive ? Color.folioOliveDark : Color.folioCanvas.opacity(0.4))
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityText)
+        .accessibilityAddTraits(isActive ? .isSelected : [])
     }
 }
 

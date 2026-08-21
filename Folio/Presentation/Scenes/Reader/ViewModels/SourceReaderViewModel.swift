@@ -22,7 +22,7 @@ final class SourceReaderViewModel: ObservableObject {
 
     @Published private(set) var state = State()
 
-    private let initialSource: Source
+    private let sourceID: String
     private let fetchSourceDetailUseCase: any FetchSourceDetailUseCaseProtocol
     private let updateSourceUseCase: any UpdateSourceUseCaseProtocol
     private let uploadSourceUseCase: any UploadSourceUseCaseProtocol
@@ -35,7 +35,7 @@ final class SourceReaderViewModel: ObservableObject {
     private var detailLoadGeneration = 0
 
     init(
-        source: Source,
+        sourceID: String,
         fetchSourceDetailUseCase: any FetchSourceDetailUseCaseProtocol,
         updateSourceUseCase: any UpdateSourceUseCaseProtocol,
         uploadSourceUseCase: any UploadSourceUseCaseProtocol,
@@ -43,18 +43,17 @@ final class SourceReaderViewModel: ObservableObject {
         onAskSource: ((Source) -> Void)? = nil,
         onDeleted: ((Source) -> Void)? = nil
     ) {
-        self.initialSource = source
+        self.sourceID = sourceID
         self.fetchSourceDetailUseCase = fetchSourceDetailUseCase
         self.updateSourceUseCase = updateSourceUseCase
         self.uploadSourceUseCase = uploadSourceUseCase
         self.fetchSourcePreviewUseCase = fetchSourcePreviewUseCase
         self.onAskSource = onAskSource
         self.onDeleted = onDeleted
-        state.source = source
     }
 
-    var source: Source {
-        state.source ?? initialSource
+    var source: Source? {
+        state.source
     }
 
     enum Intent {
@@ -85,6 +84,7 @@ final class SourceReaderViewModel: ObservableObject {
         case .retry:
             Task { await loadDetail() }
         case .editTapped:
+            guard let source else { return }
             state.editTitle = source.title
             state.editAuthor = source.author
             state.editError = nil
@@ -116,6 +116,7 @@ final class SourceReaderViewModel: ObservableObject {
             state.showDeleteConfirmation = false
             Task { await performDelete() }
         case .askThisSource:
+            guard let source else { return }
             onAskSource?(source)
         case .openOriginalTapped:
             state.showOpenOriginalSheet = true
@@ -142,7 +143,7 @@ final class SourceReaderViewModel: ObservableObject {
             }
         }
         do {
-            let detail = try await fetchSourceDetailUseCase.execute(id: initialSource.id)
+            let detail = try await fetchSourceDetailUseCase.execute(id: sourceID)
             guard generation == detailLoadGeneration else { return }
             Logger.debug("Loaded source detail for \(detail.id)")
             state.source = detail
@@ -159,6 +160,7 @@ final class SourceReaderViewModel: ObservableObject {
 
     private func performEdit(title: String) async {
         defer { state.isEditing = false }
+        guard let source else { return }
         let author = state.editAuthor.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
             let updated = try await updateSourceUseCase.execute(id: source.id, title: title, author: author)
@@ -175,6 +177,7 @@ final class SourceReaderViewModel: ObservableObject {
 
     private func performDelete() async {
         defer { state.isDeleting = false }
+        guard let source else { return }
         do {
             try await uploadSourceUseCase.deleteSource(id: source.id)
             Logger.debug("Source deleted: \(source.id)")
@@ -186,6 +189,7 @@ final class SourceReaderViewModel: ObservableObject {
     }
 
     private func loadPreview() async {
+        guard let source else { return }
         do {
             let preview = try await fetchSourcePreviewUseCase.execute(source: source)
             guard let url = preview.urlValue else {

@@ -79,6 +79,7 @@ final class NoteListViewModel: ViewModelProtocol {
     case editSaved(Note)
     case createTitleChanged(String)
     case createContentChanged(String)
+    case createContentEditingEnded
     case createSaveTapped
     case createCancelTapped
     case createDismissalAttempted
@@ -97,6 +98,7 @@ final class NoteListViewModel: ViewModelProtocol {
     case dismissToast
     case editTitleChanged(String)
     case editContentChanged(String)
+    case editContentEditingEnded
   }
 
   struct State: Equatable {
@@ -115,6 +117,7 @@ final class NoteListViewModel: ViewModelProtocol {
     var toast: ToastMessage?
     var editTitle = ""
     var editContent = ""
+    var editContentError: String?
     var isSaving = false
     var createTitle = ""
     var createContent = ""
@@ -178,7 +181,7 @@ final class NoteListViewModel: ViewModelProtocol {
       handleFilteringAction(action)
     case .newTapped, .noteSelected, .noteActionsRequested, .viewRequested,
       .editRequestedFromActionSheet, .editStarted, .editSaved, .createTitleChanged,
-      .createContentChanged, .createSaveTapped, .createCancelTapped, .createDismissalAttempted,
+      .createContentChanged, .createContentEditingEnded, .createSaveTapped, .createCancelTapped, .createDismissalAttempted,
       .createDiscardConfirmed, .createDiscardCancelled:
       handleEditingAction(action)
     case .deleteRequested, .deleteRequestedFromActionSheet, .deleteConfirmed,
@@ -192,7 +195,8 @@ final class NoteListViewModel: ViewModelProtocol {
       onSourcesChanged?()
     case .processingSourceStatusChanged:
       onSourcesChanged?()
-    case .dismissSheet, .sheetDismissed, .dismissToast, .editTitleChanged, .editContentChanged:
+    case .dismissSheet, .sheetDismissed, .dismissToast, .editTitleChanged, .editContentChanged,
+      .editContentEditingEnded:
       handleDismissalOrDraftAction(action)
     }
   }
@@ -265,9 +269,9 @@ extension NoteListViewModel {
     case .createContentChanged(let content):
       guard !state.isCreating else { return }
       state.createContent = content
-      state.createContentError = content.count > NoteLimits.maximumContentLength
-        ? String(localized: "Content exceeds maximum length of 20,000 characters")
-        : nil
+      state.createContentError = nil
+    case .createContentEditingEnded:
+      state.createContentError = contentValidationError(state.createContent)
     case .createSaveTapped:
       saveCreate()
     case .createCancelTapped:
@@ -318,6 +322,9 @@ extension NoteListViewModel {
       state.editTitle = title
     case .editContentChanged(let content):
       state.editContent = content
+      state.editContentError = nil
+    case .editContentEditingEnded:
+      state.editContentError = contentValidationError(state.editContent)
     default:
       return
     }
@@ -422,6 +429,7 @@ extension NoteListViewModel {
   private func startEdit(_ note: Note) {
     state.editTitle = note.title
     state.editContent = note.content
+    state.editContentError = nil
     setSheet(.edit(note))
   }
 
@@ -434,8 +442,10 @@ extension NoteListViewModel {
   private func saveEdit(_ note: Note) {
     let title = state.editTitle.trimmingCharacters(in: .whitespacesAndNewlines)
     let content = state.editContent
+    state.editContentError = contentValidationError(content)
 
     guard !title.isEmpty,
+      state.editContentError == nil,
       !state.isSaving
     else {
       return
@@ -466,18 +476,25 @@ extension NoteListViewModel {
 
   private func validateCreateDraft() {
     let title = state.createTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-    let content = state.createContent.trimmingCharacters(in: .whitespacesAndNewlines)
     state.createTitleError = state.createTitle.count > NoteLimits.maximumTitleLength
       ? String(localized: "Title cannot exceed 150 characters")
       : nil
-    if state.createContent.count > NoteLimits.maximumContentLength {
-      state.createContentError = String(localized: "Content exceeds maximum length of 20,000 characters")
-    } else if content.isEmpty {
-      state.createContentError = String(localized: "Content cannot be empty")
-    } else {
-      state.createContentError = nil
-    }
+    state.createContentError = contentValidationError(state.createContent)
     if title.isEmpty { state.createTitleError = nil }
+  }
+
+  private func contentValidationError(_ html: String) -> String? {
+    if html.utf8.count > NoteLimits.maximumRawHTMLLength {
+      return String(localized: "Content exceeds maximum length of 200,000 characters")
+    }
+    let plainText = NoteLimits.plainText(from: html).trimmingCharacters(in: .whitespacesAndNewlines)
+    if plainText.isEmpty {
+      return String(localized: "Content cannot be empty")
+    }
+    if plainText.count > NoteLimits.maximumContentLength {
+      return String(localized: "Content exceeds maximum length of 20,000 characters")
+    }
+    return nil
   }
 
   private func requestCreateDismissal() {

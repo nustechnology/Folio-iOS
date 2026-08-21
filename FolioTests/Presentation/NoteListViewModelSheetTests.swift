@@ -381,6 +381,7 @@ final class NoteListViewModelSheetTests: XCTestCase {
         )
 
         viewModel.handle(.newTapped)
+        viewModel.handle(.createContentChanged("<ol><li></li></ol>"))
         viewModel.handle(.createSaveTapped)
 
         XCTAssertEqual(viewModel.state.createContentError, "Content cannot be empty")
@@ -400,6 +401,7 @@ final class NoteListViewModelSheetTests: XCTestCase {
         viewModel.handle(.newTapped)
         viewModel.handle(.createTitleChanged(String(repeating: "t", count: NoteLimits.maximumTitleLength + 1)))
         viewModel.handle(.createContentChanged(String(repeating: "c", count: NoteLimits.maximumContentLength + 1)))
+        viewModel.handle(.createContentEditingEnded)
 
         XCTAssertEqual(viewModel.state.createTitleError, "Title cannot exceed 150 characters")
         XCTAssertEqual(

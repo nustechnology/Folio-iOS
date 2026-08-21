@@ -6,11 +6,13 @@ struct FolioNotebookView: View {
     let workspaceTitle: String
     let onBackToSpaces: () -> Void
     let onNavigateToNotes: () -> Void
+    let onSourceOpened: (String) -> Void
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var pendingExportAction: PendingExportAction?
     @State private var pendingQuickNotesAction: PendingQuickNotesAction?
     @State private var pendingNote: NoteSummary?
+    @State private var pendingSourceID: String?
     @State private var shareURL: ShareableURL?
     @State private var isPrintPresented = false
 
@@ -92,6 +94,7 @@ struct FolioNotebookView: View {
         .sheet(item: activeSheetBinding, onDismiss: {
             runPendingExport()
             runPendingQuickNotes()
+            openPendingSource()
         }, content: { sheet in
             switch sheet {
             case .export:
@@ -138,6 +141,10 @@ struct FolioNotebookView: View {
                     onConvert: {
                         noteListViewModel?.handle(.dismissSheet)
                         onNavigateToNotes()
+                    },
+                    onOpenSource: { sourceID in
+                        pendingSourceID = sourceID
+                        noteListViewModel?.handle(.dismissSheet)
                     },
                     showsActions: false
                 )
@@ -202,6 +209,12 @@ struct FolioNotebookView: View {
         case .none:
             break
         }
+    }
+
+    private func openPendingSource() {
+        guard let sourceID = pendingSourceID else { return }
+        pendingSourceID = nil
+        onSourceOpened(sourceID)
     }
 
     private var topBar: some View {
@@ -462,7 +475,8 @@ private struct FolioPrintSheet: UIViewControllerRepresentable {
         noteListViewModel: nil,
         workspaceTitle: "Dissertation Research",
         onBackToSpaces: {},
-        onNavigateToNotes: {}
+        onNavigateToNotes: {},
+        onSourceOpened: { _ in }
     )
 }
 

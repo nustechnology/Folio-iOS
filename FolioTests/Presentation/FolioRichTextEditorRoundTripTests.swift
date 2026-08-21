@@ -1,8 +1,120 @@
 @testable import Folio
-import XCTest
+import SwiftUI
 import UIKit
+import XCTest
 
 final class FolioRichTextEditorRoundTripTests: XCTestCase {
+    func testInlineToolbarLayoutDoesNotChangeRichTextSerialization() {
+        let text = NSMutableAttributedString(string: "Note")
+        text.addAttribute(.font, value: UIFont.italicSystemFont(ofSize: 16), range: NSRange(location: 0, length: text.length))
+
+        XCTAssertEqual(
+            FolioRichTextEditor.htmlFromAttributedText(text),
+            "<p><em>Note</em></p>"
+        )
+    }
+
+    func testFormattingDoesNotPublishWhenAttributedContentIsUnchanged() {
+        let empty = FolioRichTextEditor.makeDefaultAttributedText()
+
+        XCTAssertFalse(FolioRichTextEditor.shouldPublishContentChange(from: empty, to: empty))
+        XCTAssertTrue(
+            FolioRichTextEditor.shouldPublishContentChange(
+                from: empty,
+                to: NSAttributedString(string: "Note")
+            )
+        )
+    }
+
+    func testCoordinatorIgnoresSelectionChangesWhileUIViewIsSynchronizing() {
+        var selectedRange = NSRange(location: 0, length: 0)
+        var typingAttributes: [NSAttributedString.Key: Any] = [:]
+        let editor = FolioRichTextEditor(
+            attributedText: .constant(NSAttributedString(string: "text")),
+            selectedRange: Binding(get: { selectedRange }, set: { selectedRange = $0 }),
+            typingAttributes: Binding(get: { typingAttributes }, set: { typingAttributes = $0 }),
+            onTextChange: { _ in }
+        )
+        let coordinator = editor.makeCoordinator()
+        coordinator.isSynchronizingUIView = true
+
+        let textView = UITextView()
+        textView.selectedRange = NSRange(location: 2, length: 0)
+        coordinator.textViewDidChangeSelection(textView)
+
+        XCTAssertEqual(selectedRange, NSRange(location: 0, length: 0))
+        XCTAssertTrue(typingAttributes.isEmpty)
+    }
+
+    func testCoordinatorClearsLinkTypingAttributeAfterSpace() {
+        var selectedRange = NSRange(location: 6, length: 0)
+        var typingAttributes: [NSAttributedString.Key: Any] = [.link: URL(string: "https://example.com")!]
+        let editor = FolioRichTextEditor(
+            attributedText: .constant(NSAttributedString(string: "linked")),
+            selectedRange: Binding(get: { selectedRange }, set: { selectedRange = $0 }),
+            typingAttributes: Binding(get: { typingAttributes }, set: { typingAttributes = $0 }),
+            onTextChange: { _ in }
+        )
+        let coordinator = editor.makeCoordinator()
+        let textView = UITextView()
+        let linkedText = NSMutableAttributedString(string: "linked")
+        linkedText.addAttributes(typingAttributes, range: NSRange(location: 0, length: linkedText.length))
+        textView.attributedText = linkedText
+        textView.selectedRange = NSRange(location: linkedText.length, length: 0)
+        textView.typingAttributes = typingAttributes
+        XCTAssertNotNil(textView.typingAttributes[.link])
+
+        XCTAssertTrue(
+            coordinator.textView(
+                textView,
+                shouldChangeTextIn: NSRange(location: 6, length: 0),
+                replacementText: " "
+            )
+        )
+
+        XCTAssertNil(textView.typingAttributes[.link])
+        XCTAssertNil(typingAttributes[.link])
+    }
+
+    func testCoordinatorClearsLinkTypingAttributeAfterReturn() {
+        var selectedRange = NSRange(location: 6, length: 0)
+        var typingAttributes: [NSAttributedString.Key: Any] = [.link: URL(string: "https://example.com")!]
+        let editor = FolioRichTextEditor(
+            attributedText: .constant(NSAttributedString(string: "linked")),
+            selectedRange: Binding(get: { selectedRange }, set: { selectedRange = $0 }),
+            typingAttributes: Binding(get: { typingAttributes }, set: { typingAttributes = $0 }),
+            onTextChange: { _ in }
+        )
+        let coordinator = editor.makeCoordinator()
+        let textView = UITextView()
+        let linkedText = NSMutableAttributedString(string: "linked")
+        linkedText.addAttributes(typingAttributes, range: NSRange(location: 0, length: linkedText.length))
+        textView.attributedText = linkedText
+        textView.selectedRange = NSRange(location: linkedText.length, length: 0)
+        textView.typingAttributes = typingAttributes
+
+        XCTAssertTrue(
+            coordinator.textView(
+                textView,
+                shouldChangeTextIn: NSRange(location: 6, length: 0),
+                replacementText: "\n"
+            )
+        )
+
+        XCTAssertNil(textView.typingAttributes[.link])
+        XCTAssertNil(typingAttributes[.link])
+    }
+
+    func testEditorSynchronizesSelectionWhenContentIsAlreadyInSync() {
+        XCTAssertTrue(
+            FolioRichTextEditor.shouldSynchronizeSelection(
+                current: NSRange(location: 0, length: 0),
+                desired: NSRange(location: 4, length: 0),
+                textLength: 4
+            )
+        )
+    }
+
     func testTypedBlockquoteMarkerIsNotTreatedAsBlockquote() {
         let text = NSAttributedString(string: "> hello\n")
         let html = FolioRichTextEditor.htmlFromAttributedText(text)
@@ -38,6 +150,45 @@ final class FolioRichTextEditorRoundTripTests: XCTestCase {
         let text = NSAttributedString(string: "plain paragraph\n")
         let html = FolioRichTextEditor.htmlFromAttributedText(text)
         XCTAssertTrue(html.contains("<p>plain paragraph</p>"))
+    }
+
+    func testTrailingNewlineSerializesAsAnEmptyParagraph() {
+        let text = NSAttributedString(string: "hello\n")
+
+        XCTAssertEqual(
+            FolioRichTextEditor.htmlFromAttributedText(text),
+            "<p>hello</p>\n<p></p>"
+        )
+    }
+
+    @MainActor
+    func testHandledListEditPublishesBeforeUpdatingBinding() {
+        var publishedHTML: String?
+        let model = NoteRichTextEditingModel(
+            attributedText: NSAttributedString(string: "\u{2022}\tfirst"),
+            publishingHTML: { publishedHTML = $0 }
+        )
+        var selectedRange = NSRange(location: model.attributedText.length, length: 0)
+        var typingAttributes: [NSAttributedString.Key: Any] = [:]
+        let editor = FolioRichTextEditor(
+            attributedText: Binding(get: { model.attributedText }, set: { model.attributedText = $0 }),
+            selectedRange: Binding(get: { selectedRange }, set: { selectedRange = $0 }),
+            typingAttributes: Binding(get: { typingAttributes }, set: { typingAttributes = $0 }),
+            onTextChange: { model.textChanged($0) }
+        )
+        let coordinator = editor.makeCoordinator()
+        let textView = UITextView()
+        textView.attributedText = model.attributedText
+        textView.selectedRange = selectedRange
+
+        XCTAssertFalse(
+            coordinator.textView(
+                textView,
+                shouldChangeTextIn: selectedRange,
+                replacementText: "\n"
+            )
+        )
+        XCTAssertEqual(publishedHTML, FolioRichTextEditor.htmlFromAttributedText(model.attributedText))
     }
 
     func testOrderedListWithBoldAndItalicKeepsBoldOnParse() {
@@ -121,6 +272,47 @@ final class FolioRichTextEditorRoundTripTests: XCTestCase {
         XCTAssertTrue(reserialized.contains("<strong>world</strong>"))
         XCTAssertTrue(reserialized.contains("<em>Hello</em>"))
         XCTAssertTrue(reserialized.contains("<strong>Hi</strong>"))
+    }
+
+    func testBulletListRoundTripsToSemanticHTML() {
+        let html = "<ul><li>first</li><li><strong>second</strong></li></ul>"
+
+        let parsed = FolioRichTextEditor.attributedTextFromHTML(html)
+        let reserialized = FolioRichTextEditor.htmlFromAttributedText(parsed)
+
+        XCTAssertEqual(reserialized, "<ul><li>first</li><li><strong>second</strong></li></ul>")
+    }
+
+    func testHyperlinkRoundTripsThroughSanitizedHTML() {
+        let mutable = NSMutableAttributedString(string: "Folio")
+        mutable.addAttribute(.link, value: URL(string: "https://folio.example")!, range: NSRange(location: 0, length: 5))
+
+        let html = FolioRichTextEditor.htmlFromAttributedText(mutable)
+        let parsed = FolioRichTextEditor.attributedTextFromHTML(html)
+
+        XCTAssertEqual(html, "<p><a href=\"https://folio.example\">Folio</a></p>")
+        XCTAssertEqual((parsed.attribute(.link, at: 0, effectiveRange: nil) as? URL)?.absoluteString, "https://folio.example")
+    }
+
+    func testParsedContentUsesTitleInputTextColor() {
+        let parsed = FolioRichTextEditor.attributedTextFromHTML("<p>Folio</p>")
+
+        XCTAssertEqual(parsed.attribute(.foregroundColor, at: 0, effectiveRange: nil) as? UIColor, UIColor(Color.folioInk))
+    }
+
+    func testUnsupportedHyperlinksAreNotParsedOrSerialized() {
+        let parsed = FolioRichTextEditor.attributedTextFromHTML("<p><a href=\"javascript:alert(1)\">unsafe</a></p>")
+        let mutable = NSMutableAttributedString(string: "unsafe")
+        mutable.addAttribute(.link, value: URL(string: "file:///private/unsafe")!, range: NSRange(location: 0, length: 6))
+
+        XCTAssertNil(parsed.attribute(.link, at: 0, effectiveRange: nil))
+        XCTAssertEqual(FolioRichTextEditor.htmlFromAttributedText(mutable), "<p>unsafe</p>")
+    }
+
+    func testFallbackHTMLParserRemovesUnsupportedHyperlinks() {
+        let parsed = FolioRichTextEditor.attributedTextFromHTML("<div><a href=\"javascript:alert(1)\">unsafe</a></div>")
+
+        XCTAssertNil(parsed.attribute(.link, at: 0, effectiveRange: nil))
     }
 
     // MARK: shouldAllowTextEdit

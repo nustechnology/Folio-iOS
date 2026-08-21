@@ -92,4 +92,71 @@ final class NoteListViewModelDeleteEditTests: XCTestCase {
 
         XCTAssertFalse(viewModel.state.isSaving)
     }
+
+    func testOpeningEditFormDoesNotShowContentValidationError() {
+        let viewModel = NoteListViewModel(
+            spaceId: "space-1",
+            fetchNotesUseCase: FixtureNotesUseCase(),
+            fetchNoteUseCase: UnusedFixtureNoteUseCase(),
+            updateNoteUseCase: UnusedFixtureUpdateUseCase(),
+            deleteNoteUseCase: UnusedFixtureDeleteUseCase()
+        )
+        let note = Note(
+            id: "note-1",
+            researchSpaceId: "space-1",
+            title: "Note",
+            originType: .userCreated,
+            content: "",
+            createdAt: .now,
+            updatedAt: .now,
+            citationCount: nil
+        )
+
+        viewModel.handle(.editStarted(note))
+
+        XCTAssertNil(viewModel.state.editContentError)
+    }
+
+    func testEditContentChangeWaitsForEditingToEndBeforeValidatingEmptyBulletList() {
+        let viewModel = NoteListViewModel(
+            spaceId: "space-1",
+            fetchNotesUseCase: FixtureNotesUseCase(),
+            fetchNoteUseCase: UnusedFixtureNoteUseCase(),
+            updateNoteUseCase: UnusedFixtureUpdateUseCase(),
+            deleteNoteUseCase: UnusedFixtureDeleteUseCase()
+        )
+
+        viewModel.handle(.editContentChanged("<ul><li></li></ul>"))
+        XCTAssertNil(viewModel.state.editContentError)
+
+        viewModel.handle(.editContentEditingEnded)
+        XCTAssertEqual(viewModel.state.editContentError, String(localized: "Content cannot be empty"))
+    }
+
+    func testSavingEmptyEditContentShowsValidationError() {
+        let viewModel = NoteListViewModel(
+            spaceId: "space-1",
+            fetchNotesUseCase: FixtureNotesUseCase(),
+            fetchNoteUseCase: UnusedFixtureNoteUseCase(),
+            updateNoteUseCase: UnusedFixtureUpdateUseCase(),
+            deleteNoteUseCase: UnusedFixtureDeleteUseCase()
+        )
+        let note = Note(
+            id: "note-1",
+            researchSpaceId: "space-1",
+            title: "Note",
+            originType: .userCreated,
+            content: "",
+            createdAt: .now,
+            updatedAt: .now,
+            citationCount: nil
+        )
+
+        viewModel.handle(.editStarted(note))
+        viewModel.handle(.editContentChanged("<ul><li></li></ul>"))
+        viewModel.handle(.editSaved(note))
+
+        XCTAssertEqual(viewModel.state.editContentError, String(localized: "Content cannot be empty"))
+        XCTAssertFalse(viewModel.state.isSaving)
+    }
 }

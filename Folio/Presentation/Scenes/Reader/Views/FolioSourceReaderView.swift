@@ -4,14 +4,14 @@ struct FolioSourceReaderView: View {
     @StateObject private var viewModel: SourceReaderViewModel
     @State private var webContentHeight: CGFloat = 300
     @State private var showSourceActionSheet = false
-
+    
     private let passageID: String?
     private let onBack: () -> Void
     private var onAskSource: ((Source) -> Void)?
     private var onDeleted: ((Source) -> Void)?
-
+    
     init(
-        source: Source,
+        sourceID: String,
         fetchSourceDetailUseCase: any FetchSourceDetailUseCaseProtocol,
         updateSourceUseCase: any UpdateSourceUseCaseProtocol,
         uploadSourceUseCase: any UploadSourceUseCaseProtocol,
@@ -22,7 +22,7 @@ struct FolioSourceReaderView: View {
         onDeleted: ((Source) -> Void)? = nil
     ) {
         _viewModel = StateObject(wrappedValue: SourceReaderViewModel(
-            source: source,
+            sourceID: sourceID,
             fetchSourceDetailUseCase: fetchSourceDetailUseCase,
             updateSourceUseCase: updateSourceUseCase,
             uploadSourceUseCase: uploadSourceUseCase,
@@ -35,21 +35,30 @@ struct FolioSourceReaderView: View {
         self.onAskSource = onAskSource
         self.onDeleted = onDeleted
     }
-
+    
     var body: some View {
         ZStack {
             Color.folioCanvas.ignoresSafeArea()
-            VStack(spacing: 0) {
-                SourceReaderHeader(
-                    source: viewModel.source,
-                    onBack: onBack,
-                    headerTrailing: { AnyView(menuButton) },
-                    infoTrailing: { AnyView(HStack(spacing: 8) {
-                        askSourceButton
-                        openOriginalButton
-                    }) }
-                )
-                contentCard
+            if let source = viewModel.source {
+                VStack(spacing: 0) {
+                    SourceReaderHeader(
+                        source: source,
+                        onBack: onBack,
+                        headerTrailing: { AnyView(menuButton) },
+                        infoTrailing: { AnyView(HStack(spacing: 8) {
+                            askSourceButton
+                            openOriginalButton
+                        }) }
+                    )
+                    contentCard
+                }
+            } else if viewModel.state.errorMessage == nil {
+                FolioSourceReaderSkeletonView(onBack: onBack)
+            } else {
+                VStack(spacing: 0) {
+                    FolioSourceReaderSkeletonHeader(onBack: onBack)
+                    contentCard
+                }
             }
         }
         .task { viewModel.send(.appeared) }
@@ -63,7 +72,7 @@ struct FolioSourceReaderView: View {
         }
         .sheet(isPresented: $showSourceActionSheet) {
             SourceActionSheet(
-                title: viewModel.source.title,
+                title: viewModel.source?.title ?? "",
                 onEdit: { viewModel.send(.editTapped) },
                 onDelete: { viewModel.send(.deleteTapped) }
             )
@@ -73,7 +82,7 @@ struct FolioSourceReaderView: View {
             set: { if !$0 { viewModel.send(.dismissOpenOriginalSheet) } }
         )) {
             OpenOriginalBottomSheet(
-                fileName: viewModel.source.fileName,
+                fileName: viewModel.source?.fileName ?? "",
                 onCancel: { viewModel.send(.dismissOpenOriginalSheet) },
                 onOpen: { viewModel.send(.openOriginalConfirmed) }
             )
@@ -95,9 +104,9 @@ struct FolioSourceReaderView: View {
             set: { _ in viewModel.send(.dismissToast) }
         ))
     }
-
+    
     // MARK: - Header
-
+    
     private var menuButton: some View {
         Button {
             showSourceActionSheet = true
@@ -117,9 +126,9 @@ struct FolioSourceReaderView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(String(localized: "More options"))
     }
-
+    
     // MARK: - Action buttons
-
+    
     private var askSourceButton: some View {
         Button {
             viewModel.send(.askThisSource)
@@ -139,7 +148,7 @@ struct FolioSourceReaderView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(String(localized: "Ask this source"))
     }
-
+    
     private var openOriginalButton: some View {
         Button {
             viewModel.send(.openOriginalTapped)
@@ -158,19 +167,12 @@ struct FolioSourceReaderView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(String(localized: "Open original"))
     }
-
+    
     // MARK: - Content
-
+    
     private var contentCard: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                if viewModel.state.isLoading {
-                    ProgressView()
-                        .tint(Color.folioGold)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                }
-
                 if let error = viewModel.state.errorMessage {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -190,14 +192,16 @@ struct FolioSourceReaderView: View {
                     .padding(.vertical, 10)
                     .background(Color.folioDanger.opacity(0.08))
                 }
-
-                ReaderWebContentView(
-                    html: SourceHTMLBuilder.fullHTML(for: viewModel.source),
-                    passageID: passageID,
-                    onHeightChange: { height in webContentHeight = height }
-                )
-                .frame(maxWidth: .infinity)
-                .frame(height: max(webContentHeight, 1))
+                
+                if let source = viewModel.source {
+                    ReaderWebContentView(
+                        html: SourceHTMLBuilder.fullHTML(for: source),
+                        passageID: passageID,
+                        onHeightChange: { height in webContentHeight = height }
+                    )
+                    .frame(maxWidth: .infinity)
+                    .frame(height: max(webContentHeight, 1))
+                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
@@ -213,13 +217,13 @@ struct FolioSourceReaderView: View {
         .padding(.horizontal, 18)
         .ignoresSafeArea(edges: .bottom)
     }
-
+    
     // MARK: - Sheets
-
+    
     private enum ReaderSheet: Identifiable {
         case edit
         case share(URL)
-
+        
         var id: String {
             switch self {
             case .edit: return "edit"
@@ -227,13 +231,13 @@ struct FolioSourceReaderView: View {
             }
         }
     }
-
+    
     private var activeSheet: ReaderSheet? {
         if viewModel.state.showEditSheet { return .edit }
         if viewModel.state.showShareSheet, let url = viewModel.state.previewUrl { return .share(url) }
         return nil
     }
-
+    
     private var sheetBinding: Binding<ReaderSheet?> {
         Binding(
             get: { activeSheet },
@@ -246,7 +250,7 @@ struct FolioSourceReaderView: View {
             }
         )
     }
-
+    
     // MARK: - Sheets
 }
 
@@ -256,12 +260,12 @@ private struct SourceReaderEditSheet: View {
     @ObservedObject var viewModel: SourceReaderViewModel
     @Environment(\.dismiss) private var dismiss
     @FocusState private var focusedField: Field?
-
+    
     private enum Field: Hashable {
         case title
         case author
     }
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: FolioSpacing.xl) {
             Text(String(localized: "Edit Source"))
@@ -269,7 +273,7 @@ private struct SourceReaderEditSheet: View {
                 .foregroundStyle(Color.folioTextPrimary)
                 .padding(.top, FolioSpacing.xl5)
                 .padding(.bottom, FolioSpacing.sm)
-
+            
             VStack(alignment: .leading, spacing: 6) {
                 Text(String(localized: "Title"))
                     .font(.system(size: FolioFontSize.body, weight: .medium))
@@ -289,7 +293,7 @@ private struct SourceReaderEditSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
                 .focused($focusedField, equals: .title)
             }
-
+            
             VStack(alignment: .leading, spacing: 6) {
                 Text(String(localized: "Author / Publisher"))
                     .font(.system(size: FolioFontSize.body, weight: .medium))
@@ -309,13 +313,13 @@ private struct SourceReaderEditSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
                 .focused($focusedField, equals: .author)
             }
-
+            
             if let error = viewModel.state.editError {
                 Text(error)
                     .font(.system(size: FolioFontSize.small))
                     .foregroundStyle(Color.folioDanger)
             }
-
+            
             HStack(spacing: FolioSpacing.lg) {
                 Button {
                     focusedField = nil
@@ -334,7 +338,7 @@ private struct SourceReaderEditSheet: View {
                         .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
                 }
                 .buttonStyle(.plain)
-
+                
                 Button {
                     focusedField = nil
                     viewModel.send(.editConfirmed)
@@ -371,8 +375,21 @@ private struct SourceReaderEditSheet: View {
 
 #Preview {
     FolioSourceReaderView(
-        source: Source(
-            id: "preview-source",
+        sourceID: "preview-source",
+        fetchSourceDetailUseCase: PreviewFetchSourceDetailUseCase(),
+        updateSourceUseCase: PreviewUpdateSourceUseCase(),
+        uploadSourceUseCase: PreviewUploadSourceUseCase(),
+        fetchSourcePreviewUseCase: PreviewFetchSourcePreviewUseCase(),
+        onBack: {},
+        onAskSource: { _ in },
+        onDeleted: { _ in }
+    )
+}
+
+private struct PreviewFetchSourceDetailUseCase: FetchSourceDetailUseCaseProtocol {
+    func execute(id: String) async throws -> Source {
+        Source(
+            id: id,
             researchSpaceId: "space",
             sourceType: .file,
             title: "Alan Turing: Computing Machinery",
@@ -389,19 +406,8 @@ private struct SourceReaderEditSheet: View {
             processingError: "",
             createdAt: Date(),
             updatedAt: Date()
-        ),
-        fetchSourceDetailUseCase: PreviewFetchSourceDetailUseCase(),
-        updateSourceUseCase: PreviewUpdateSourceUseCase(),
-        uploadSourceUseCase: PreviewUploadSourceUseCase(),
-        fetchSourcePreviewUseCase: PreviewFetchSourcePreviewUseCase(),
-        onBack: {},
-        onAskSource: { _ in },
-        onDeleted: { _ in }
-    )
-}
-
-private struct PreviewFetchSourceDetailUseCase: FetchSourceDetailUseCaseProtocol {
-    func execute(id: String) async throws -> Source { throw CancellationError() }
+        )
+    }
 }
 
 private struct PreviewUpdateSourceUseCase: UpdateSourceUseCaseProtocol {

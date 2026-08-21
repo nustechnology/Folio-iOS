@@ -76,9 +76,21 @@ final class NoteRepositoryTests: XCTestCase {
         let service = NoteRepositoryNetworkService()
         let repository = NoteRepository(networkService: service)
 
-        let updated = try await repository.updateNote(spaceId: "space-1", noteId: "note-1", title: "Updated", content: "New")
+        let updated = try await repository.updateNote(
+            spaceId: "space-1", noteId: "note-1", title: "Updated", content: "<p><em>New</em></p>")
 
         XCTAssertEqual(updated.title, "Full Note")
+        XCTAssertEqual(service.lastRequestPayload?["content"] as? String, "<p><em>New</em></p>")
+    }
+
+    func testCreateNoteSendsHTMLWithoutOriginMetadata() async throws {
+        let service = NoteRepositoryNetworkService()
+        let repository = NoteRepository(networkService: service)
+
+        _ = try await repository.createNote(spaceId: "space-1", title: "Created", content: "<p>Body</p>")
+
+        XCTAssertEqual(service.lastRequestPayload?["content"] as? String, "<p>Body</p>")
+        XCTAssertNil(service.lastRequestPayload?["origin"])
     }
 
     func testDeleteNoteCallsRequestVoid() async throws {
@@ -94,7 +106,12 @@ private enum StubNetworkError: Error {
 }
 
 private final class NoteRepositoryNetworkService: NetworkServiceProtocol {
+    private(set) var lastRequestPayload: [String: Any]?
+
     func request<T: Decodable>(_ endpoint: APIEndpoint) async throws -> T {
+        if let body = endpoint.body {
+            lastRequestPayload = try? JSONSerialization.jsonObject(with: body) as? [String: Any]
+        }
         switch endpoint.method {
         case .get where endpoint.path.contains("/notes/note-1"):
             let response = NoteResponseDTO(

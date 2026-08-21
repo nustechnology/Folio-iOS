@@ -4,7 +4,10 @@ import UIKit
 struct FolioRichTextEditor: UIViewRepresentable {
     @Binding var attributedText: NSAttributedString
     @Binding var selectedRange: NSRange
+    var typingAttributes: Binding<[NSAttributedString.Key: Any]>?
     var onTextChange: (NSAttributedString) -> Void
+    var onEditingChanged: ((Bool) -> Void)?
+    var textContainerTopInset: CGFloat = 16
     var canUndo: Bool = false
     var canRedo: Bool = false
     var onBlockquoteShortcut: (() -> Void)?
@@ -43,7 +46,8 @@ struct FolioRichTextEditor: UIViewRepresentable {
         textView.backgroundColor = .clear
         textView.font = UIFont.systemFont(ofSize: 16)
         textView.textColor = UIColor(Color.folioInk)
-        textView.textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+        textView.textContainerInset = UIEdgeInsets(top: textContainerTopInset, left: 16, bottom: 16, right: 16)
+        textView.textContainer.lineFragmentPadding = 0
         textView.allowsEditingTextAttributes = false
         textView.dataDetectorTypes = []
         textView.spellCheckingType = .default
@@ -58,20 +62,30 @@ struct FolioRichTextEditor: UIViewRepresentable {
 
     func updateUIView(_ textView: UITextView, context: Context) {
         context.coordinator.parent = self
+        context.coordinator.isSynchronizingUIView = true
+        defer { context.coordinator.isSynchronizingUIView = false }
         if let folioTextView = textView as? FolioTextView {
             folioTextView.canUndo = canUndo
             folioTextView.canRedo = canRedo
         }
         if textView.attributedText != attributedText {
             textView.attributedText = attributedText
-            if NSMaxRange(selectedRange) <= textView.textStorage.length {
-                textView.selectedRange = selectedRange
-            }
+        }
+        if Self.shouldSynchronizeSelection(
+            current: textView.selectedRange,
+            desired: selectedRange,
+            textLength: textView.textStorage.length
+        ) {
+            textView.selectedRange = selectedRange
+        }
+        if let typingAttributes, !typingAttributes.wrappedValue.isEmpty {
+            textView.typingAttributes = typingAttributes.wrappedValue
         }
     }
 
     final class Coordinator: NSObject, UITextViewDelegate {
         var parent: FolioRichTextEditor
+        var isSynchronizingUIView = false
         weak var textView: UITextView?
 
         init(parent: FolioRichTextEditor) {
@@ -79,27 +93,84 @@ struct FolioRichTextEditor: UIViewRepresentable {
         }
 
         func textViewDidChange(_ textView: UITextView) {
+            guard !isSynchronizingUIView else { return }
             parent.onTextChange(textView.attributedText)
             parent.attributedText = textView.attributedText
             parent.selectedRange = textView.selectedRange
         }
 
         func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+            let shouldClearLinkTypingAttribute = text == " " || text == "\n"
+            if shouldClearLinkTypingAttribute {
+                clearLinkTypingAttribute(in: textView)
+            }
+
             guard let attributed = textView.attributedText else { return true }
+            let formattingController = NotebookFormattingController()
+            if let result = formattingController.applyListEdit(replacementText: text, in: attributed, selectedRange: range) {
+                textView.attributedText = result.attributedText
+                textView.selectedRange = result.selectedRange ?? NSRange(location: 0, length: 0)
+                if var typingAttributes = result.typingAttributes {
+                    if shouldClearLinkTypingAttribute {
+                        typingAttributes.removeValue(forKey: .link)
+                    }
+                    textView.typingAttributes = typingAttributes
+                    parent.typingAttributes?.wrappedValue = typingAttributes
+                }
+                parent.onTextChange(result.attributedText)
+                parent.attributedText = result.attributedText
+                parent.selectedRange = textView.selectedRange
+                return false
+            }
             return FolioRichTextEditor.shouldAllowTextEdit(
                 in: range,
                 markers: FolioRichTextEditor.formattingMarkerRanges(in: attributed))
         }
 
+        private func clearLinkTypingAttribute(in textView: UITextView) {
+            var typingAttributes = textView.typingAttributes
+            typingAttributes.removeValue(forKey: .link)
+            textView.typingAttributes = typingAttributes
+            parent.typingAttributes?.wrappedValue = typingAttributes
+        }
+
         func textViewDidChangeSelection(_ textView: UITextView) {
+            guard !isSynchronizingUIView else { return }
             parent.selectedRange = textView.selectedRange
+            parent.typingAttributes?.wrappedValue = textView.typingAttributes
+        }
+
+        func textViewDidBeginEditing(_ textView: UITextView) {
+            parent.onEditingChanged?(true)
+        }
+
+        func textViewDidEndEditing(_ textView: UITextView) {
+            parent.onEditingChanged?(false)
         }
     }
 }
 
 extension FolioRichTextEditor {
+    static func shouldSynchronizeSelection(
+        current: NSRange,
+        desired: NSRange,
+        textLength: Int
+    ) -> Bool {
+        desired.location >= 0
+            && desired.length >= 0
+            && NSMaxRange(desired) <= textLength
+            && current != desired
+    }
+
     static func makeDefaultAttributedText() -> NSAttributedString {
         return NSAttributedString(string: "", attributes: [:])
+    }
+
+    static func shouldPublishContentChange(
+        from oldValue: NSAttributedString,
+        to newValue: NSAttributedString
+    ) -> Bool {
+        oldValue != newValue
     }
 
     static func attributedTextFromHTML(_ html: String) -> NSAttributedString {
@@ -118,6 +189,7 @@ extension FolioRichTextEditor {
         if let attributed = try? NSMutableAttributedString(data: data, options: options, documentAttributes: nil) {
             let mutable = NSMutableAttributedString(attributedString: attributed)
             migrateFonts(in: mutable)
+            removeUnsupportedLinks(from: mutable)
             return mutable
         }
         return NSAttributedString(string: html)
@@ -161,6 +233,7 @@ extension FolioRichTextEditor {
         var location = 0
         var openListTag: String?
         var listItems: [String] = []
+        var lastParagraphWasListItem = false
 
         func flushList() {
             guard let tag = openListTag else { return }
@@ -184,10 +257,12 @@ extension FolioRichTextEditor {
             if text.isEmpty {
                 flushList()
                 blocks.append("<p></p>")
+                lastParagraphWasListItem = false
             } else if isBold, size >= FolioRichTextFormat.heading3FontSize {
                 flushList()
                 let tag = size >= FolioRichTextFormat.heading1FontSize ? "h1" : (size >= FolioRichTextFormat.heading2FontSize ? "h2" : "h3")
                 blocks.append("<\(tag)>\(inlineHTML(for: text, in: attributedText, range: contentRange, skipBold: true))</\(tag)>")
+                lastParagraphWasListItem = false
             } else if text.hasPrefix(FolioRichTextFormat.bulletMarker) {
                 if openListTag != "ul" {
                     flushList()
@@ -196,6 +271,7 @@ extension FolioRichTextEditor {
                 let body = String(text.dropFirst(2))
                 let bodyRange = NSRange(location: contentRange.location + 2, length: max(0, contentRange.length - 2))
                 listItems.append("<li>\(inlineHTML(for: body, in: attributedText, range: bodyRange, skipBold: false))</li>")
+                lastParagraphWasListItem = true
             } else if let markerLength = FolioRichTextFormat.orderedListMarkerLength(in: text) {
                 if openListTag != "ol" {
                     flushList()
@@ -204,6 +280,7 @@ extension FolioRichTextEditor {
                 let body = (text as NSString).substring(from: markerLength)
                 let bodyRange = NSRange(location: contentRange.location + markerLength, length: max(0, contentRange.length - markerLength))
                 listItems.append("<li>\(inlineHTML(for: body, in: attributedText, range: bodyRange, skipBold: false))</li>")
+                lastParagraphWasListItem = true
             } else if text.hasPrefix(FolioRichTextFormat.blockquoteMarker),
                       hasBlockquoteStyle(attributedText, at: paragraphRange.location) {
                 flushList()
@@ -211,9 +288,11 @@ extension FolioRichTextEditor {
                 let body = String(text.dropFirst(markerLength))
                 let bodyRange = NSRange(location: contentRange.location + markerLength, length: max(0, contentRange.length - markerLength))
                 blocks.append("<blockquote>\(inlineHTML(for: body, in: attributedText, range: bodyRange, skipBold: false))</blockquote>")
+                lastParagraphWasListItem = false
             } else {
                 flushList()
                 blocks.append("<p>\(inlineHTML(for: text, in: attributedText, range: contentRange, skipBold: false))</p>")
+                lastParagraphWasListItem = false
             }
 
             let next = NSMaxRange(paragraphRange)
@@ -221,6 +300,9 @@ extension FolioRichTextEditor {
             location = next
         }
         flushList()
+        if string.length > 0, string.character(at: string.length - 1) == 10, !lastParagraphWasListItem {
+            blocks.append("<p></p>")
+        }
         return blocks.joined(separator: "\n")
     }
 
@@ -229,10 +311,8 @@ extension FolioRichTextEditor {
         attributed.enumerateAttributes(in: range, options: []) { attrs, attrRange, _ in
             var segment = (attributed.string as NSString).substring(with: attrRange)
             segment = escapeHTML(segment)
-            if let url = attrs[.link] as? URL {
+            if let url = supportedLinkURL(from: attrs[.link]) {
                 segment = "<a href=\"\(escapeAttribute(url.absoluteString))\">\(segment)</a>"
-            } else if let urlString = attrs[.link] as? String {
-                segment = "<a href=\"\(escapeAttribute(urlString))\">\(segment)</a>"
             }
             if hasTextDecoration(.underlineStyle, in: attrs) {
                 segment = "<span style=\"text-decoration:underline\">\(segment)</span>"
@@ -272,6 +352,32 @@ extension FolioRichTextEditor {
         escapeHTML(text)
             .replacingOccurrences(of: "\"", with: "&quot;")
             .replacingOccurrences(of: "'", with: "&#39;")
+    }
+
+    static func isSupportedLinkURL(_ url: URL) -> Bool {
+        ["http", "https"].contains(url.scheme?.lowercased() ?? "") && url.host != nil
+    }
+
+    fileprivate static func supportedLinkURL(from value: Any?) -> URL? {
+        let url: URL?
+        if let value = value as? URL {
+            url = value
+        } else if let value = value as? String {
+            url = URL(string: value)
+        } else {
+            url = nil
+        }
+        guard let url, isSupportedLinkURL(url) else { return nil }
+        return url
+    }
+
+    private static func removeUnsupportedLinks(from attributed: NSMutableAttributedString) {
+        let fullRange = NSRange(location: 0, length: attributed.length)
+        attributed.enumerateAttribute(.link, in: fullRange, options: []) { value, range, _ in
+            if supportedLinkURL(from: value) == nil {
+                attributed.removeAttribute(.link, range: range)
+            }
+        }
     }
 
     private static func parseSemanticHTML(_ html: String) -> NSAttributedString? {
@@ -488,7 +594,7 @@ private final class SemanticHTMLParser: NSObject, XMLParserDelegate {
     private var listTypeStack: [ListType] = []
     private var orderedCounterStack: [Int] = []
     private var spanStyleStack: [SpanStyle] = []
-    private var linkHrefStack: [String] = []
+    private var linkHrefStack: [URL?] = []
 
     private struct SpanStyle {
         let fontSize: CGFloat?
@@ -536,9 +642,7 @@ private final class SemanticHTMLParser: NSObject, XMLParserDelegate {
                 )
             )
         case "a":
-            if let href = attributeDict["href"] {
-                linkHrefStack.append(href)
-            }
+            linkHrefStack.append(FolioRichTextEditor.supportedLinkURL(from: attributeDict["href"]))
         default:
             break
         }
@@ -576,15 +680,18 @@ private final class SemanticHTMLParser: NSObject, XMLParserDelegate {
         let style = spanStyleStack.last
         let size = style?.fontSize ?? top.baseSize
         let font = makeFont(size: size, bold: top.baseBold || boldDepth > 0, italic: italicDepth > 0)
-        var attributes: [NSAttributedString.Key: Any] = [.font: font]
+        var attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: UIColor(Color.folioInk)
+        ]
         if style?.underline == true {
             attributes[.underlineStyle] = NSUnderlineStyle.single.rawValue
         }
         if style?.strikethrough == true {
             attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
         }
-        if let href = linkHrefStack.last {
-            attributes[.link] = URL(string: href) ?? href
+        if let url = linkHrefStack.last ?? nil {
+            attributes[.link] = url
         }
         result.append(NSAttributedString(string: string, attributes: attributes))
     }
@@ -643,7 +750,7 @@ private final class SemanticHTMLParser: NSObject, XMLParserDelegate {
             let range = NSRange(location: block.startLocation, length: result.length - block.startLocation)
             let style = NSMutableParagraphStyle()
             style.headIndent = FolioRichTextFormat.listIndent
-            style.firstLineHeadIndent = FolioRichTextFormat.listIndent
+            style.firstLineHeadIndent = 0
             result.addAttribute(.paragraphStyle, value: style, range: range)
         case .heading, .paragraph:
             break

@@ -85,7 +85,7 @@ struct MainView: View {
     private var appShellWithTab: some View {
         let isMySpaces = viewModel.state.selectedTab == .sources
             && selectedWorkspace == nil
-        let showTabBar = viewModel.state.activeReader == nil && !isMySpaces
+        let showTabBar = viewModel.state.activeReaderID == nil && !isMySpaces
 
         return ZStack(alignment: .bottom) {
             appShell
@@ -104,10 +104,9 @@ struct MainView: View {
     @ViewBuilder
     private var appShell: some View {
         let userInitial = viewModel.state.userDisplayName?.first.map(String.init).map { $0.uppercased() } ?? "?"
-        switch viewModel.state.activeReader {
-        case .some(let source):
+        if let sourceID = viewModel.state.activeReaderID {
             FolioSourceReaderView(
-                source: source,
+                sourceID: sourceID,
                 fetchSourceDetailUseCase: viewModel.fetchSourceDetailUseCase,
                 updateSourceUseCase: viewModel.updateSourceUseCase,
                 uploadSourceUseCase: viewModel.uploadSourceUseCase,
@@ -123,7 +122,7 @@ struct MainView: View {
                     Task { await sourceListViewModel?.refresh() }
                 }
             )
-        case .none:
+        } else {
             switch viewModel.state.selectedTab {
             case .sources:
                 if let workspace = selectedWorkspace, let sourceVM = sourceListViewModel {
@@ -166,8 +165,8 @@ struct MainView: View {
                         viewModel: noteVM,
                         workspaceTitle: workspace.name,
                         onBackToSpaces: showMySpaces,
-                        onSourceOpened: { source in
-                            viewModel.handle(.addNewSource(source: source, workspaceID: workspace.id))
+                        onSourceOpened: { sourceID in
+                            viewModel.handle(.openSource(id: sourceID, workspaceID: workspace.id))
                         }
                     )
                 } else {
@@ -189,6 +188,9 @@ struct MainView: View {
                         onBackToSpaces: { showMySpaces() },
                         onNavigateToNotes: {
                             viewModel.handle(.selectTab(.notes))
+                        },
+                        onSourceOpened: { sourceID in
+                            viewModel.handle(.openSource(id: sourceID, workspaceID: workspace.id))
                         }
                     )
                 } else {
