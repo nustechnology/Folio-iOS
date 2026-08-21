@@ -4,6 +4,7 @@ protocol AuthRepositoryProtocol {
     func signUp(name: String, email: String, password: String) async throws -> AuthToken
     func signIn(email: String, password: String) async throws -> AuthToken
     func refreshToken(_ refreshToken: String) async throws -> AuthToken
+    func requestPasswordReset(email: String) async throws
     func signOut() throws
     func signOutAwaitingCancellation() async throws
     func getCurrentSession() -> AuthToken?

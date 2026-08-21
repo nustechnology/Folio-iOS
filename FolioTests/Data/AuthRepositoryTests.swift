@@ -119,6 +119,31 @@ final class AuthRepositoryTests: XCTestCase {
 
         XCTAssertEqual(try storage.load(forKey: StorageKey.authSession) as AuthTokenDTO?, oldSession)
     }
+
+    func testRequestPasswordResetSucceedsWhenLinkRequestIsAccepted() async {
+        let repository = AuthRepository(networkService: SuccessfulAuthNetworkService(), localStorage: RecordingStorage())
+
+        do {
+            try await repository.requestPasswordReset(email: "test@example.com")
+        } catch {
+            XCTFail("Expected password reset to succeed: \(error)")
+        }
+    }
+
+    func testRequestPasswordResetMapsNetworkError() async {
+        let repository = AuthRepository(networkService: UnusedNetworkService(), localStorage: RecordingStorage())
+
+        do {
+            try await repository.requestPasswordReset(email: "test@example.com")
+            XCTFail("Expected password reset to fail")
+        } catch let error as AuthError {
+            guard case .networkError = error else {
+                return XCTFail("Unexpected error: \(error)")
+            }
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
 }
 
 private final class RecordingStorage: LocalStorageProtocol {

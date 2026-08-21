@@ -139,6 +139,7 @@ final class MainViewModelTests: XCTestCase {
             signInUseCase: EmptySignInUseCase(),
             signOutUseCase: signOutUseCase,
             refreshTokenUseCase: refreshTokenUseCase,
+            passwordResetUseCase: EmptyRequestPasswordResetUseCase(),
             fetchWorkspacesUseCase: FetchWorkspacesUseCase(repository: EmptyWorkspaceRepository()),
             createWorkspaceUseCase: CreateWorkspaceUseCase(repository: EmptyWorkspaceRepository()),
             updateWorkspaceUseCase: UpdateWorkspaceUseCase(repository: EmptyWorkspaceRepository()),
@@ -277,6 +278,10 @@ private struct FailingSignOutUseCase: SignOutUseCaseProtocol {
 
 private struct EmptyRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
     func execute(refreshToken: String) async throws -> AuthToken { throw CancellationError() }
+}
+
+private struct EmptyRequestPasswordResetUseCase: RequestPasswordResetUseCaseProtocol {
+    func execute(email: String) async throws {}
 }
 
 private actor BlockingRefreshTokenUseCase: RefreshTokenUseCaseProtocol {

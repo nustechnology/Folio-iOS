@@ -11,6 +11,7 @@ struct MainView: View {
     let uploadSourceUseCase: (any UploadSourceUseCaseProtocol)?
     @State private var showAccountSheet = false
     @State private var showAccountSettings = false
+    @State private var showSignOutConfirmation = false
     @State private var selectedWorkspace: Workspace?
     @State private var sourceListViewModel: SourceListViewModel?
     @State private var noteListViewModel: NoteListViewModel?
@@ -31,9 +32,29 @@ struct MainView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
                         showAccountSettings = true
                     }
+                },
+                onSignOut: {
+                    showAccountSheet = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showSignOutConfirmation = true
+                    }
                 }
             )
             .presentationDetents([.height(170)])
+        }
+        .sheet(isPresented: $showSignOutConfirmation) {
+            ConfirmationBottomSheet(
+                title: String(localized: "Sign out?"),
+                message: String(localized: "You will need to sign in again to access your spaces."),
+                confirmTitle: String(localized: "Sign Out"),
+                onCancel: {
+                    showSignOutConfirmation = false
+                },
+                onConfirm: {
+                    showSignOutConfirmation = false
+                    completeSignOut()
+                }
+            )
         }
         .fullScreenCover(isPresented: $showAccountSettings) {
             FolioBackdrop()
@@ -43,12 +64,7 @@ struct MainView: View {
                         emailAddress: viewModel.state.userEmail ?? "",
                         onSignOut: {
                             showAccountSettings = false
-                            notebookViewModel?.flushPendingSave()
-                            selectedWorkspace = nil
-                            sourceListViewModel = nil
-                            noteListViewModel = nil
-                            notebookViewModel = nil
-                            viewModel.handle(.signOut)
+                            completeSignOut()
                         }
                     )
                 }
@@ -229,6 +245,15 @@ struct MainView: View {
         notebookViewModel = nil
         viewModel.handle(.showSpaces)
     }
+
+    private func completeSignOut() {
+        notebookViewModel?.flushPendingSave()
+        selectedWorkspace = nil
+        sourceListViewModel = nil
+        noteListViewModel = nil
+        notebookViewModel = nil
+        viewModel.handle(.signOut)
+    }
 }
 
 #Preview {
@@ -240,6 +265,7 @@ struct MainView: View {
         signInUseCase: PreviewSignInUseCase(),
         signOutUseCase: PreviewSignOutUseCase(),
         refreshTokenUseCase: PreviewRefreshTokenUseCase(),
+        passwordResetUseCase: PreviewPasswordResetUseCase(),
         fetchWorkspacesUseCase: FetchWorkspacesUseCase(repository: PreviewWorkspaceRepository()),
         createWorkspaceUseCase: CreateWorkspaceUseCase(repository: PreviewWorkspaceRepository()),
         updateWorkspaceUseCase: UpdateWorkspaceUseCase(repository: PreviewWorkspaceRepository()),
@@ -298,6 +324,10 @@ private struct PreviewRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
     func execute(refreshToken: String) async throws -> AuthToken {
         AuthToken(accessToken: "", refreshToken: "", expiresAt: Date())
     }
+}
+
+private struct PreviewPasswordResetUseCase: RequestPasswordResetUseCaseProtocol {
+    func execute(email: String) async throws {}
 }
 
 private struct PreviewUploadSourceUseCase: UploadSourceUseCaseProtocol {

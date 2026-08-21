@@ -4,6 +4,7 @@ enum AuthEndpoint: APIEndpoint {
     case signUp(name: String, email: String, password: String, confirmPassword: String)
     case signIn(email: String, password: String)
     case refreshToken(refreshToken: String)
+    case requestPasswordReset(email: String)
 
     var path: String {
         switch self {
@@ -13,6 +14,8 @@ enum AuthEndpoint: APIEndpoint {
             return "/api/v1/auth/login"
         case .refreshToken:
             return "/api/v1/auth/refresh"
+        case .requestPasswordReset:
+            return "/api/v1/auth/forgot-password"
         }
     }
 
@@ -31,6 +34,8 @@ enum AuthEndpoint: APIEndpoint {
             return try? encoder.encode(SignInRequest(email: email, password: password))
         case .refreshToken(let refreshToken):
             return try? encoder.encode(RefreshRequest(refreshToken: refreshToken))
+        case .requestPasswordReset(let email):
+            return try? encoder.encode(ForgotPasswordRequest(email: email))
         }
     }
 }
@@ -49,4 +54,8 @@ private struct SignInRequest: Codable {
 
 private struct RefreshRequest: Codable {
     let refreshToken: String
+}
+
+private struct ForgotPasswordRequest: Codable {
+    let email: String
 }

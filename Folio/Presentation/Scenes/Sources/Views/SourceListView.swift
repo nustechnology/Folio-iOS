@@ -52,11 +52,12 @@ struct SourceListView: View {
             get: { viewModel.state.deleteConfirmationSource },
             set: { if $0 == nil { viewModel.send(.cancelDelete) } }
         )) { _ in
-            DeleteSourceBottomSheet(
+            ConfirmationBottomSheet(
                 title: String(localized: "Delete source?"),
                 message: String(localized: "This permanently removes the source and its retrieval data."),
+                confirmTitle: String(localized: "Delete"),
                 onCancel: { viewModel.send(.cancelDelete) },
-                onDelete: { viewModel.send(.deleteConfirmed) }
+                onConfirm: { viewModel.send(.deleteConfirmed) }
             )
         }
         .folioToast(message: Binding(

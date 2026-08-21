@@ -44,6 +44,7 @@ final class MainViewModel: ViewModelProtocol {
     private let signInUseCase: any SignInUseCaseProtocol
     private let signOutUseCase: any SignOutUseCaseProtocol
     private let refreshTokenUseCase: any RefreshTokenUseCaseProtocol
+    let passwordResetUseCase: any RequestPasswordResetUseCaseProtocol
     let fetchWorkspacesUseCase: any FetchWorkspacesUseCaseProtocol
     let createWorkspaceUseCase: any CreateWorkspaceUseCaseProtocol
     let updateWorkspaceUseCase: any UpdateWorkspaceUseCaseProtocol
@@ -69,6 +70,7 @@ final class MainViewModel: ViewModelProtocol {
         signInUseCase: any SignInUseCaseProtocol,
         signOutUseCase: any SignOutUseCaseProtocol,
         refreshTokenUseCase: any RefreshTokenUseCaseProtocol,
+        passwordResetUseCase: any RequestPasswordResetUseCaseProtocol,
         fetchWorkspacesUseCase: any FetchWorkspacesUseCaseProtocol,
         createWorkspaceUseCase: any CreateWorkspaceUseCaseProtocol,
         updateWorkspaceUseCase: any UpdateWorkspaceUseCaseProtocol,
@@ -89,6 +91,7 @@ final class MainViewModel: ViewModelProtocol {
         self.signInUseCase = signInUseCase
         self.signOutUseCase = signOutUseCase
         self.refreshTokenUseCase = refreshTokenUseCase
+        self.passwordResetUseCase = passwordResetUseCase
         self.fetchWorkspacesUseCase = fetchWorkspacesUseCase
         self.createWorkspaceUseCase = createWorkspaceUseCase
         self.updateWorkspaceUseCase = updateWorkspaceUseCase
