@@ -125,11 +125,43 @@ final class MainViewModelTests: XCTestCase {
         XCTAssertTrue(sources.allSatisfy { $0.workspaceID == "dissertation-research" })
     }
 
+    func testOpenSourceActivatesReaderByIDWithoutResolvingDetail() {
+        let viewModel = makeViewModel()
+
+        viewModel.handle(.openSource(id: "page-two", workspaceID: "research"))
+
+        XCTAssertEqual(viewModel.state.activeReaderID, "page-two")
+    }
+
+    func testSourceReaderFetchesDetailUsingSourceID() async {
+        let resolvedSource = makeSourceDetail(id: "page-two")
+        let viewModel = SourceReaderViewModel(
+            sourceID: resolvedSource.id,
+            fetchSourceDetailUseCase: ReturningFetchSourceDetailUseCase(source: resolvedSource),
+            updateSourceUseCase: EmptyUpdateSourceUseCase(),
+            uploadSourceUseCase: EmptyUploadSourceUseCase(),
+            fetchSourcePreviewUseCase: EmptyFetchSourcePreviewUseCase()
+        )
+
+        viewModel.send(.appeared)
+        let deadline = ContinuousClock.now + .seconds(1)
+        while viewModel.state.source == nil {
+            guard ContinuousClock.now < deadline else {
+                XCTFail("Timed out waiting for source detail")
+                return
+            }
+            await Task.yield()
+        }
+
+        XCTAssertEqual(viewModel.state.source?.id, resolvedSource.id)
+    }
+
     private func makeViewModel(
         fetchMeUseCase: any FetchMeUseCaseProtocol = EmptyFetchMeUseCase(),
         localStorage: LocalStorageProtocol = EmptyLocalStorage(),
         refreshTokenUseCase: any RefreshTokenUseCaseProtocol = EmptyRefreshTokenUseCase(),
-        signOutUseCase: any SignOutUseCaseProtocol = EmptySignOutUseCase()
+        signOutUseCase: any SignOutUseCaseProtocol = EmptySignOutUseCase(),
+        fetchSourceDetailUseCase: any FetchSourceDetailUseCaseProtocol = EmptyFetchSourceDetailUseCase()
     ) -> MainViewModel {
         MainViewModel(
             fetchUsersUseCase: EmptyFetchUsersUseCase(),
@@ -147,7 +179,7 @@ final class MainViewModelTests: XCTestCase {
             uploadSourceUseCase: EmptyUploadSourceUseCase(),
             fetchSourcesUseCase: EmptyFetchSourcesUseCase(),
             updateSourceUseCase: EmptyUpdateSourceUseCase(),
-            fetchSourceDetailUseCase: EmptyFetchSourceDetailUseCase(),
+            fetchSourceDetailUseCase: fetchSourceDetailUseCase,
             fetchSourcePreviewUseCase: EmptyFetchSourcePreviewUseCase(),
             fetchNotebookUseCase: EmptyFetchNotebookUseCase(),
             saveNotebookUseCase: EmptySaveNotebookUseCase(),
@@ -194,6 +226,28 @@ final class MainViewModelTests: XCTestCase {
         )
     }
 
+    private func makeSourceDetail(id: String) -> Source {
+        Source(
+            id: id,
+            researchSpaceId: "research",
+            sourceType: .file,
+            title: id,
+            author: "",
+            sourceUrl: "",
+            fileName: "",
+            fileSize: 0,
+            fileType: "",
+            pageCount: 0,
+            characterCount: 0,
+            content: "",
+            structuredContent: nil,
+            processingState: .ready,
+            processingError: "",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+    }
+
     private func waitForAuthLoading(_ viewModel: MainViewModel, toBe expected: Bool) async {
         let deadline = ContinuousClock.now + .seconds(1)
         while viewModel.state.authLoading != expected {
@@ -204,6 +258,7 @@ final class MainViewModelTests: XCTestCase {
             try? await Task.sleep(for: .milliseconds(10))
         }
     }
+
 }
 
 private struct EmptyFetchUsersUseCase: FetchUsersUseCaseProtocol {
@@ -359,6 +414,12 @@ private struct EmptyUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
 
 private struct EmptyFetchSourceDetailUseCase: FetchSourceDetailUseCaseProtocol {
     func execute(id: String) async throws -> Source { throw CancellationError() }
+}
+
+private struct ReturningFetchSourceDetailUseCase: FetchSourceDetailUseCaseProtocol {
+    let source: Source
+
+    func execute(id: String) async throws -> Source { source }
 }
 
 private struct EmptyFetchSourcePreviewUseCase: FetchSourcePreviewUseCaseProtocol {

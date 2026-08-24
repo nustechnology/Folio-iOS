@@ -38,6 +38,29 @@
         }
       }
     },
+    "“%@”" : {
+
+    },
+    "%@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@"
+          }
+        }
+      }
+    },
     "%lld / %@" : {
       "localizations" : {
         "en" : {
@@ -47,6 +70,9 @@
           }
         }
       }
+    },
+    "%lld / 150" : {
+
     },
     "%lld Citations" : {
       "localizations" : {
@@ -356,6 +382,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Thêm tệp, bài viết web hoặc nguồn văn bản thủ công."
+          }
+        }
+      }
+    },
+    "Add link" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add link"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thêm liên kết"
           }
         }
       }
@@ -1206,6 +1248,22 @@
         }
       }
     },
+    "Citation" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Citation"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trích dẫn"
+          }
+        }
+      }
+    },
     "Clear search" : {
       "localizations" : {
         "en" : {
@@ -1298,6 +1356,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nội dung vượt quá 20.000 ký tự"
+          }
+        }
+      }
+    },
+    "Content exceeds maximum length of 200,000 characters" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Content exceeds maximum length of 200,000 characters"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nội dung vượt quá độ dài tối đa 200.000 ký tự"
           }
         }
       }
@@ -1591,6 +1665,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tạo kho lưu trữ riêng tư của bạn."
+          }
+        }
+      }
+    },
+    "Created" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Created"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã tạo"
           }
         }
       }
@@ -2684,6 +2774,22 @@
         }
       }
     },
+    "Hyperlink" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hyperlink"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siêu liên kết"
+          }
+        }
+      }
+    },
     "Index evidence" : {
       "localizations" : {
         "en" : {
@@ -2797,6 +2903,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vừa xong"
+          }
+        }
+      }
+    },
+    "Link URL" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link URL"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "URL liên kết"
           }
         }
       }
@@ -3490,6 +3612,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mở hộp thoại in"
+          }
+        }
+      }
+    },
+    "Open in source" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open in source"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mở trong nguồn"
           }
         }
       }
@@ -4660,6 +4798,22 @@
         }
       }
     },
+    "Select text to add a link" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select text to add a link"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn văn bản để thêm liên kết"
+          }
+        }
+      }
+    },
     "Selected: %@" : {
       "comment" : "A preview of the file that the user has selected to upload. It includes the file name, size, and a prompt to choose a different file.",
       "isCommentAutoGenerated" : true,
@@ -5711,6 +5865,22 @@
         }
       }
     },
+    "Updated" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Updated"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã cập nhật"
+          }
+        }
+      }
+    },
     "Updated %@" : {
       "localizations" : {
         "en" : {
@@ -6000,6 +6170,7 @@
       }
     },
     "Write your note" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

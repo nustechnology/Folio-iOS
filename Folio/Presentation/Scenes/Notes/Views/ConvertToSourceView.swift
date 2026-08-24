@@ -46,11 +46,10 @@ struct ConvertToSourceView: View {
               .foregroundStyle(Color.folioHomeTypeTextText)
 
             FolioCard(
-              content: Text(note.content)
-                .font(.system(size: FolioFontSize.body, weight: .regular))
-                .foregroundStyle(Color.folioInk)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading),
+              content: CitationRichTextView(
+                content: note.content,
+                citationCount: note.citations.count
+              ),
               height: FolioSize.snapshotCardH
             )
             actionButtons
@@ -61,6 +60,7 @@ struct ConvertToSourceView: View {
       }
     }
     .background(Color.folioHomeSheetBackground)
+    .dismissKeyboardOnTapOutside()
     .presentationBackground(Color.folioHomeSheetBackground)
     .presentationCornerRadius(FolioRadius.xl2)
     .folioDynamicSheet(minHeight: FolioSize.conversionSheetMinH, maxHeight: FolioSize.conversionSheetMaxH)

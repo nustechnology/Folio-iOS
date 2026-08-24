@@ -43,7 +43,7 @@ struct CreateNoteEndpoint: APIEndpoint {
   var queryItems: [URLQueryItem]? { nil }
   var requiresAuthentication: Bool { true }
   var body: Data? {
-    try? JSONEncoder().encode(UpdateNoteRequestDTO(title: title, content: content))
+    try? JSONEncoder().encode(CreateNoteRequestDTO(title: title, content: content))
   }
 }
 

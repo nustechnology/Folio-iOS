@@ -4,7 +4,8 @@ struct NoteListView: View {
     @ObservedObject var viewModel: NoteListViewModel
     let workspaceTitle: String
     let onBackToSpaces: () -> Void
-    let onSourceOpened: (Source) -> Void
+    let onSourceOpened: (String) -> Void
+    @State private var pendingSourceID: String?
 
     static func showsFullError(errorMessage: String?, notes: [NoteSummary]) -> Bool {
         errorMessage != nil && notes.isEmpty
@@ -29,6 +30,7 @@ struct NoteListView: View {
         .task { viewModel.handle(.onAppear) }
         .sheet(item: sheetBinding, onDismiss: {
             viewModel.handle(.sheetDismissed)
+            openPendingSource()
         }) { sheet in
             sheetContent(sheet)
                 .folioToast(message: toastBinding)
@@ -263,7 +265,11 @@ struct NoteListView: View {
             NoteDetailView(
                 note: note,
                 onEdit: { viewModel.handle(.editStarted(note)) },
-                onConvert: { viewModel.handle(.convertTapped(note.summary)) }
+                onConvert: { viewModel.handle(.convertTapped(note.summary)) },
+                onOpenSource: { sourceID in
+                    pendingSourceID = sourceID
+                    viewModel.handle(.dismissSheet)
+                }
             )
         case .edit(let note):
             NoteEditView(note: note, viewModel: viewModel)
@@ -281,7 +287,7 @@ struct NoteListView: View {
                     onDismiss: { viewModel.handle(.dismissSheet) },
                     onDeleted: { _ in viewModel.handle(.processingSourceDeleted) },
                     onStatusChanged: { _ in viewModel.handle(.processingSourceStatusChanged) },
-                    onSourceOpened: onSourceOpened
+                    onSourceOpened: { source in onSourceOpened(source.id) }
                 )
             }
         case .sortOptions:
@@ -292,6 +298,12 @@ struct NoteListView: View {
                 onSelect: { viewModel.handle(.sortSelected($0)) }
             )
         }
+    }
+
+    private func openPendingSource() {
+        guard let sourceID = pendingSourceID else { return }
+        pendingSourceID = nil
+        onSourceOpened(sourceID)
     }
 }
 

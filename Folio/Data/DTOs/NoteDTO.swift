@@ -51,16 +51,80 @@ struct NoteDTO: Decodable {
   let researchSpaceId: String
   let title: String
   let originType: String
+  let originConversationId: String?
+  let originMessageId: String?
   let content: String
   let createdAt: Date
   let updatedAt: Date
   let citationCount: Int?
+  let citations: [NoteCitationDTO]?
+
+  init(
+    id: String,
+    researchSpaceId: String,
+    title: String,
+    originType: String,
+    originConversationId: String? = nil,
+    originMessageId: String? = nil,
+    content: String,
+    createdAt: Date,
+    updatedAt: Date,
+    citationCount: Int?,
+    citations: [NoteCitationDTO]? = nil
+  ) {
+    self.id = id
+    self.researchSpaceId = researchSpaceId
+    self.title = title
+    self.originType = originType
+    self.originConversationId = originConversationId
+    self.originMessageId = originMessageId
+    self.content = content
+    self.createdAt = createdAt
+    self.updatedAt = updatedAt
+    self.citationCount = citationCount
+    self.citations = citations
+  }
+
   func toDomain() -> Note {
     Note(
       id: id, researchSpaceId: researchSpaceId, title: title,
       originType: NoteOriginType(rawValue: originType) ?? .userCreated, content: content,
-      createdAt: createdAt, updatedAt: updatedAt, citationCount: citationCount)
+      createdAt: createdAt, updatedAt: updatedAt, citationCount: citationCount,
+      originConversationId: originConversationId, originMessageId: originMessageId,
+      citations: citations?.map { $0.toDomain() } ?? [])
   }
+}
+
+struct NoteCitationDTO: Decodable {
+  let id: String
+  let sourceId: String
+  let sourceTitle: String
+  let sourceType: String
+  let sourceAuthor: String?
+  let passageId: String?
+  let snippet: String?
+  let locationLabel: String?
+  let pageReference: String?
+  let sectionReference: String?
+
+  func toDomain() -> NoteCitation {
+    NoteCitation(
+      id: id,
+      sourceId: sourceId,
+      sourceTitle: sourceTitle,
+      sourceType: sourceType,
+      sourceAuthor: sourceAuthor,
+      passageId: passageId,
+      snippet: snippet,
+      locationLabel: locationLabel,
+      pageReference: pageReference,
+      sectionReference: sectionReference
+    )
+  }
+}
+struct CreateNoteRequestDTO: Encodable {
+  let title: String
+  let content: String
 }
 struct UpdateNoteRequestDTO: Encodable {
   let title: String

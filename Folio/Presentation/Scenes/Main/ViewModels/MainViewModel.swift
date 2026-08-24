@@ -8,7 +8,7 @@ final class MainViewModel: ViewModelProtocol {
         var selectedTab: FolioTab = .sources
         var sourcesMode: FolioSourcesMode = .spaces
         var selectedFilter: FolioSourceFilter = .all
-        var activeReader: Source?
+        var activeReaderID: String?
         var activeAskScope: Source?
         var sourceFilters: [FolioSourceFilter] = []
         var sources: [FolioSource] = []
@@ -33,6 +33,7 @@ final class MainViewModel: ViewModelProtocol {
         case closeReader
         case dismissToast
         case addNewSource(source: Source, workspaceID: String?)
+        case openSource(id: String, workspaceID: String)
         case sourceDeleted(source: Source)
         case openAskForSource(source: Source, kind: FolioSourceKind)
     }
@@ -147,7 +148,7 @@ final class MainViewModel: ViewModelProtocol {
             state.isAuthenticated = true
             state.selectedTab = .sources
             state.sourcesMode = .spaces
-            state.activeReader = nil
+            state.activeReaderID = nil
 #endif
         case .signOut:
             guard signOutTask == nil else { return }
@@ -175,12 +176,12 @@ final class MainViewModel: ViewModelProtocol {
                 state.userEmail = nil
                 state.selectedTab = .sources
                 state.sourcesMode = .spaces
-                state.activeReader = nil
+                state.activeReaderID = nil
                 signOutTask = nil
             }
         case .selectTab(let tab):
             state.selectedTab = tab
-            state.activeReader = nil
+            state.activeReaderID = nil
             if tab != .ask {
                 state.activeAskScope = nil
             }
@@ -188,22 +189,22 @@ final class MainViewModel: ViewModelProtocol {
         case .showSpaces:
             state.selectedTab = .sources
             state.sourcesMode = .spaces
-            state.activeReader = nil
+            state.activeReaderID = nil
             state.activeAskScope = nil
         case .showLibrary:
             state.selectedTab = .sources
             state.sourcesMode = .library
-            state.activeReader = nil
+            state.activeReaderID = nil
             state.activeAskScope = nil
         case .selectFilter(let filter):
             state.selectedFilter = filter
         case .openReader(let source):
-            state.activeReader = source
+            state.activeReaderID = source.id
             state.activeAskScope = nil
             state.selectedTab = .sources
             state.sourcesMode = .library
         case .closeReader:
-            state.activeReader = nil
+            state.activeReaderID = nil
         case .dismissToast:
             toastMessage = nil
         case .addNewSource(let source, let workspaceID):
@@ -213,11 +214,13 @@ final class MainViewModel: ViewModelProtocol {
             } else {
                 state.sources.append(folioSource)
             }
-            state.activeReader = source
+            state.activeReaderID = source.id
             state.activeAskScope = nil
+        case .openSource(let id, _):
+            state.activeReaderID = id
         case .sourceDeleted(let source):
             state.sources.removeAll { $0.id == source.id }
-            state.activeReader = nil
+            state.activeReaderID = nil
             state.activeAskScope = nil
             toastMessage = .success(String(localized: "Source deleted"))
         case .openAskForSource(let source, _):
@@ -228,7 +231,7 @@ final class MainViewModel: ViewModelProtocol {
                 state.sources.append(FolioSource(from: source, workspaceID: nil))
             }
             state.selectedTab = .ask
-            state.activeReader = nil
+            state.activeReaderID = nil
             state.activeAskScope = source
             state.sourcesMode = .spaces
         }
@@ -278,7 +281,7 @@ final class MainViewModel: ViewModelProtocol {
         state.userEmail = nil
         state.selectedTab = .sources
         state.sourcesMode = .spaces
-        state.activeReader = nil
+        state.activeReaderID = nil
         startProfileFetch()
     }
 
