@@ -9,16 +9,24 @@ struct RichTextToolbar: View {
     struct ActiveFormats {
         let isBold: Bool
         let isItalic: Bool
+        let isHeading1: Bool
+        let isHeading2: Bool
+        let isHeading3: Bool
         let isUnorderedList: Bool
         let isOrderedList: Bool
         let hasLink: Bool
+        let isBlockquote: Bool
 
         static let inactive = ActiveFormats(
             isBold: false,
             isItalic: false,
+            isHeading1: false,
+            isHeading2: false,
+            isHeading3: false,
             isUnorderedList: false,
             isOrderedList: false,
-            hasLink: false
+            hasLink: false,
+            isBlockquote: false
         )
     }
 
@@ -114,11 +122,11 @@ struct RichTextToolbar: View {
                         if configuration == .notebook {
                             toolbarDivider
 
-                            FormatButton(glyph: "H1", accessibilityText: String(localized: "Heading 1"), action: onHeading1)
+                            FormatButton(glyph: "H1", accessibilityText: String(localized: "Heading 1"), isActive: activeFormats.isHeading1, action: onHeading1)
 
-                            FormatButton(glyph: "H2", accessibilityText: String(localized: "Heading 2"), action: onHeading2)
+                            FormatButton(glyph: "H2", accessibilityText: String(localized: "Heading 2"), isActive: activeFormats.isHeading2, action: onHeading2)
 
-                            FormatButton(glyph: "H3", accessibilityText: String(localized: "Heading 3"), action: onHeading3)
+                            FormatButton(glyph: "H3", accessibilityText: String(localized: "Heading 3"), isActive: activeFormats.isHeading3, action: onHeading3)
 
                             toolbarDivider
                         }
@@ -128,9 +136,9 @@ struct RichTextToolbar: View {
                         FormatButton(systemImage: "list.number", accessibilityText: String(localized: "Ordered list"), isActive: activeFormats.isOrderedList, action: onOrderedList)
 
                         if configuration == .notes {
-                            FormatButton(glyph: "\u{1F517}", accessibilityText: String(localized: "Hyperlink"), isActive: activeFormats.hasLink, action: onHyperlink)
+                            FormatButton(systemImage: "link", accessibilityText: String(localized: "Hyperlink"), isActive: activeFormats.hasLink, action: onHyperlink)
                         } else {
-                            FormatButton(glyph: "\u{201C}", accessibilityText: String(localized: "Blockquote"), action: onBlockquote)
+                            FormatButton(glyph: "\u{201C}", accessibilityText: String(localized: "Blockquote"), isActive: activeFormats.isBlockquote, action: onBlockquote)
                         }
                     }
                     .padding(.horizontal, 8)

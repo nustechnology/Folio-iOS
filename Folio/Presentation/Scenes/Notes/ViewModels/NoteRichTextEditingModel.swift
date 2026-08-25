@@ -13,7 +13,7 @@ final class NoteRichTextEditingModel: ObservableObject {
     @Published var linkError: String?
 
     private let publishingHTML: (String) -> Void
-    private let formattingController = NotebookFormattingController()
+    private let formattingController = RichTextFormattingController()
 
     init(attributedText: NSAttributedString, publishingHTML: @escaping (String) -> Void) {
         self.attributedText = attributedText
@@ -29,14 +29,17 @@ final class NoteRichTextEditingModel: ObservableObject {
         return RichTextToolbar.ActiveFormats(
             isBold: state.isBold,
             isItalic: state.isItalic,
+            isHeading1: false,
+            isHeading2: false,
+            isHeading3: false,
             isUnorderedList: state.isUnorderedList,
             isOrderedList: state.isOrderedList,
-            hasLink: state.hasLink
+            hasLink: state.hasLink,
+            isBlockquote: state.isBlockquote
         )
     }
 
     func textChanged(_ value: NSAttributedString) {
-        guard value != attributedText else { return }
         attributedText = value
         publishContent(value)
     }
@@ -68,6 +71,8 @@ final class NoteRichTextEditingModel: ObservableObject {
     func applyBlockquote() {
         guard let result = formattingController.applyBlockquote(in: attributedText, selectedRange: selectedRange) else { return }
         commitFormatting(result.attributedText)
+        if let range = result.selectedRange { selectedRange = range }
+        if let typingAttributes = result.typingAttributes { self.typingAttributes = typingAttributes }
     }
 
     func presentLinkPrompt() -> Bool {

@@ -60,6 +60,7 @@ struct MainView: View {
             createSavedAnswerNoteUseCase: createSavedAnswerNoteUseCase
         ))
     }
+    @StateObject private var keyboardVisibility = KeyboardVisibilityObserver()
 
     var body: some View {
         ZStack {
@@ -135,11 +136,13 @@ struct MainView: View {
     }
 
     private var appShellWithTab: some View {
-        appShell
+        let showTabBar = viewModel.state.activeReaderID == nil
+            && !(viewModel.state.selectedTab == .sources && selectedWorkspace == nil)
+        let isKeyboardVisible = keyboardVisibility.isVisible
+
+        return appShell
             .safeAreaInset(edge: .bottom) {
-                let isMySpaces = viewModel.state.selectedTab == .sources
-                    && selectedWorkspace == nil
-                if viewModel.state.activeReaderID == nil && !isMySpaces {
+                if Self.shouldShowBottomTabBar(showTabBar: showTabBar, isKeyboardVisible: isKeyboardVisible) {
                     FolioBottomTabBar(selectedTab: viewModel.state.selectedTab) { tab in
                         viewModel.handle(.selectTab(tab))
                     }
@@ -147,7 +150,27 @@ struct MainView: View {
                     .padding(.bottom, 8)
                 }
             }
-            .ignoresSafeArea(.keyboard, edges: .bottom)
+            .modifier(KeyboardSafeAreaModifier(isEnabled: Self.shouldIgnoreKeyboardSafeArea(
+                showTabBar: showTabBar,
+                selectedTab: viewModel.state.selectedTab,
+                isKeyboardVisible: isKeyboardVisible
+            )))
+    }
+
+    static func shouldShowNotebookChrome(selectedTab: FolioTab, isKeyboardVisible: Bool) -> Bool {
+        selectedTab == .notebook && !isKeyboardVisible
+    }
+
+    static func shouldIgnoreKeyboardSafeArea(
+        showTabBar: Bool,
+        selectedTab: FolioTab,
+        isKeyboardVisible: Bool
+    ) -> Bool {
+        showTabBar && selectedTab != .notebook && !isKeyboardVisible
+    }
+
+    static func shouldShowBottomTabBar(showTabBar: Bool, isKeyboardVisible: Bool) -> Bool {
+        showTabBar && !isKeyboardVisible
     }
 
     @ViewBuilder
@@ -291,7 +314,8 @@ struct MainView: View {
                         },
                         onSourceOpened: { sourceID in
                             viewModel.handle(.openSource(id: sourceID, workspaceID: workspace.id))
-                        }
+                        },
+                        isKeyboardVisible: keyboardVisibility.isVisible
                     )
                 } else {
                     FolioPlaceholderView(

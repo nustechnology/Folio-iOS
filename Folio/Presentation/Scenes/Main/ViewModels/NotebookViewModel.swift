@@ -20,19 +20,45 @@ final class NotebookViewModel: ViewModelProtocol {
     @Published var toastMessage: ToastMessage?
 
     @Published var attributedText: NSAttributedString = NSAttributedString(string: "")
-    var selectedRange: NSRange = NSRange(location: 0, length: 0)
+    @Published var selectedRange: NSRange = NSRange(location: 0, length: 0)
+    @Published var typingAttributes: [NSAttributedString.Key: Any] = [:]
     @Published private(set) var canUndo: Bool = false
     @Published private(set) var canRedo: Bool = false
-    private var undoStack: [NSAttributedString] = []
-    private var redoStack: [NSAttributedString] = []
+    private struct EditorSnapshot {
+        let attributedText: NSAttributedString
+        let selectedRange: NSRange
+        let typingAttributes: [NSAttributedString.Key: Any]
+    }
+
+    private var undoStack: [EditorSnapshot] = []
+    private var redoStack: [EditorSnapshot] = []
     private var isTypingSession = false
     private let maximumUndoSteps = 100
     var spaceId: String = ""
     var spaceName: String = ""
 
+    var toolbarActiveFormats: RichTextToolbar.ActiveFormats {
+        let formats = formattingController.activeFormats(
+            in: attributedText,
+            selectedRange: selectedRange,
+            typingAttributes: typingAttributes
+        )
+        return RichTextToolbar.ActiveFormats(
+            isBold: formats.isBold,
+            isItalic: formats.isItalic,
+            isHeading1: formats.isHeading1,
+            isHeading2: formats.isHeading2,
+            isHeading3: formats.isHeading3,
+            isUnorderedList: formats.isUnorderedList,
+            isOrderedList: formats.isOrderedList,
+            hasLink: formats.hasLink,
+            isBlockquote: formats.isBlockquote
+        )
+    }
+
     private let fetchNotebookUseCase: any FetchNotebookUseCaseProtocol
     private let saveNotebookUseCase: any SaveNotebookUseCaseProtocol
-    private let formattingController = NotebookFormattingController()
+    private let formattingController = RichTextFormattingController()
     private var saveTask: Task<Void, Never>?
     private var loadTask: Task<Void, Never>?
     private var typingSessionTask: Task<Void, Never>?
@@ -147,6 +173,8 @@ final class NotebookViewModel: ViewModelProtocol {
                     attributedText = NSAttributedString(string: "")
                     state.plainText = ""
                 }
+                selectedRange = NSRange(location: attributedText.length, length: 0)
+                typingAttributes = [:]
                 if result.preservedOfflineDraft {
                     toastMessage = .info(String(localized: "This notebook changed elsewhere — your offline draft was preserved"))
                 }
@@ -164,7 +192,7 @@ final class NotebookViewModel: ViewModelProtocol {
         guard !state.loadFailed else { return }
 
         if !isTypingSession {
-            undoStack.append(attributedText)
+            undoStack.append(currentSnapshot())
             trimUndoStack()
             redoStack.removeAll()
             isTypingSession = true
@@ -243,13 +271,24 @@ final class NotebookViewModel: ViewModelProtocol {
     }
 
     private func toggleTrait(_ trait: UIFontDescriptor.SymbolicTraits) {
-        guard let result = formattingController.toggleTrait(trait, in: attributedText, selectedRange: selectedRange) else { return }
+        guard let result = formattingController.toggleTrait(
+            trait,
+            in: attributedText,
+            selectedRange: selectedRange,
+            currentTypingAttributes: typingAttributes,
+            appliesToTypingAttributes: true
+        ) else { return }
         beginUndoableChange()
         applyFormatted(result)
     }
 
     private func applyHeading(fontSize: CGFloat) {
-        guard let result = formattingController.applyHeading(fontSize: fontSize, in: attributedText, selectedRange: selectedRange) else { return }
+        guard let result = formattingController.applyHeading(
+            fontSize: fontSize,
+            in: attributedText,
+            selectedRange: selectedRange,
+            currentTypingAttributes: typingAttributes
+        ) else { return }
         beginUndoableChange()
         applyFormatted(result)
     }
@@ -266,18 +305,24 @@ final class NotebookViewModel: ViewModelProtocol {
         applyFormatted(result)
     }
 
-    private func applyFormatted(_ result: NotebookFormattingController.Result) {
+    private func applyFormatted(_ result: RichTextFormattingController.Result) {
+        let previousAttributedText = attributedText
         attributedText = result.attributedText
         if let range = result.selectedRange {
             selectedRange = range
         }
+        if let typingAttributes = result.typingAttributes {
+            self.typingAttributes = typingAttributes
+        }
         state.plainText = result.attributedText.string
-        scheduleSave(result.attributedText)
+        if result.attributedText != previousAttributedText {
+            scheduleSave(result.attributedText)
+        }
     }
 
     private func beginUndoableChange() {
         typingSessionTask?.cancel()
-        undoStack.append(attributedText)
+        undoStack.append(currentSnapshot())
         trimUndoStack()
         redoStack.removeAll()
         isTypingSession = false
@@ -288,22 +333,35 @@ final class NotebookViewModel: ViewModelProtocol {
         typingSessionTask?.cancel()
         isTypingSession = false
         guard let previous = undoStack.popLast() else { return }
-        redoStack.append(attributedText)
-        applyText(previous)
+        redoStack.append(currentSnapshot())
+        applySnapshot(previous)
     }
 
     private func redo() {
         typingSessionTask?.cancel()
         isTypingSession = false
         guard let next = redoStack.popLast() else { return }
-        undoStack.append(attributedText)
-        applyText(next)
+        undoStack.append(currentSnapshot())
+        applySnapshot(next)
     }
 
-    private func applyText(_ text: NSAttributedString) {
-        attributedText = text
-        state.plainText = text.string
-        scheduleSave(text)
+    private func currentSnapshot() -> EditorSnapshot {
+        EditorSnapshot(
+            attributedText: attributedText,
+            selectedRange: selectedRange,
+            typingAttributes: typingAttributes
+        )
+    }
+
+    private func applySnapshot(_ snapshot: EditorSnapshot) {
+        let textChanged = snapshot.attributedText != attributedText
+        attributedText = snapshot.attributedText
+        selectedRange = snapshot.selectedRange
+        typingAttributes = snapshot.typingAttributes
+        state.plainText = snapshot.attributedText.string
+        if textChanged {
+            scheduleSave(snapshot.attributedText)
+        }
         refreshUndoState()
     }
 
