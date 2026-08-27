@@ -214,6 +214,11 @@ private final class CreateOnlyNoteRepository: NoteRepositoryProtocol {
     func fetchNote(spaceId: String, noteId: String) async throws -> Note { fatalError("Unused") }
     func updateNote(spaceId: String, noteId: String, title: String, content: String) async throws -> Note { fatalError("Unused") }
     func deleteNote(spaceId: String, noteId: String) async throws { fatalError("Unused") }
+    func createSavedAnswerNote(
+        spaceId: String, title: String, content: String, project: String?,
+        originConversationId: String?, originMessageId: String?,
+        citationCount: Int?, citations: [SavedAnswerCitationDTO]?
+    ) async throws -> Note { fatalError("Unused") }
     func convertNoteToSource(spaceId: String, noteId: String, title: String) async throws -> Source {
         receivedSpaceId = spaceId
         receivedNoteId = noteId

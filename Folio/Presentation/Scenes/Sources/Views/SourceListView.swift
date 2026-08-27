@@ -8,6 +8,7 @@ struct SourceListView: View {
     let onOpenAccountSettings: () -> Void
     let userInitial: String
     let onSourceOpened: (Source) -> Void
+    let onAskSource: (Source) -> Void
 
     init(
         viewModel: SourceListViewModel,
@@ -15,7 +16,8 @@ struct SourceListView: View {
         onBackToSpaces: @escaping () -> Void,
         onOpenAccountSettings: @escaping () -> Void,
         userInitial: String,
-        onSourceOpened: @escaping (Source) -> Void
+        onSourceOpened: @escaping (Source) -> Void,
+        onAskSource: @escaping (Source) -> Void
     ) {
         _viewModel = StateObject(wrappedValue: viewModel)
         self.workspaceTitle = workspaceTitle
@@ -23,6 +25,7 @@ struct SourceListView: View {
         self.onOpenAccountSettings = onOpenAccountSettings
         self.userInitial = userInitial
         self.onSourceOpened = onSourceOpened
+        self.onAskSource = onAskSource
     }
 
     var body: some View {
@@ -77,7 +80,11 @@ struct SourceListView: View {
                     viewModel.send(.sourceUploaded)
                     onSourceOpened(source)
                 },
-                onAskSource: { _ in
+                onAskSource: { source in
+                    viewModel.send(.sourceUploaded)
+                    onAskSource(source)
+                },
+                onSourceAdded: { _ in
                     viewModel.send(.sourceUploaded)
                 }
             )
@@ -96,7 +103,8 @@ struct SourceListView: View {
                 onStatusChanged: { updatedSource in
                     viewModel.send(.sourceStatusChanged(updatedSource))
                 },
-                onSourceOpened: onSourceOpened
+                onSourceOpened: onSourceOpened,
+                onAskSource: onAskSource
             )
         case .failure(let source):
             SourceProcessingSheet(
@@ -111,7 +119,8 @@ struct SourceListView: View {
                 onStatusChanged: { updatedSource in
                     viewModel.send(.sourceStatusChanged(updatedSource))
                 },
-                onSourceOpened: onSourceOpened
+                onSourceOpened: onSourceOpened,
+                onAskSource: onAskSource
             )
         case .sortOptions:
             SortOptionsSheet(

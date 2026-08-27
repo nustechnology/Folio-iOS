@@ -39,7 +39,15 @@ struct FolioApp: App {
             deleteNoteUseCase: diContainer.deleteNoteUseCase,
             createNoteUseCase: diContainer.createNoteUseCase,
             convertNoteToSourceUseCase: diContainer.convertNoteToSourceUseCase,
-            uploadSourceUseCase: diContainer.uploadSourceUseCase)
+            uploadSourceUseCase: diContainer.uploadSourceUseCase,
+            fetchAskSuggestionsUseCase: diContainer.fetchAskSuggestionsUseCase,
+            streamAskAnswerUseCase: diContainer.streamAskAnswerUseCase,
+            fetchAskConversationsUseCase: diContainer.fetchAskConversationsUseCase,
+            fetchAskConversationDetailUseCase: diContainer.fetchAskConversationDetailUseCase,
+            sendFeedbackUseCase: diContainer.sendFeedbackUseCase,
+            createSavedAnswerNoteUseCase: diContainer.createSavedAnswerNoteUseCase,
+            deleteConversationUseCase: diContainer.deleteConversationUseCase,
+            renameConversationUseCase: diContainer.renameConversationUseCase)
         }
     }
 

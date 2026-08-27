@@ -18,6 +18,23 @@ final class NoteRepository: NoteRepositoryProtocol {
       CreateNoteEndpoint(spaceId: spaceId, title: title, content: content))
     return response.data.note.toDomain()
   }
+  func createSavedAnswerNote(
+    spaceId: String, title: String, content: String, project: String?,
+    originConversationId: String?, originMessageId: String?,
+    citationCount: Int?, citations: [SavedAnswerCitationDTO]?
+  ) async throws -> Note {
+    let origin: NoteOriginDTO?
+    if let cid = originConversationId, let mid = originMessageId {
+      origin = NoteOriginDTO(conversationId: cid, messageId: mid)
+    } else {
+      origin = nil
+    }
+    let request = CreateNoteRequestDTO(
+      title: title, content: content, project: project, origin: origin)
+    let response: NoteResponseDTO = try await networkService.request(
+      CreateNoteEndpoint(spaceId: spaceId, request: request))
+    return response.data.note.toDomain()
+  }
   func convertNoteToSource(spaceId: String, noteId: String, title: String) async throws -> Source {
     do {
       let response: SourceResponseDTO = try await networkService.request(

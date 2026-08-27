@@ -5,6 +5,7 @@ xcuserdata/
 # Build output
 DerivedData/
 .build/
+build/
 
 # macOS metadata
 .DS_Store

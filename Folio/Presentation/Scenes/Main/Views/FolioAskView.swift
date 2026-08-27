@@ -1,133 +1,286 @@
+import Combine
 import SwiftUI
 
-struct FolioAskView: View {
-    let onBackToSpaces: () -> Void
-    var scopedSource: Source? = nil
+// MARK: - View
 
-    @State private var prompt = ""
-    @State private var isLoading = false
-    @State private var resultText: String?
-    @State private var errorText: String?
+struct FolioAskView: View {
+    let sources: [FolioSource]
+    let spaceId: String?
+    let workspaceTitle: String?
+    let onBackToSpaces: () -> Void
+    let onOpenSource: (FolioSource) -> Void
+    let onSourceAdded: ((Source) -> Void)?
+    let uploadSourceUseCase: (any UploadSourceUseCaseProtocol)?
+    let userDisplayName: String?
+    let userEmail: String?
+
+    /// Owned by the caller (MainView) so the conversation survives tab switches —
+    /// this view is re-created every time `MainView.appShell`'s tab switch statement
+    /// re-selects the Ask branch, which would otherwise reset a locally-owned
+    /// @StateObject and clear askMessages, unlike HomeViewModel's single long-lived
+    /// state on Android.
+    @ObservedObject private var viewModel: FolioAskViewModel
+    @State private var query = ""
+    @State private var showScopeSheet = false
+    @State private var showConversationSheet = false
+    @State private var showAddSourceSheet = false
+
+    init(
+        viewModel: FolioAskViewModel,
+        sources: [FolioSource],
+        spaceId: String? = nil,
+        workspaceTitle: String? = nil,
+        onBackToSpaces: @escaping () -> Void,
+        onOpenSource: @escaping (FolioSource) -> Void,
+        onSourceAdded: ((Source) -> Void)? = nil,
+        uploadSourceUseCase: (any UploadSourceUseCaseProtocol)? = nil,
+        userDisplayName: String? = nil,
+        userEmail: String? = nil
+    ) {
+        self.viewModel = viewModel
+        self.sources = sources
+        self.spaceId = spaceId
+        self.workspaceTitle = workspaceTitle
+        self.onBackToSpaces = onBackToSpaces
+        self.onOpenSource = onOpenSource
+        self.onSourceAdded = onSourceAdded
+        self.uploadSourceUseCase = uploadSourceUseCase
+        self.userDisplayName = userDisplayName
+        self.userEmail = userEmail
+    }
+
+    private var userAvatarLabel: String {
+        let label = initialsFromDisplayName(userDisplayName, emailFallback: userEmail)
+        return label.isEmpty ? String(localized: "You") : label
+    }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                FolioContentHeader(
-                    title: String(localized: "Ask"),
-                    subtitle: String(localized: "Private research assistant"),
-                    onBackToSpaces: onBackToSpaces,
-                    onPlusTapped: nil,
-                    searchText: .constant("")
+        let conversationTitle = viewModel.activeConversationTitle
+        let headerTitle = conversationTitle?.isEmpty == false ? conversationTitle! : String(localized: "Ask")
+        let headerSubtitle = conversationTitle?.isEmpty == false ? "" : (workspaceTitle?.isEmpty == false ? workspaceTitle! : String(localized: "Private research assistant"))
+
+        VStack(spacing: 0) {
+            FolioContentHeader(
+                title: headerTitle,
+                subtitle: headerSubtitle,
+                onBackToSpaces: onBackToSpaces,
+                onPlusTapped: { showConversationSheet = true },
+                searchText: .constant("")
+            )
+
+            content
+        }
+        .background(Color.folioCanvas)
+        .folioToast(message: $viewModel.toastMessage)
+        .onAppear { viewModel.updateSources(sources, spaceId: spaceId) }
+        .onChange(of: sources) { _, newSources in viewModel.updateSources(newSources, spaceId: spaceId) }
+        .onChange(of: spaceId) { _, newSpaceId in viewModel.updateSources(sources, spaceId: newSpaceId) }
+        .sheet(isPresented: $showConversationSheet) {
+            ConversationMenuSheet(
+                onNewConversation: {
+                    viewModel.handle(.newConversation)
+                    query = ""
+                    showConversationSheet = false
+                }
+            )
+        }
+        .sheet(isPresented: $showAddSourceSheet) {
+            if let uploadUseCase = uploadSourceUseCase, let spaceId {
+                FolioAddSourceSheet(
+                    uploadUseCase: uploadUseCase,
+                    spaceId: spaceId,
+                    onSourceOpened: { source in onSourceAdded?(source) },
+                    onSourceAdded: { source in onSourceAdded?(source) }
                 )
-
-                if let scopedSource {
-                    scopeBanner(source: scopedSource)
-                }
-
-                VStack(alignment: .leading, spacing: 14) {
-                    Text(String(localized: "Ask across your sources with grounded citations and traceable evidence."))
-                        .font(.system(size: 22, weight: .regular, design: .serif))
-                        .foregroundStyle(Color.folioInk)
-
-                    TextEditor(text: $prompt)
-                        .font(.system(size: 14, weight: .regular))
-                        .scrollContentBackground(.hidden)
-                        .frame(minHeight: 120)
-                        .padding(12)
-                        .background(Color.folioSurfaceStrong)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(Color.folioLine, lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-                    FolioPrimaryButton(title: isLoading ? "Asking…" : "Ask Folio", action: submitAsk)
-                        .disabled(prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
-
-                    if let errorText {
-                        Text(errorText)
-                            .font(.system(size: 12, weight: .regular))
-                            .foregroundStyle(Color.folioGold)
-                    }
-
-                    if let resultText {
-                        FolioCard(
-                            content: Text(resultText)
-                                .font(.system(size: 14, weight: .regular))
-                                .foregroundStyle(Color.folioInk)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        )
-                    }
-                }
-                .padding(.horizontal, 18)
-
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(String(localized: "Quick prompts"))
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Color.folioInkSoft)
-                        .textCase(.uppercase)
-
-                    VStack(spacing: 10) {
-                        promptCard("What does Turing argue about machine thinking?")
-                        promptCard("Compare the surveillance risks in these sources.")
-                        promptCard("Extract the strongest citation for my summary.")
-                    }
-                }
-                .padding(.horizontal, 18)
-                .padding(.bottom, 26)
             }
         }
+        .sheet(isPresented: $showScopeSheet) {
+            AnswerScopeSheet(
+                selectedScope: viewModel.state.scope,
+                selectedSourceID: viewModel.state.selectedSourceID,
+                sources: sources,
+                readySourceCount: viewModel.readySourceCount,
+                onSelect: { sourceID in
+                    viewModel.handle(.scopeOptionSelected(sourceID: sourceID))
+                    showScopeSheet = false
+                }
+            )
+        }
+        .sheet(item: Binding(
+            get: { viewModel.previewCitation },
+            set: { viewModel.previewCitation = $0 }
+        )) { citation in
+            CitationPreviewSheet(
+                citation: citation,
+                onOpenInSource: {
+                    if let source = viewModel.openCitationInSource() {
+                        onOpenSource(source)
+                    }
+                }
+            )
+        }
+        .sheet(item: Binding(
+            get: { viewModel.saveDraft },
+            set: { viewModel.saveDraft = $0 }
+        )) { draft in
+            SaveAskNoteSheet(
+                draft: draft,
+                onCancel: { viewModel.handle(.saveAsNoteDismissed) },
+                onSubmit: { title in viewModel.handle(.saveAsNoteConfirmed(title)) }
+            )
+        }
     }
 
-    private func scopeBanner(source: Source) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: "lock.fill")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Color.folioOliveDark)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(String(localized: "Scoping to this source"))
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.folioInkMuted)
-                Text(source.title)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Color.folioInk)
-                    .lineLimit(1)
+    @ViewBuilder
+    private var content: some View {
+        let hasEvidence = viewModel.hasEvidence
+        let isStreaming = viewModel.isStreaming
+        let showEmptyState = viewModel.state.messages.isEmpty && hasEvidence
+
+        VStack(spacing: 0) {
+            if !hasEvidence {
+                AskNoEvidenceBanner(onAddSource: { showAddSourceSheet = true })
+                    .padding(.top, 16)
+                    .padding(.horizontal, 20)
             }
-            Spacer(minLength: 0)
+
+            if viewModel.state.isLoadingConversation {
+                Spacer()
+                ProgressView()
+                Spacer()
+            } else if let error = viewModel.state.conversationLoadError {
+                Spacer()
+                ErrorView(message: error) {
+                    viewModel.handle(.retryConversationLoad)
+                }
+                Spacer()
+            } else if showEmptyState {
+                ScrollView {
+                    AskEmptyStateHeader()
+                        .padding(.top, 28)
+                    VStack(spacing: 12) {
+                        if viewModel.state.isSuggestionsLoading {
+                            ForEach(0..<3, id: \.self) { _ in
+                                AskSuggestionCardSkeleton()
+                            }
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(String(localized: "Loading suggestions"))
+                        } else {
+                            ForEach(viewModel.displaySuggestions, id: \.self) { suggestion in
+                                AskSuggestionCard(text: suggestion, enabled: !isStreaming) {
+                                    submit(suggestion)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 28)
+                }
+            } else if !viewModel.state.messages.isEmpty {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 12) {
+                            ForEach(viewModel.state.messages) { message in
+                                AskMessageBubble(
+                                    message: message,
+                                    userAvatarLabel: userAvatarLabel,
+                                    isSavingNote: viewModel.state.savingMessageID == message.id,
+                                    onCitationTap: { citation in viewModel.handle(.citationTap(citation)) },
+                                    onStop: { viewModel.handle(.stop) },
+                                    onSaveAsNote: { viewModel.handle(.saveAsNoteRequested(message.id)) },
+                                    onFeedback: { useful in viewModel.handle(.feedback(message.id, useful: useful)) }
+                                )
+                                .id(message.id)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
+                        .padding(.bottom, 4)
+                    }
+                    .onChange(of: viewModel.state.messages.count) { _, count in
+                        guard count > 0, let lastID = viewModel.state.messages.last?.id else { return }
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            proxy.scrollTo(lastID, anchor: .bottom)
+                        }
+                    }
+                }
+            } else {
+                Spacer()
+            }
+
+            AskInputPanel(
+                query: $query,
+                hasEvidence: hasEvidence,
+                isStreaming: isStreaming,
+                scopeChipLabel: viewModel.scopeChipLabel,
+                onScopeTap: { showScopeSheet = true },
+                onSubmit: { submit(query) }
+            )
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 35)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(Color.folioGold.opacity(0.18))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.folioGold.opacity(0.55), lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .padding(.horizontal, 18)
+        .id(viewModel.state.conversationEpoch)
     }
 
-    private func promptCard(_ text: String) -> some View {
-        FolioCard(
-            content: Text(text)
-                .font(.system(size: 14, weight: .regular))
-                .foregroundStyle(Color.folioInk)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        )
-    }
-
-    private func submitAsk() {
-        guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        isLoading = true
-        errorText = nil
-        resultText = nil
-        Task {
-            try? await Task.sleep(nanoseconds: FolioDuration.askMockDelay)
-            isLoading = false
-            resultText = "Based on your sources, Turing argues that the question \"Can machines think?\" is too ambiguous. He reframes it as an imitation game where a machine's ability to mimic human responses is the practical test of intelligence."
-        }
+    private func submit(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        viewModel.handle(.submit(trimmed))
+        query = ""
     }
 }
 
 #Preview {
-    FolioAskView(onBackToSpaces: {})
+    FolioAskView(
+        viewModel: FolioAskViewModel(
+            fetchAskSuggestionsUseCase: PreviewFetchAskSuggestionsUseCase(),
+            streamAskAnswerUseCase: PreviewStreamAskAnswerUseCase(),
+            fetchAskConversationDetailUseCase: PreviewFetchAskConversationDetailUseCase(),
+            sendFeedbackUseCase: PreviewSendFeedbackUseCase(),
+            createSavedAnswerNoteUseCase: PreviewCreateSavedAnswerNoteUseCase()
+        ),
+        sources: FolioDesignFixtures.sources,
+        onBackToSpaces: {},
+        onOpenSource: { _ in },
+        userDisplayName: "Ada Lovelace",
+        userEmail: "ada@folio.app"
+    )
+}
+
+private struct PreviewFetchAskSuggestionsUseCase: FetchAskSuggestionsUseCaseProtocol {
+    func execute(spaceId: String, scope: String, sourceId: String?) async throws -> AskSuggestionsResult {
+        AskSuggestionsResult(suggestions: [], isDynamic: false)
+    }
+}
+
+private struct PreviewStreamAskAnswerUseCase: StreamAskAnswerUseCaseProtocol {
+    func execute(
+        spaceId: String, question: String, scope: AskAnswerScope, sourceId: String?, conversationId: String?
+    ) -> AsyncThrowingStream<AskAnswerStreamEvent, Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+}
+
+private struct PreviewFetchAskConversationDetailUseCase: FetchAskConversationDetailUseCaseProtocol {
+    func execute(spaceId: String, conversationId: String) async throws -> AskConversationDetail {
+        AskConversationDetail(
+            id: conversationId, researchSpaceId: spaceId, title: "", scope: AskConversationScope(type: "space", sourceId: nil),
+            messages: [], createdAt: Date(), updatedAt: Date())
+    }
+}
+
+private struct PreviewSendFeedbackUseCase: SendFeedbackUseCaseProtocol {
+    func execute(spaceId: String, conversationId: String, messageId: String, rating: String) async throws {}
+}
+
+private struct PreviewCreateSavedAnswerNoteUseCase: CreateSavedAnswerNoteUseCaseProtocol {
+    func execute(
+        spaceId: String, title: String, content: String, project: String?,
+        originConversationId: String?, originMessageId: String?,
+        citationCount: Int?, citations: [SavedAnswerCitationDTO]?
+    ) async throws -> Note {
+        Note(id: "preview", researchSpaceId: spaceId, title: title, originType: .savedAssistantAnswer,
+             content: content, createdAt: Date(), updatedAt: Date(), citationCount: citationCount)
+    }
 }

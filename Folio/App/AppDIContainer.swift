@@ -124,4 +124,40 @@ final class AppDIContainer {
     lazy var saveNotebookUseCase: any SaveNotebookUseCaseProtocol = {
         SaveNotebookUseCase(repository: notebookRepository)
     }()
+
+    lazy var askRepository: AskRepositoryProtocol = {
+        AskRepository(networkService: networkService, baseURL: AppConfiguration.apiBaseURL, accessTokenProvider: accessTokenProvider)
+    }()
+
+    lazy var fetchAskSuggestionsUseCase: any FetchAskSuggestionsUseCaseProtocol = {
+        FetchAskSuggestionsUseCase(repository: askRepository)
+    }()
+
+    lazy var fetchAskConversationsUseCase: any FetchAskConversationsUseCaseProtocol = {
+        FetchAskConversationsUseCase(repository: askRepository)
+    }()
+
+    lazy var fetchAskConversationDetailUseCase: any FetchAskConversationDetailUseCaseProtocol = {
+        FetchAskConversationDetailUseCase(repository: askRepository)
+    }()
+
+    lazy var streamAskAnswerUseCase: any StreamAskAnswerUseCaseProtocol = {
+        StreamAskAnswerUseCase(repository: askRepository)
+    }()
+
+    lazy var sendFeedbackUseCase: any SendFeedbackUseCaseProtocol = {
+        SendFeedbackUseCase(repository: askRepository)
+    }()
+
+    lazy var createSavedAnswerNoteUseCase: any CreateSavedAnswerNoteUseCaseProtocol = {
+        CreateSavedAnswerNoteUseCase(repository: noteRepository)
+    }()
+
+    lazy var deleteConversationUseCase: any DeleteConversationUseCaseProtocol = {
+        DeleteConversationUseCase(repository: askRepository)
+    }()
+
+    lazy var renameConversationUseCase: any RenameConversationUseCaseProtocol = {
+        RenameConversationUseCase(repository: askRepository)
+    }()
 }

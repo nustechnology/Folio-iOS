@@ -122,9 +122,50 @@ struct NoteCitationDTO: Decodable {
     )
   }
 }
+struct NoteOriginDTO: Encodable {
+  let conversationId: String
+  let messageId: String
+
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(conversationId, forKey: .conversationId)
+    try container.encode(messageId, forKey: .messageId)
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case conversationId, messageId
+  }
+}
+
 struct CreateNoteRequestDTO: Encodable {
   let title: String
   let content: String
+  let project: String?
+  let origin: NoteOriginDTO?
+
+  init(
+    title: String,
+    content: String,
+    project: String? = nil,
+    origin: NoteOriginDTO? = nil
+  ) {
+    self.title = title
+    self.content = content
+    self.project = project
+    self.origin = origin
+  }
+
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(title, forKey: .title)
+    try container.encode(content, forKey: .content)
+    try container.encodeIfPresent(project, forKey: .project)
+    try container.encodeIfPresent(origin, forKey: .origin)
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case title, content, project, origin
+  }
 }
 struct UpdateNoteRequestDTO: Encodable {
   let title: String
@@ -132,4 +173,11 @@ struct UpdateNoteRequestDTO: Encodable {
 }
 struct ConvertNoteRequestDTO: Encodable {
   let title: String
+}
+
+struct SavedAnswerCitationDTO: Encodable {
+  let sourceId: String
+  let sourceTitle: String
+  let snippet: String
+  let locationLabel: String
 }

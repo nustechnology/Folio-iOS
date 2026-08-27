@@ -54,30 +54,32 @@ struct FolioContentHeader: View {
                 HStack(spacing: 8) {
                     searchField
 
-                    Button(action: { onSortTapped?() }) {
-                        ZStack(alignment: .topTrailing) {
-                            Image(systemName: "line.3.horizontal.decrease")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(Color.folioHomeSearchPlaceholder)
+                    if onSortTapped != nil {
+                        Button(action: { onSortTapped?() }) {
+                            ZStack(alignment: .topTrailing) {
+                                Image(systemName: "line.3.horizontal.decrease")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(Color.folioHomeSearchPlaceholder)
 
-                            if isSortActive {
-                                Circle()
-                                    .fill(Color.folioDanger)
-                                    .frame(width: 8, height: 8)
-                                    .overlay {
-                                        Circle()
-                                            .stroke(Color.folioHomeSearchField, lineWidth: 1.5)
-                                    }
-                                    .offset(x: 2, y: -4)
+                                if isSortActive {
+                                    Circle()
+                                        .fill(Color.folioDanger)
+                                        .frame(width: 8, height: 8)
+                                        .overlay {
+                                            Circle()
+                                                .stroke(Color.folioHomeSearchField, lineWidth: 1.5)
+                                        }
+                                        .offset(x: 2, y: -4)
+                                }
                             }
+                            .frame(width: 46, height: 46)
+                            .background(Color.folioHomeSearchField)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
-                        .frame(width: 46, height: 46)
-                        .background(Color.folioHomeSearchField)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(String(localized: "Sort"))
+                        .accessibilityHint(String(localized: "Opens sort options"))
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(String(localized: "Sort"))
-                    .accessibilityHint(String(localized: "Opens sort options"))
                 }
                 .padding(.horizontal, 18)
             }
