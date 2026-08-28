@@ -179,9 +179,6 @@ final class AskAnswerSSEClient {
             }
 
             if trimmed.hasPrefix("event:") {
-                if let event = flushPendingEvent() {
-                    events.append(event)
-                }
                 currentEventName = String(trimmed.dropFirst(6)).trimmingCharacters(in: .whitespaces)
                 continue
             }

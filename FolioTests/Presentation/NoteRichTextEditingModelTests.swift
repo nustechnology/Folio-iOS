@@ -16,6 +16,20 @@ final class NoteRichTextEditingModelTests: XCTestCase {
         XCTAssertEqual(publishedHTML, FolioRichTextEditor.htmlFromAttributedText(model.attributedText))
     }
 
+    func testTextChangePublishesHTMLWhenBindingUpdatedBeforeCallback() {
+        var publishedHTML: String?
+        let model = NoteRichTextEditingModel(
+            attributedText: NSAttributedString(string: ""),
+            publishingHTML: { publishedHTML = $0 }
+        )
+        let editedText = NSAttributedString(string: "Content")
+
+        model.attributedText = editedText
+        model.textChanged(editedText)
+
+        XCTAssertEqual(publishedHTML, FolioRichTextEditor.htmlFromAttributedText(editedText))
+    }
+
     func testLinkPromptRequiresSelectionAndValidatesURL() {
         let model = NoteRichTextEditingModel(
             attributedText: NSAttributedString(string: "Text"),
@@ -31,5 +45,18 @@ final class NoteRichTextEditingModelTests: XCTestCase {
 
         XCTAssertFalse(model.applyLink())
         XCTAssertEqual(model.linkError, String(localized: "Invalid URL"))
+    }
+
+    func testApplyingBlockquoteToEmptyEditorActivatesQuoteToolbar() {
+        let model = NoteRichTextEditingModel(
+            attributedText: NSAttributedString(string: ""),
+            publishingHTML: { _ in }
+        )
+
+        model.applyBlockquote()
+
+        XCTAssertEqual(model.attributedText.string, FolioRichTextFormat.blockquoteMarker)
+        XCTAssertEqual(model.selectedRange, NSRange(location: 2, length: 0))
+        XCTAssertTrue(model.toolbarActiveFormats.isBlockquote)
     }
 }

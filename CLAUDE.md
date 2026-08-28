@@ -11,7 +11,7 @@ Native iOS client for Folio — private research, grounded answers. Sources, not
 - **Architecture:** Clean Architecture + MVVM — dependency flow: **Presentation → Domain ← Data**
 - **DI:** Manual `AppDIContainer` in `FolioApp` (no Swinject/Resolver yet)
 - **Async:** Swift Concurrency (`async/await`, `@MainActor`)
-- **Min Deployment Target:** iOS 26.5 | **Xcode:** 26.6+
+- **Min Deployment Target:** iOS 26.0 | **Xcode:** 26.6+
 - **Dependencies:** Zero external dependencies (Apple frameworks only: SwiftUI, Foundation, Combine)
 
 ## Project Structure

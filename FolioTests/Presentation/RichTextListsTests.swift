@@ -3,117 +3,10 @@ import UIKit
 import XCTest
 
 @MainActor
-final class NotebookFormattingControllerTests: XCTestCase {
-    func testToggleTraitAtEmptyCursorLeavesExistingTextUnchangedAndUpdatesTypingAttributes() {
-        let text = NSAttributedString(
-            string: "hello",
-            attributes: [.font: UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize)]
-        )
-        let controller = NotebookFormattingController()
-
-        let result = controller.toggleTrait(
-            .traitBold,
-            in: text,
-            selectedRange: NSRange(location: 5, length: 0),
-            appliesToTypingAttributes: true
-        )
-
-        XCTAssertEqual(result?.attributedText.string, "hello")
-        let font = result?.typingAttributes?[.font] as? UIFont
-        XCTAssertTrue(font?.fontDescriptor.symbolicTraits.contains(.traitBold) == true)
-        XCTAssertEqual(result?.selectedRange, NSRange(location: 5, length: 0))
-    }
-
-    func testToggleTraitAtEmptyCursorRemovesPreviouslyAppliedTypingTrait() {
-        let text = NSAttributedString(
-            string: "hello",
-            attributes: [.font: UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize)]
-        )
-        let controller = NotebookFormattingController()
-        let cursor = NSRange(location: 5, length: 0)
-        let firstResult = controller.toggleTrait(
-            .traitBold,
-            in: text,
-            selectedRange: cursor,
-            appliesToTypingAttributes: true
-        )!
-
-        let secondResult = controller.toggleTrait(
-            .traitBold,
-            in: text,
-            selectedRange: cursor,
-            currentTypingAttributes: firstResult.typingAttributes,
-            appliesToTypingAttributes: true
-        )
-
-        let font = secondResult?.typingAttributes?[.font] as? UIFont
-        XCTAssertFalse(font?.fontDescriptor.symbolicTraits.contains(.traitBold) == true)
-    }
-
-    func testToggleTraitOnMixedSelectionAppliesBoldToEveryCharacter() {
-        let mutable = NSMutableAttributedString(
-            string: "bold plain",
-            attributes: [.font: UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize)]
-        )
-        mutable.addAttribute(
-            .font,
-            value: UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize, weight: .bold),
-            range: NSRange(location: 0, length: 4)
-        )
-        let controller = NotebookFormattingController()
-
-        let result = controller.toggleTrait(.traitBold, in: mutable, selectedRange: NSRange(location: 0, length: mutable.length))
-
-        XCTAssertTrue(controller.activeFormats(in: result!.attributedText, selectedRange: NSRange(location: 0, length: mutable.length)).isBold)
-    }
-
-    func testToggleTraitAddsBoldToSelectedTextWithoutAnExplicitFont() {
-        let text = NSAttributedString(string: "plain")
-        let controller = NotebookFormattingController()
-
-        let result = controller.toggleTrait(.traitBold, in: text, selectedRange: NSRange(location: 0, length: text.length))
-
-        XCTAssertTrue(controller.activeFormats(in: result!.attributedText, selectedRange: NSRange(location: 0, length: text.length)).isBold)
-    }
-
-    func testActiveFormatsUsesTypingAttributesAtAnEmptyCursor() {
-        let controller = NotebookFormattingController()
-        let typingAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize, weight: .bold)
-        ]
-
-        let state = controller.activeFormats(
-            in: NSAttributedString(string: ""),
-            selectedRange: NSRange(location: 0, length: 0),
-            typingAttributes: typingAttributes
-        )
-
-        XCTAssertTrue(state.isBold)
-    }
-
-    func testApplyLinkPreservesSelectedRangeAndAddsLinkAttribute() {
-        let text = NSAttributedString(string: "Folio")
-        let controller = NotebookFormattingController()
-        let selection = NSRange(location: 0, length: 5)
-
-        let result = controller.applyLink(URL(string: "https://folio.example")!, in: text, selectedRange: selection)
-
-        XCTAssertEqual(result?.selectedRange, selection)
-        XCTAssertEqual((result?.attributedText.attribute(.link, at: 0, effectiveRange: nil) as? URL)?.absoluteString, "https://folio.example")
-    }
-
-    func testApplyLinkRejectsUnsupportedURLScheme() {
-        let text = NSAttributedString(string: "Folio")
-        let controller = NotebookFormattingController()
-
-        let result = controller.applyLink(URL(string: "javascript:alert(1)")!, in: text, selectedRange: NSRange(location: 0, length: 5))
-
-        XCTAssertNil(result)
-    }
-
+final class RichTextListsTests: XCTestCase {
     func testListToggleFormatsAndRemovesEverySelectedParagraph() {
         let text = NSAttributedString(string: "first\nsecond\n")
-        let controller = NotebookFormattingController()
+        let controller = RichTextFormattingController()
         let selection = NSRange(location: 0, length: text.length)
 
         let formatted = controller.applyListStyle(ordered: false, in: text, selectedRange: selection)!
@@ -125,7 +18,7 @@ final class NotebookFormattingControllerTests: XCTestCase {
 
     func testListParagraphPlacesMarkerAtTheEditorInset() {
         let text = NSAttributedString(string: "first")
-        let controller = NotebookFormattingController()
+        let controller = RichTextFormattingController()
 
         let formatted = controller.applyListStyle(
             ordered: false,
@@ -139,7 +32,7 @@ final class NotebookFormattingControllerTests: XCTestCase {
     }
 
     func testBulletActionInEmptyEditorCreatesFirstItem() {
-        let controller = NotebookFormattingController()
+        let controller = RichTextFormattingController()
 
         let result = controller.applyListStyle(
             ordered: false,
@@ -152,7 +45,7 @@ final class NotebookFormattingControllerTests: XCTestCase {
     }
 
     func testNumberedListActionInEmptyEditorCreatesFirstItem() {
-        let controller = NotebookFormattingController()
+        let controller = RichTextFormattingController()
 
         let result = controller.applyListStyle(
             ordered: true,
@@ -165,7 +58,7 @@ final class NotebookFormattingControllerTests: XCTestCase {
     }
 
     func testBulletListActionFormatsEmptyParagraphAfterNewline() {
-        let controller = NotebookFormattingController()
+        let controller = RichTextFormattingController()
         let text = NSAttributedString(string: "hello\n")
 
         let result = controller.applyListStyle(
@@ -178,7 +71,7 @@ final class NotebookFormattingControllerTests: XCTestCase {
     }
 
     func testNumberedListActionFormatsEmptyParagraphAfterNewline() {
-        let controller = NotebookFormattingController()
+        let controller = RichTextFormattingController()
         let text = NSAttributedString(string: "hello\n")
 
         let result = controller.applyListStyle(
@@ -192,7 +85,7 @@ final class NotebookFormattingControllerTests: XCTestCase {
 
     func testActiveFormatsRequiresEverySelectedParagraphToUseSameListType() {
         let text = NSAttributedString(string: "\u{2022}\tfirst\n2.\tsecond\n")
-        let controller = NotebookFormattingController()
+        let controller = RichTextFormattingController()
 
         let state = controller.activeFormats(in: text, selectedRange: NSRange(location: 0, length: text.length))
 
@@ -202,7 +95,7 @@ final class NotebookFormattingControllerTests: XCTestCase {
 
     func testReturnAfterBulletItemCreatesAnotherBulletItem() {
         let text = NSAttributedString(string: "\u{2022}\tfirst")
-        let controller = NotebookFormattingController()
+        let controller = RichTextFormattingController()
 
         let result = controller.applyListEdit(
             replacementText: "\n",
@@ -216,7 +109,7 @@ final class NotebookFormattingControllerTests: XCTestCase {
 
     func testReturnAfterNumberedItemCreatesNextNumber() {
         let text = NSAttributedString(string: "1.\tfirst")
-        let controller = NotebookFormattingController()
+        let controller = RichTextFormattingController()
 
         let result = controller.applyListEdit(
             replacementText: "\n",
@@ -228,9 +121,46 @@ final class NotebookFormattingControllerTests: XCTestCase {
         XCTAssertEqual(result?.selectedRange, NSRange(location: 12, length: 0))
     }
 
+    func testHeadingAfterNumberedItemEnterUpdatesTypingAttributesForNewItem() {
+        let text = NSAttributedString(
+            string: "first",
+            attributes: [.font: UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize)]
+        )
+        let controller = RichTextFormattingController()
+
+        let listResult = controller.applyListStyle(
+            ordered: true,
+            in: text,
+            selectedRange: NSRange(location: 0, length: text.length)
+        )!
+        let itemResult = controller.applyListEdit(
+            replacementText: "\n",
+            in: listResult.attributedText,
+            selectedRange: NSRange(location: listResult.attributedText.length, length: 0)
+        )!
+        let headingResult = controller.applyHeading(
+            fontSize: FolioRichTextFormat.heading1FontSize,
+            in: itemResult.attributedText,
+            selectedRange: itemResult.selectedRange!,
+            currentTypingAttributes: itemResult.typingAttributes ?? [:]
+        )!
+
+        let font = headingResult.typingAttributes?[.font] as? UIFont
+        XCTAssertEqual(font?.pointSize, FolioRichTextFormat.heading1FontSize)
+        let markerFont = headingResult.attributedText.attribute(.font, at: 0, effectiveRange: nil) as? UIFont
+        XCTAssertEqual(markerFont?.pointSize, FolioRichTextFormat.bodyFontSize)
+        XCTAssertTrue(
+            controller.activeFormats(
+                in: headingResult.attributedText,
+                selectedRange: headingResult.selectedRange!,
+                typingAttributes: headingResult.typingAttributes ?? [:]
+            ).isHeading1
+        )
+    }
+
     func testReturnOnEmptyBulletItemExitsList() {
         let text = NSAttributedString(string: "\u{2022}\t")
-        let controller = NotebookFormattingController()
+        let controller = RichTextFormattingController()
 
         let result = controller.applyListEdit(
             replacementText: "\n",
@@ -244,7 +174,7 @@ final class NotebookFormattingControllerTests: XCTestCase {
 
     func testBackspaceAfterNumberedMarkerRemovesCompleteMarker() {
         let text = NSAttributedString(string: "1.\tfirst")
-        let controller = NotebookFormattingController()
+        let controller = RichTextFormattingController()
 
         let result = controller.applyListEdit(
             replacementText: "",
@@ -258,7 +188,7 @@ final class NotebookFormattingControllerTests: XCTestCase {
 
     func testReturnWithinOrderedListRenumbersFollowingItems() {
         let text = NSAttributedString(string: "1.\tfirst\n2.\tsecond")
-        let controller = NotebookFormattingController()
+        let controller = RichTextFormattingController()
 
         let result = controller.applyListEdit(
             replacementText: "\n",
@@ -272,7 +202,7 @@ final class NotebookFormattingControllerTests: XCTestCase {
 
     func testDeleteAtBulletMarkerRemovesCompleteMarker() {
         let text = NSAttributedString(string: "\u{2022}\tfirst")
-        let controller = NotebookFormattingController()
+        let controller = RichTextFormattingController()
 
         let result = controller.applyListEdit(
             replacementText: "",
@@ -286,7 +216,7 @@ final class NotebookFormattingControllerTests: XCTestCase {
 
     func testDeletingMarkerAndItemTextFallsBackToTextViewDeletion() {
         let text = NSAttributedString(string: "\u{2022}\tfirst")
-        let controller = NotebookFormattingController()
+        let controller = RichTextFormattingController()
 
         let result = controller.applyListEdit(
             replacementText: "",
@@ -299,7 +229,7 @@ final class NotebookFormattingControllerTests: XCTestCase {
 
     func testRemovingNumberedMarkerRenumbersNextOrderedList() {
         let text = NSAttributedString(string: "1.\tfirst\n2.\tsecond\n3.\tthird")
-        let controller = NotebookFormattingController()
+        let controller = RichTextFormattingController()
 
         let result = controller.applyListEdit(
             replacementText: "",
@@ -317,7 +247,7 @@ final class NotebookFormattingControllerTests: XCTestCase {
             value: UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize, weight: .bold),
             range: NSRange(location: 2, length: 4)
         )
-        let controller = NotebookFormattingController()
+        let controller = RichTextFormattingController()
 
         let result = controller.applyListEdit(
             replacementText: "\n",
@@ -329,4 +259,24 @@ final class NotebookFormattingControllerTests: XCTestCase {
         XCTAssertTrue(font?.fontDescriptor.symbolicTraits.contains(.traitBold) == true)
     }
 
+    func testReplacingListMarkerWithTextResetsParagraphIndentation() {
+        let text = NSAttributedString(string: "\u{2022}\tfirst")
+        let style = NSMutableParagraphStyle()
+        style.headIndent = FolioRichTextFormat.listIndent
+        style.firstLineHeadIndent = 0
+        let mutable = NSMutableAttributedString(attributedString: text)
+        mutable.addAttribute(.paragraphStyle, value: style, range: NSRange(location: 0, length: mutable.length))
+        let controller = RichTextFormattingController()
+
+        let result = controller.applyListEdit(
+            replacementText: "replacement",
+            in: mutable,
+            selectedRange: NSRange(location: 0, length: mutable.length)
+        )
+
+        XCTAssertEqual(result?.attributedText.string, "replacement")
+        let paragraphStyle = result?.attributedText.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle
+        XCTAssertEqual(paragraphStyle?.headIndent, 0)
+        XCTAssertEqual(result?.selectedRange, NSRange(location: "replacement".count, length: 0))
+    }
 }

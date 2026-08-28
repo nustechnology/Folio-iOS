@@ -46,7 +46,7 @@ struct FolioRichTextEditor: UIViewRepresentable {
         textView.backgroundColor = .clear
         textView.font = UIFont.systemFont(ofSize: 16)
         textView.textColor = UIColor(Color.folioInk)
-        textView.textContainerInset = UIEdgeInsets(top: textContainerTopInset, left: 16, bottom: 16, right: 16)
+        textView.textContainerInset = UIEdgeInsets(top: textContainerTopInset, left: 16, bottom: 96, right: 16)
         textView.textContainer.lineFragmentPadding = 0
         textView.allowsEditingTextAttributes = false
         textView.dataDetectorTypes = []
@@ -70,6 +70,7 @@ struct FolioRichTextEditor: UIViewRepresentable {
         }
         if textView.attributedText != attributedText {
             textView.attributedText = attributedText
+            (textView as? FolioTextView)?.applyBlockquotePresentation()
         }
         if Self.shouldSynchronizeSelection(
             current: textView.selectedRange,
@@ -94,19 +95,57 @@ struct FolioRichTextEditor: UIViewRepresentable {
 
         func textViewDidChange(_ textView: UITextView) {
             guard !isSynchronizingUIView else { return }
-            parent.onTextChange(textView.attributedText)
+            (textView as? FolioTextView)?.applyBlockquotePresentation()
             parent.attributedText = textView.attributedText
             parent.selectedRange = textView.selectedRange
+            parent.onTextChange(textView.attributedText)
         }
 
         func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
             let shouldClearLinkTypingAttribute = text == " " || text == "\n"
+            let hadLinkTypingAttribute = textView.typingAttributes[.link] != nil
             if shouldClearLinkTypingAttribute {
                 clearLinkTypingAttribute(in: textView)
             }
 
             guard let attributed = textView.attributedText else { return true }
-            let formattingController = NotebookFormattingController()
+            let markers = FolioRichTextEditor.formattingMarkerRanges(in: attributed)
+            let formattingController = RichTextFormattingController()
+            if let result = formattingController.applyBlockquoteEdit(
+                replacementText: text,
+                in: attributed,
+                selectedRange: range
+            ) {
+                textView.attributedText = result.attributedText
+                textView.selectedRange = result.selectedRange ?? NSRange(location: 0, length: 0)
+                if var typingAttributes = result.typingAttributes {
+                    if shouldClearLinkTypingAttribute {
+                        typingAttributes.removeValue(forKey: .link)
+                    }
+                    textView.typingAttributes = typingAttributes
+                    parent.typingAttributes?.wrappedValue = typingAttributes
+                }
+                parent.onTextChange(result.attributedText)
+                parent.attributedText = result.attributedText
+                parent.selectedRange = textView.selectedRange
+                return false
+            }
+            if text.isEmpty,
+               let result = formattingController.removeEmptyBlockquote(in: attributed, editRange: range) {
+                textView.attributedText = result.attributedText
+                textView.selectedRange = result.selectedRange ?? NSRange(location: 0, length: 0)
+                if var typingAttributes = result.typingAttributes {
+                    if shouldClearLinkTypingAttribute {
+                        typingAttributes.removeValue(forKey: .link)
+                    }
+                    textView.typingAttributes = typingAttributes
+                    parent.typingAttributes?.wrappedValue = typingAttributes
+                }
+                parent.onTextChange(result.attributedText)
+                parent.attributedText = result.attributedText
+                parent.selectedRange = textView.selectedRange
+                return false
+            }
             if let result = formattingController.applyListEdit(replacementText: text, in: attributed, selectedRange: range) {
                 textView.attributedText = result.attributedText
                 textView.selectedRange = result.selectedRange ?? NSRange(location: 0, length: 0)
@@ -122,9 +161,47 @@ struct FolioRichTextEditor: UIViewRepresentable {
                 parent.selectedRange = textView.selectedRange
                 return false
             }
+            if text == "\n",
+               range.length == 0,
+               let result = formattingController.splitParagraphAfterHeading(in: attributed, at: range.location) {
+                textView.attributedText = result.attributedText
+                textView.selectedRange = result.selectedRange ?? NSRange(location: 0, length: 0)
+                if var typingAttributes = result.typingAttributes {
+                    if shouldClearLinkTypingAttribute {
+                        typingAttributes.removeValue(forKey: .link)
+                    }
+                    textView.typingAttributes = typingAttributes
+                    parent.typingAttributes?.wrappedValue = typingAttributes
+                }
+                parent.onTextChange(result.attributedText)
+                parent.attributedText = result.attributedText
+                parent.selectedRange = textView.selectedRange
+                return false
+            }
+            if text == "\n",
+               range.length == 0,
+               !hadLinkTypingAttribute,
+               FolioRichTextEditor.shouldAllowTextEdit(in: range, markers: markers) {
+                var attributes = textView.typingAttributes
+                if shouldClearLinkTypingAttribute {
+                    attributes.removeValue(forKey: .link)
+                }
+                if attributes[.font] == nil {
+                    attributes[.font] = UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize)
+                }
+                let newline = NSAttributedString(string: "\n", attributes: attributes)
+                textView.textStorage.replaceCharacters(in: range, with: newline)
+                textView.selectedRange = NSRange(location: range.location + newline.length, length: 0)
+                textView.typingAttributes = attributes
+                parent.typingAttributes?.wrappedValue = attributes
+                parent.attributedText = textView.attributedText
+                parent.selectedRange = textView.selectedRange
+                parent.onTextChange(textView.attributedText)
+                return false
+            }
             return FolioRichTextEditor.shouldAllowTextEdit(
                 in: range,
-                markers: FolioRichTextEditor.formattingMarkerRanges(in: attributed))
+                markers: markers)
         }
 
         private func clearLinkTypingAttribute(in textView: UITextView) {
@@ -137,7 +214,109 @@ struct FolioRichTextEditor: UIViewRepresentable {
         func textViewDidChangeSelection(_ textView: UITextView) {
             guard !isSynchronizingUIView else { return }
             parent.selectedRange = textView.selectedRange
-            parent.typingAttributes?.wrappedValue = textView.typingAttributes
+            var typingAttributes = textView.typingAttributes
+            if textView.attributedText.length == 0 {
+                typingAttributes[.font] = UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize)
+                typingAttributes[.foregroundColor] = UIColor(Color.folioInk)
+            } else if isCaretInEmptyParagraph(in: textView) || isCaretInEmptyBlockquote(in: textView) {
+                typingAttributes[.font] = UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize)
+                typingAttributes[.foregroundColor] = UIColor(Color.folioInk)
+            } else if let currentFont = fontAtCurrentCaret(in: textView) {
+                typingAttributes[.font] = currentFont
+            }
+            if hasInlineBoldAtCurrentSelection(in: textView) {
+                typingAttributes[FolioRichTextFormat.inlineBoldAttribute] = true
+            } else {
+                typingAttributes.removeValue(forKey: FolioRichTextFormat.inlineBoldAttribute)
+            }
+            textView.typingAttributes = typingAttributes
+            parent.typingAttributes?.wrappedValue = typingAttributes
+        }
+
+        private func isCaretInEmptyParagraph(in textView: UITextView) -> Bool {
+            let selectedRange = textView.selectedRange
+            guard selectedRange.length == 0, textView.attributedText.length > 0 else { return false }
+
+            let string = textView.attributedText.string as NSString
+            let paragraph = string.paragraphRange(for: NSRange(location: selectedRange.location, length: 0))
+            let hasTrailingNewline = paragraph.length > 0
+                && string.character(at: NSMaxRange(paragraph) - 1) == 10
+            let contentLength = paragraph.length - (hasTrailingNewline ? 1 : 0)
+            return contentLength == 0
+        }
+
+        private func isCaretInEmptyBlockquote(in textView: UITextView) -> Bool {
+            let selectedRange = textView.selectedRange
+            guard selectedRange.length == 0, textView.attributedText.length > 0 else { return false }
+
+            let string = textView.attributedText.string as NSString
+            let paragraph = string.paragraphRange(for: NSRange(location: selectedRange.location, length: 0))
+            let marker = FolioRichTextFormat.blockquoteMarker as NSString
+            guard paragraph.length >= marker.length,
+                  string.substring(with: NSRange(location: paragraph.location, length: marker.length)) == marker as String else {
+                return false
+            }
+
+            let hasTrailingNewline = paragraph.length > 0
+                && string.character(at: NSMaxRange(paragraph) - 1) == 10
+            let contentLength = paragraph.length - marker.length - (hasTrailingNewline ? 1 : 0)
+            return contentLength == 0
+        }
+
+        private func fontAtCurrentCaret(in textView: UITextView) -> UIFont? {
+            let selectedRange = textView.selectedRange
+            guard selectedRange.length == 0, textView.attributedText.length > 0 else { return nil }
+
+            let string = textView.attributedText.string as NSString
+            let paragraph = string.paragraphRange(for: NSRange(location: selectedRange.location, length: 0))
+            let contentLength = paragraph.length > 0
+                && string.character(at: NSMaxRange(paragraph) - 1) == 10
+                ? paragraph.length - 1
+                : paragraph.length
+            guard contentLength > 0 else { return nil }
+
+            let contentEnd = paragraph.location + contentLength
+            let location = min(max(selectedRange.location, paragraph.location), contentEnd - 1)
+            return textView.attributedText.attribute(.font, at: location, effectiveRange: nil) as? UIFont
+        }
+
+        private func hasInlineBoldAtCurrentSelection(in textView: UITextView) -> Bool {
+            let selectedRange = textView.selectedRange
+            guard textView.attributedText.length > 0 else { return false }
+
+            if selectedRange.length == 0 {
+                let string = textView.attributedText.string as NSString
+                let paragraph = string.paragraphRange(for: NSRange(location: selectedRange.location, length: 0))
+                let contentLength = paragraph.length > 0
+                    && string.character(at: NSMaxRange(paragraph) - 1) == 10
+                    ? paragraph.length - 1
+                    : paragraph.length
+                guard contentLength > 0 else { return false }
+
+                let contentEnd = paragraph.location + contentLength
+                let location = min(max(selectedRange.location, paragraph.location), contentEnd - 1)
+                return textView.attributedText.attribute(
+                    FolioRichTextFormat.inlineBoldAttribute,
+                    at: location,
+                    effectiveRange: nil
+                ) as? Bool == true
+            }
+
+            guard NSMaxRange(selectedRange) <= textView.attributedText.length else { return false }
+            var isBold = true
+            var foundAttribute = false
+            textView.attributedText.enumerateAttribute(
+                FolioRichTextFormat.inlineBoldAttribute,
+                in: selectedRange,
+                options: []
+            ) { value, _, stop in
+                foundAttribute = true
+                if value as? Bool != true {
+                    isBold = false
+                    stop.pointee = true
+                }
+            }
+            return foundAttribute && isBold
         }
 
         func textViewDidBeginEditing(_ textView: UITextView) {
@@ -252,13 +431,12 @@ extension FolioRichTextEditor {
 
             let font = attributedText.attribute(.font, at: paragraphRange.location, effectiveRange: nil) as? UIFont
             let size = font?.pointSize ?? FolioRichTextFormat.bodyFontSize
-            let isBold = font?.fontDescriptor.symbolicTraits.contains(.traitBold) ?? false
 
             if text.isEmpty {
                 flushList()
                 blocks.append("<p></p>")
                 lastParagraphWasListItem = false
-            } else if isBold, size >= FolioRichTextFormat.heading3FontSize {
+            } else if isHeadingFont(font, size: size) {
                 flushList()
                 let tag = size >= FolioRichTextFormat.heading1FontSize ? "h1" : (size >= FolioRichTextFormat.heading2FontSize ? "h2" : "h3")
                 blocks.append("<\(tag)>\(inlineHTML(for: text, in: attributedText, range: contentRange, skipBold: true))</\(tag)>")
@@ -322,7 +500,10 @@ extension FolioRichTextEditor {
             }
             if let font = attrs[.font] as? UIFont {
                 let traits = font.fontDescriptor.symbolicTraits
-                if !skipBold, traits.contains(.traitBold) { segment = "<strong>\(segment)</strong>" }
+                let isInlineBold = attrs[FolioRichTextFormat.inlineBoldAttribute] as? Bool == true
+                if isInlineBold || (!skipBold && traits.contains(.traitBold)) {
+                    segment = "<strong>\(segment)</strong>"
+                }
                 if traits.contains(.traitItalic) { segment = "<em>\(segment)</em>" }
                 let size = font.pointSize
                 if abs(size - defaultBodyFontSize) > 0.1 {
@@ -394,7 +575,7 @@ extension FolioRichTextEditor {
         return result
     }
 
-    private static func hasBlockquoteStyle(_ attributedText: NSAttributedString, at location: Int) -> Bool {
+    fileprivate static func hasBlockquoteStyle(_ attributedText: NSAttributedString, at location: Int) -> Bool {
         guard let style = attributedText.attribute(.paragraphStyle, at: location, effectiveRange: nil) as? NSParagraphStyle else {
             return false
         }
@@ -483,10 +664,9 @@ extension FolioRichTextEditor {
         guard range.length > 0 else { return "" }
 
         let font = attributed.attribute(.font, at: range.location, effectiveRange: nil) as? UIFont
-        let isBold = font?.fontDescriptor.symbolicTraits.contains(.traitBold) ?? false
         let size = font?.pointSize ?? FolioRichTextFormat.bodyFontSize
 
-        if isBold, size >= FolioRichTextFormat.heading3FontSize {
+        if isHeadingFont(font, size: size) {
             let prefix = size >= FolioRichTextFormat.heading1FontSize ? "#" : (size >= FolioRichTextFormat.heading2FontSize ? "##" : "###")
             return "\(prefix) \(text)"
         }
@@ -532,6 +712,22 @@ extension FolioRichTextEditor {
 
     private static let defaultBodyFontSize = FolioRichTextFormat.bodyFontSize
 
+    private static func isHeadingFont(_ font: UIFont?, size: CGFloat) -> Bool {
+        guard size >= FolioRichTextFormat.heading3FontSize else { return false }
+        guard let font else { return false }
+        let traits = font.fontDescriptor.fontAttributes[.traits] as? [UIFontDescriptor.TraitKey: Any]
+        let weight = (traits?[.weight] as? NSNumber).map { CGFloat(truncating: $0) }
+        let expectedWeight = FolioRichTextFormat.headingFontWeight(for: size).rawValue
+        let isConfiguredHeading = weight == expectedWeight
+            || font.fontDescriptor.postscriptName
+                == UIFont.systemFont(
+                    ofSize: size,
+                    weight: FolioRichTextFormat.headingFontWeight(for: size)
+                ).fontDescriptor.postscriptName
+        let isLegacyBoldHeading = font.fontDescriptor.symbolicTraits.contains(.traitBold)
+        return isConfiguredHeading || isLegacyBoldHeading
+    }
+
     private static func makeBodyFont(bold: Bool, italic: Bool, size: CGFloat = defaultBodyFontSize) -> UIFont {
         var symbolicTraits: UIFontDescriptor.SymbolicTraits = []
         if bold { symbolicTraits.insert(.traitBold) }
@@ -571,7 +767,7 @@ private final class SemanticHTMLParser: NSObject, XMLParserDelegate {
 
     private struct Block {
         let baseSize: CGFloat
-        let baseBold: Bool
+        let baseWeight: UIFont.Weight
         let startLocation: Int
         let style: BlockStyle
     }
@@ -614,18 +810,22 @@ private final class SemanticHTMLParser: NSObject, XMLParserDelegate {
         case "h1", "h2", "h3":
             let size: CGFloat = normalizedName == "h1" ? FolioRichTextFormat.heading1FontSize
                 : (normalizedName == "h2" ? FolioRichTextFormat.heading2FontSize : FolioRichTextFormat.heading3FontSize)
-            pushBlock(baseSize: size, baseBold: true, style: .heading)
+            pushBlock(
+                baseSize: size,
+                baseWeight: FolioRichTextFormat.headingFontWeight(for: size),
+                style: .heading
+            )
         case "p":
-            pushBlock(baseSize: FolioRichTextFormat.bodyFontSize, baseBold: false, style: .paragraph)
+            pushBlock(baseSize: FolioRichTextFormat.bodyFontSize, baseWeight: .regular, style: .paragraph)
         case "blockquote":
-            pushBlock(baseSize: FolioRichTextFormat.bodyFontSize, baseBold: false, style: .blockquote)
+            pushBlock(baseSize: FolioRichTextFormat.bodyFontSize, baseWeight: .regular, style: .blockquote)
         case "ul":
             listTypeStack.append(.unordered)
         case "ol":
             listTypeStack.append(.ordered)
             orderedCounterStack.append(0)
         case "li":
-            pushBlock(baseSize: FolioRichTextFormat.bodyFontSize, baseBold: false, style: .listItem)
+            pushBlock(baseSize: FolioRichTextFormat.bodyFontSize, baseWeight: .regular, style: .listItem)
             appendListMarker()
         case "strong", "b":
             boldDepth += 1
@@ -679,11 +879,15 @@ private final class SemanticHTMLParser: NSObject, XMLParserDelegate {
         guard let top = blockStack.last else { return }
         let style = spanStyleStack.last
         let size = style?.fontSize ?? top.baseSize
-        let font = makeFont(size: size, bold: top.baseBold || boldDepth > 0, italic: italicDepth > 0)
+        let weight = boldDepth > 0 ? FolioRichTextFormat.inlineBoldFontWeight : top.baseWeight
+        let font = makeFont(size: size, weight: weight, italic: italicDepth > 0)
         var attributes: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: UIColor(Color.folioInk)
         ]
+        if boldDepth > 0 {
+            attributes[FolioRichTextFormat.inlineBoldAttribute] = true
+        }
         if style?.underline == true {
             attributes[.underlineStyle] = NSUnderlineStyle.single.rawValue
         }
@@ -696,9 +900,9 @@ private final class SemanticHTMLParser: NSObject, XMLParserDelegate {
         result.append(NSAttributedString(string: string, attributes: attributes))
     }
 
-    private func pushBlock(baseSize: CGFloat, baseBold: Bool, style: BlockStyle) {
+    private func pushBlock(baseSize: CGFloat, baseWeight: UIFont.Weight, style: BlockStyle) {
         blockStack.append(
-            Block(baseSize: baseSize, baseBold: baseBold, startLocation: result.length, style: style)
+            Block(baseSize: baseSize, baseWeight: baseWeight, startLocation: result.length, style: style)
         )
     }
 
@@ -723,7 +927,7 @@ private final class SemanticHTMLParser: NSObject, XMLParserDelegate {
             }
             marker = "\(index).\t"
         }
-        let font = makeFont(size: FolioRichTextFormat.bodyFontSize, bold: false, italic: false)
+        let font = makeFont(size: FolioRichTextFormat.bodyFontSize, weight: .regular, italic: false)
         result.append(NSAttributedString(string: marker, attributes: [.font: font]))
     }
 
@@ -736,7 +940,7 @@ private final class SemanticHTMLParser: NSObject, XMLParserDelegate {
             let contentLength = result.length - block.startLocation
             let markerAttributed = NSAttributedString(
                 string: marker,
-                attributes: [.font: makeFont(size: FolioRichTextFormat.bodyFontSize, bold: false, italic: false)]
+                attributes: [.font: makeFont(size: FolioRichTextFormat.bodyFontSize, weight: .regular, italic: false)]
             )
             result.insert(markerAttributed, at: block.startLocation)
             let affectedRange = NSRange(location: block.startLocation, length: contentLength + (marker as NSString).length)
@@ -757,16 +961,16 @@ private final class SemanticHTMLParser: NSObject, XMLParserDelegate {
         }
     }
 
-    private func makeFont(size: CGFloat, bold: Bool, italic: Bool) -> UIFont {
+    private func makeFont(size: CGFloat, weight: UIFont.Weight, italic: Bool) -> UIFont {
         var symbolicTraits: UIFontDescriptor.SymbolicTraits = []
-        if bold { symbolicTraits.insert(.traitBold) }
+        if weight == FolioRichTextFormat.inlineBoldFontWeight { symbolicTraits.insert(.traitBold) }
         if italic { symbolicTraits.insert(.traitItalic) }
 
         let base = UIFont.systemFont(ofSize: size)
         var fontAttributes = base.fontDescriptor.fontAttributes
         fontAttributes[.traits] = [
             UIFontDescriptor.TraitKey.symbolic: symbolicTraits.rawValue,
-            UIFontDescriptor.TraitKey.weight: bold ? UIFont.Weight.bold : UIFont.Weight.regular
+            UIFontDescriptor.TraitKey.weight: weight
         ]
         let descriptor = UIFontDescriptor(fontAttributes: fontAttributes)
         return UIFont(descriptor: descriptor, size: size)
@@ -783,6 +987,92 @@ final class FolioTextView: UITextView {
     var onRedoKeyCommand: (() -> Void)?
     private var lastUndoShortcutTime: Date = .distantPast
     private var lastRedoShortcutTime: Date = .distantPast
+
+    func applyBlockquotePresentation() {
+        accessibilityLabel = FolioRichTextEditor.attributedTextWithoutMarkers(attributedText).string
+        let string = attributedText.string as NSString
+        for marker in FolioRichTextEditor.formattingMarkerRanges(in: attributedText) {
+            guard string.substring(with: marker) == FolioRichTextFormat.blockquoteMarker else {
+                continue
+            }
+            let paragraph = string.paragraphRange(for: NSRange(location: marker.location, length: 0))
+            let paragraphContentLength = paragraph.length
+                - marker.length
+                - (paragraph.length > 0 && string.character(at: NSMaxRange(paragraph) - 1) == 10 ? 1 : 0)
+            let markerFontSize = paragraphContentLength > 0
+                ? FolioRichTextFormat.hiddenMarkerFontSize
+                : FolioRichTextFormat.bodyFontSize
+            let currentFont = textStorage.attribute(.font, at: marker.location, effectiveRange: nil) as? UIFont
+            let currentColor = textStorage.attribute(.foregroundColor, at: marker.location, effectiveRange: nil) as? UIColor
+            guard currentFont?.pointSize != markerFontSize || currentColor != .clear else {
+                continue
+            }
+            textStorage.addAttributes([
+                .font: UIFont.systemFont(ofSize: markerFontSize),
+                .foregroundColor: UIColor.clear
+            ], range: marker)
+        }
+        setNeedsDisplay()
+    }
+
+    func blockquoteRuleRects() -> [CGRect] {
+        layoutManager.ensureLayout(for: textContainer)
+        let string = attributedText.string as NSString
+        var ruleRects: [CGRect] = []
+        var activeRule: CGRect?
+        var previousParagraphEnd: Int?
+
+        for marker in FolioRichTextEditor.formattingMarkerRanges(in: attributedText) {
+            guard string.substring(with: marker) == FolioRichTextFormat.blockquoteMarker else { continue }
+            let paragraph = string.paragraphRange(for: NSRange(location: marker.location, length: 0))
+            guard let style = attributedText.attribute(.paragraphStyle, at: paragraph.location, effectiveRange: nil) as? NSParagraphStyle else {
+                continue
+            }
+
+            let glyphRange = layoutManager.glyphRange(forCharacterRange: paragraph, actualCharacterRange: nil)
+            var paragraphMinY = CGFloat.greatestFiniteMagnitude
+            var paragraphMaxY = -CGFloat.greatestFiniteMagnitude
+            layoutManager.enumerateLineFragments(forGlyphRange: glyphRange) { lineRect, _, _, _, _ in
+                paragraphMinY = min(paragraphMinY, lineRect.minY + self.textContainerInset.top)
+                paragraphMaxY = max(paragraphMaxY, lineRect.maxY + self.textContainerInset.top)
+            }
+            guard paragraphMinY.isFinite, paragraphMaxY.isFinite else { continue }
+
+            let ruleX = textContainerInset.left
+                + style.headIndent
+                - FolioRichTextFormat.blockquoteRuleToContentSpacing
+                - FolioRichTextFormat.blockquoteRuleWidth
+            let paragraphRule = CGRect(
+                x: ruleX,
+                y: paragraphMinY,
+                width: FolioRichTextFormat.blockquoteRuleWidth,
+                height: paragraphMaxY - paragraphMinY
+            )
+            if previousParagraphEnd == paragraph.location, let rule = activeRule {
+                activeRule = rule.union(paragraphRule)
+            } else {
+                if let activeRule { ruleRects.append(activeRule) }
+                activeRule = paragraphRule
+            }
+            previousParagraphEnd = NSMaxRange(paragraph)
+        }
+        if let activeRule { ruleRects.append(activeRule) }
+        return ruleRects
+    }
+
+    override func draw(_ rect: CGRect) {
+        super.draw(rect)
+        UIColor(Color.folioInkSoft).withAlphaComponent(0.65).setFill()
+        for rule in blockquoteRuleRects() where rule.intersects(rect) {
+            UIBezierPath(roundedRect: rule, cornerRadius: rule.width / 2).fill()
+        }
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        setNeedsDisplay()
+    }
+
 
     override var undoManager: UndoManager? { nil }
 

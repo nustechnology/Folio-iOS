@@ -7,6 +7,7 @@ struct FolioNotebookView: View {
     let onBackToSpaces: () -> Void
     let onNavigateToNotes: () -> Void
     let onSourceOpened: (String) -> Void
+    let isKeyboardVisible: Bool
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var pendingExportAction: PendingExportAction?
@@ -72,7 +73,8 @@ struct FolioNotebookView: View {
                     onRedo: { viewModel.handle(.redo) },
                     canUndo: viewModel.canUndo,
                     canRedo: viewModel.canRedo,
-                    saveStatus: viewModel.state.saveStatus
+                    saveStatus: viewModel.state.saveStatus,
+                    activeFormats: viewModel.toolbarActiveFormats
                 )
                 .onTapGesture { dismissKeyboard() }
 
@@ -247,7 +249,7 @@ struct FolioNotebookView: View {
             ]
         )
         .padding(.top, FolioSpacing.xs)
-        .background(Color.folioOlive)
+        .background(Color.folioHomeHeader)
         .onTapGesture { dismissKeyboard() }
     }
 
@@ -256,6 +258,7 @@ struct FolioNotebookView: View {
             FolioRichTextEditor(
                 attributedText: $viewModel.attributedText,
                 selectedRange: $viewModel.selectedRange,
+                typingAttributes: $viewModel.typingAttributes,
                 onTextChange: { viewModel.handle(.textChanged($0)) },
                 canUndo: viewModel.canUndo,
                 canRedo: viewModel.canRedo,
@@ -272,7 +275,9 @@ struct FolioNotebookView: View {
                 emptyPlaceholder
             }
 
-            quickNotesButton
+            if !isKeyboardVisible {
+                quickNotesButton
+            }
         }
     }
 
@@ -476,7 +481,8 @@ private struct FolioPrintSheet: UIViewControllerRepresentable {
         workspaceTitle: "Dissertation Research",
         onBackToSpaces: {},
         onNavigateToNotes: {},
-        onSourceOpened: { _ in }
+        onSourceOpened: { _ in },
+        isKeyboardVisible: false
     )
 }
 

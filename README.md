@@ -26,7 +26,7 @@ Folio/
 ## Tech Stack
 
 - **Swift 5.0** / **SwiftUI** / **Combine**
-- iOS 26.5+
+- iOS 26.0+
 - Zero external dependencies
 
 ## Configuration

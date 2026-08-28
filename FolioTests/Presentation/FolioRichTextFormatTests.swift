@@ -2,6 +2,13 @@ import XCTest
 @testable import Folio
 
 final class FolioRichTextFormatTests: XCTestCase {
+    func testHeadingFontWeightsAreDistinctFromInlineBold() {
+        XCTAssertEqual(FolioRichTextFormat.heading1FontWeight.rawValue, UIFont.Weight.semibold.rawValue)
+        XCTAssertEqual(FolioRichTextFormat.heading2FontWeight.rawValue, UIFont.Weight.medium.rawValue)
+        XCTAssertEqual(FolioRichTextFormat.heading3FontWeight.rawValue, UIFont.Weight.regular.rawValue)
+        XCTAssertEqual(FolioRichTextFormat.inlineBoldFontWeight.rawValue, UIFont.Weight.bold.rawValue)
+    }
+
     func testSingleDigitOrderedMarkerReturnsMarkerEnd() {
         XCTAssertEqual(FolioRichTextFormat.orderedListMarkerLength(in: "1.\tItem"), 3)
     }
