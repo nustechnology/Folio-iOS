@@ -36,6 +36,7 @@ struct AskConversationDTO: Decodable {
   let title: String
   let createdAt: Date
   let updatedAt: Date
+
   func toDomain() -> AskConversation {
     AskConversation(id: id, title: title, createdAt: createdAt, updatedAt: updatedAt)
   }
@@ -46,6 +47,19 @@ struct AskConversationPaginationDTO: Decodable {
   let limit: Int
   let totalCount: Int
   let totalPages: Int
+
+  private enum CodingKeys: String, CodingKey {
+    case page, limit, totalCount, totalPages
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    self.page = (try? container.decode(Int.self, forKey: .page)) ?? 1
+    self.limit = (try? container.decode(Int.self, forKey: .limit)) ?? 1
+    self.totalCount = (try? container.decode(Int.self, forKey: .totalCount)) ?? 0
+    self.totalPages = (try? container.decode(Int.self, forKey: .totalPages))
+      ?? (totalCount > 0 && limit > 0 ? Int(ceil(Double(totalCount) / Double(limit))) : 1)
+  }
 }
 
 struct AskConversationDetailResponseDTO: Decodable {
@@ -68,6 +82,21 @@ struct AskConversationDetailDTO: Decodable {
   let messages: [AskConversationMessageDTO]
   let createdAt: Date
   let updatedAt: Date
+
+  private enum CodingKeys: String, CodingKey {
+    case id, title, scope, messages, researchSpaceId, createdAt, updatedAt
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    self.id = try container.decode(String.self, forKey: .id)
+    self.title = try container.decode(String.self, forKey: .title)
+    self.scope = try container.decode(AskConversationScopeDTO.self, forKey: .scope)
+    self.messages = (try? container.decode([AskConversationMessageDTO].self, forKey: .messages)) ?? []
+    self.researchSpaceId = try container.decode(String.self, forKey: .researchSpaceId)
+    self.createdAt = try container.decode(Date.self, forKey: .createdAt)
+    self.updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+  }
 
   func toDomain() -> AskConversationDetail {
     AskConversationDetail(
@@ -153,7 +182,7 @@ struct AskQuestionRequestDTO: Encodable {
     var container = encoder.container(keyedBy: CodingKeys.self)
     try container.encode(question, forKey: .question)
     try container.encode(scope, forKey: .scope)
-    try container.encode(sourceId, forKey: .sourceId)
+    try container.encodeIfPresent(sourceId, forKey: .sourceId)
     try container.encodeIfPresent(conversationId, forKey: .conversationId)
   }
 }

@@ -261,7 +261,10 @@ struct MainView: View {
                         spaceId: selectedWorkspace?.id,
                         workspaceTitle: selectedWorkspace?.name,
                         onBackToSpaces: canReturnToConversationList
-                            ? { isAskConversationOpen = false }
+                            ? {
+                                isAskConversationOpen = false
+                                askConversationListViewModel?.handle(.refresh)
+                            }
                             : { showMySpaces() },
                         onOpenSource: { folioSource in
                             Task {
@@ -362,11 +365,15 @@ struct MainView: View {
             saveNotebookUseCase: viewModel.saveNotebookUseCase
         )
         notebookViewModel?.configure(spaceId: workspace.id, spaceName: workspace.name)
-        askConversationListViewModel = AskConversationListViewModel(
+        let askListVM = AskConversationListViewModel(
             spaceId: workspace.id,
             fetchAskConversationsUseCase: fetchAskConversationsUseCase,
             deleteConversationUseCase: deleteConversationUseCase,
             renameConversationUseCase: renameConversationUseCase)
+        askConversationListViewModel = askListVM
+        askViewModel.onConversationCreated = { [weak askListVM] in
+            askListVM?.handle(.refresh)
+        }
         isAskConversationOpen = false
         selectedWorkspace = workspace
     }

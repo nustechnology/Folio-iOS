@@ -23,7 +23,7 @@ final class AskConversationListViewModel: ViewModelProtocol {
         case renameConversation(AskConversation, title: String)
     }
 
-    private static let pageSize = 20
+    private static let pageSize = 10
     private static let searchDebounceDuration: TimeInterval = 0.4
     static let titleMaxLength = 255
 
@@ -68,6 +68,7 @@ final class AskConversationListViewModel: ViewModelProtocol {
             loadMore()
         case .searchQueryChanged(let query):
             state.searchQuery = query
+            latestLoadRequestID += 1
             debounceSearch()
         case .deleteConversation(let conversation):
             Task { await performDelete(conversation) }
@@ -127,7 +128,6 @@ final class AskConversationListViewModel: ViewModelProtocol {
             let result = try await fetchAskConversationsUseCase.execute(query: query)
 
             guard requestID == latestLoadRequestID else { return }
-
             state.conversations = replace ? result.conversations : mergedConversations(with: result.conversations)
             state.pagination = result.pagination
         } catch is CancellationError {

@@ -231,6 +231,13 @@ final class AskAnswerSSEClientLineParserTests: XCTestCase {
         XCTAssertTrue(threw)
     }
 
+    func testAskQuestionRequestDTOEncodingExcludesNilSourceId() throws {
+        let request = AskQuestionRequestDTO(question: "What problems?", scope: "space", sourceId: nil, conversationId: nil)
+        let data = try JSONEncoder().encode(request)
+        let jsonString = String(data: data, encoding: .utf8)!
+        XCTAssertFalse(jsonString.contains("sourceId"))
+    }
+
     // MARK: - Helper
 
     private func parse(_ lines: [String]) async throws -> [AskAnswerStreamEvent] {
