@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 struct FolioNotebookView: View {
@@ -16,6 +17,7 @@ struct FolioNotebookView: View {
     @State private var pendingSourceID: String?
     @State private var shareURL: ShareableURL?
     @State private var isPrintPresented = false
+    @State private var noteDetailToPresent: Note?
 
     private enum PendingExportAction {
         case copy
@@ -156,14 +158,29 @@ struct FolioNotebookView: View {
                 }
             }
         })
-        .onChange(of: noteListViewModel?.state.sheet) { _, sheet in
-            if sheet == nil {
-                viewModel.handle(.closeNewNote)
-            }
-        }
         .onChange(of: viewModel.state.showQuickNotesSheet) { _, isPresented in
             if isPresented {
+                noteDetailToPresent = nil
                 noteListViewModel?.handle(.refresh)
+            }
+        }
+        .onReceive(
+            noteListViewModel?.objectWillChange.eraseToAnyPublisher()
+                ?? Empty<Void, Never>().eraseToAnyPublisher()
+        ) { _ in
+            DispatchQueue.main.async {
+                if let sheet = noteListViewModel?.state.sheet {
+                    if case .detail(let note) = sheet {
+                        noteDetailToPresent = note
+                    }
+                } else {
+                    if viewModel.state.showNewNoteSheet {
+                        viewModel.handle(.closeNewNote)
+                    }
+                    if noteDetailToPresent != nil {
+                        noteDetailToPresent = nil
+                    }
+                }
             }
         }
         .folioToast(message: $viewModel.toastMessage)
@@ -179,7 +196,7 @@ struct FolioNotebookView: View {
         if viewModel.state.showQuickNotesSheet { return .quickNotes }
         if let url = shareURL { return .share(url) }
         if isPrintPresented { return .print }
-        if let note = detailNote { return .noteDetail(note) }
+        if let note = noteDetailToPresent { return .noteDetail(note) }
         if viewModel.state.showNewNoteSheet { return .newNote }
         return nil
     }
@@ -204,6 +221,7 @@ struct FolioNotebookView: View {
         case .print:
             isPrintPresented = false
         case .noteDetail:
+            noteDetailToPresent = nil
             noteListViewModel?.handle(.dismissSheet)
         case .newNote:
             if viewModel.state.showNewNoteSheet { viewModel.handle(.setNewNotePresented(false)) }

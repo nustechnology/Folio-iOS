@@ -1,3 +1,4 @@
+import SwiftUI
 import UIKit
 
 @MainActor
@@ -25,33 +26,73 @@ extension RichTextFormattingController {
             }
         }
 
-        let range = clampedSelection(
-            clampedSelectedRange.length > 0
-                ? clampedSelectedRange
-                : paragraphRange(at: clampedSelectedRange.location, in: attributedText),
-            to: attributedText.length
-        )
-        guard range.location != NSNotFound else { return nil }
-
-        guard range.length > 0 else { return nil }
+        let selectionRange = clampedSelectedRange.length > 0
+            ? clampedSelectedRange
+            : paragraphRange(at: clampedSelectedRange.location, in: attributedText)
+        guard selectionRange.location != NSNotFound else { return nil }
 
         let mutable = NSMutableAttributedString(attributedString: attributedText)
-        let isCurrentlyHeading = hasHeadingStyle(mutable, range: range, fontSize: fontSize)
+        let nsString = mutable.string as NSString
+        let paragraphs = paragraphRanges(in: selectionRange, string: nsString)
+        guard !paragraphs.isEmpty else { return nil }
 
-        if isCurrentlyHeading {
-            let bodyFont = UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize)
-            mutable.addAttribute(.font, value: bodyFont, range: range)
-        } else {
-            let headingFont = UIFont.systemFont(
-                ofSize: fontSize,
-                weight: FolioRichTextFormat.headingFontWeight(for: fontSize)
-            )
-            mutable.addAttribute(.font, value: headingFont, range: range)
+        let allMatch = paragraphs.allSatisfy { paragraph in
+            hasHeadingStyle(mutable, range: paragraph, fontSize: fontSize)
         }
 
+        let originalStart = paragraphs.first!.location
+
+        for paragraph in paragraphs.reversed() {
+            let currentNsString = mutable.string as NSString
+            let currentParagraph = currentNsString.paragraphRange(for: NSRange(location: paragraph.location, length: 0))
+
+            if let marker = listMarker(in: currentParagraph, in: currentNsString) {
+                mutable.replaceCharacters(in: marker.range, with: "")
+                applyPlainParagraphStyle(at: currentParagraph.location, in: mutable)
+                let nextLocation = currentParagraph.location + max(0, currentParagraph.length - marker.range.length)
+                if marker.isOrdered {
+                    _ = renumberOrderedList(startingAt: nextLocation, in: mutable, caretLocation: currentParagraph.location)
+                }
+            }
+
+            let updatedNsString = mutable.string as NSString
+            let updatedParagraph = updatedNsString.paragraphRange(for: NSRange(location: currentParagraph.location, length: 0))
+            let paragraphText = updatedNsString.substring(with: updatedParagraph)
+            let blockquoteMarkerLength = (FolioRichTextFormat.blockquoteMarker as NSString).length
+            let currentParagraphStyle = mutable.attribute(
+                .paragraphStyle,
+                at: updatedParagraph.location,
+                effectiveRange: nil
+            ) as? NSParagraphStyle
+            if paragraphText.hasPrefix(FolioRichTextFormat.blockquoteMarker),
+               currentParagraphStyle?.headIndent == FolioRichTextFormat.blockquoteIndent {
+                let markerRange = NSRange(location: updatedParagraph.location, length: blockquoteMarkerLength)
+                mutable.replaceCharacters(in: markerRange, with: "")
+                applyPlainParagraphStyle(at: updatedParagraph.location, in: mutable)
+                let adjustedRange = NSRange(location: updatedParagraph.location, length: max(0, updatedParagraph.length - blockquoteMarkerLength))
+                mutable.addAttribute(.foregroundColor, value: UIColor(Color.folioInk), range: adjustedRange)
+            }
+
+            let finalNsString = mutable.string as NSString
+            let finalParagraph = finalNsString.paragraphRange(for: NSRange(location: currentParagraph.location, length: 0))
+            if finalParagraph.length > 0 {
+                let newFont = allMatch
+                    ? UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize)
+                    : UIFont.systemFont(
+                        ofSize: fontSize,
+                        weight: FolioRichTextFormat.headingFontWeight(for: fontSize)
+                    )
+                mutable.addAttribute(.font, value: newFont, range: finalParagraph)
+            }
+        }
+
+        let lastSelectedParagraph = paragraphs.last!
+        let finalNsString = mutable.string as NSString
+        let finalLastParagraph = finalNsString.paragraphRange(for: NSRange(location: lastSelectedParagraph.location, length: 0))
+        let newRange = NSRange(location: originalStart, length: max(0, NSMaxRange(finalLastParagraph) - originalStart))
         return Result(
             attributedText: mutable,
-            selectedRange: clampedSelection(clampedSelectedRange, to: mutable.length),
+            selectedRange: clampedSelection(newRange, to: mutable.length),
             typingAttributes: clampedSelectedRange.length == 0
                 ? typingAttributes(at: clampedSelectedRange.location, in: mutable)
                 : nil

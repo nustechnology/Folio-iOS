@@ -185,18 +185,27 @@ extension RichTextFormattingController {
                     range: NSRange(location: currentParagraph.location, length: contentLength)
                 )
             } else {
+                let nsString = mutable.string as NSString
+                if let marker = listMarker(in: currentParagraph, in: nsString) {
+                    mutable.replaceCharacters(in: marker.range, with: "")
+                    if marker.isOrdered {
+                        _ = renumberOrderedList(startingAt: currentParagraph.location, in: mutable, caretLocation: currentParagraph.location)
+                    }
+                }
+                let currentPara = (mutable.string as NSString).paragraphRange(for: NSRange(location: currentParagraph.location, length: 0))
+                let bodyFont = UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize)
+                mutable.addAttribute(.font, value: bodyFont, range: currentPara)
+
                 mutable.replaceCharacters(
-                    in: NSRange(location: currentParagraph.location, length: 0),
+                    in: NSRange(location: currentPara.location, length: 0),
                     with: FolioRichTextFormat.blockquoteMarker
                 )
-                applyBlockquoteParagraphStyle(at: currentParagraph.location, in: mutable)
+                applyBlockquoteParagraphStyle(at: currentPara.location, in: mutable)
+                let adjustedPara = (mutable.string as NSString).paragraphRange(for: NSRange(location: currentPara.location, length: 0))
                 mutable.addAttribute(
                     .foregroundColor,
                     value: UIColor(Color.folioInkMuted),
-                    range: NSRange(
-                        location: currentParagraph.location,
-                        length: currentParagraph.length + markerLength
-                    )
+                    range: adjustedPara
                 )
             }
         }

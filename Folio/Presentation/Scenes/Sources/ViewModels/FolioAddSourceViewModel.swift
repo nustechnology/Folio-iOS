@@ -86,7 +86,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
 
     var onOpenSource: ((Source) -> Void)?
     var onOpenAsk: ((Source) -> Void)?
-    var onSourceAdded: ((Source) -> Void)?
+    var onProcessingComplete: ((Source) -> Void)?
 
     private let uploadUseCase: any UploadSourceUseCaseProtocol
     private let spaceId: String
@@ -106,10 +106,6 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         case .web: return validWebURL
         case .text: return validManualContent
         }
-    }
-
-    var isDismissalLocked: Bool {
-        state.isSubmitting || (state.isProcessing && !state.isProcessingComplete && !state.isProcessingFailed)
     }
 
     private var validWebURL: Bool {
@@ -384,7 +380,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             state.processingStageLabel = ProcessingStage.ready.title
             for i in 0..<ProcessingStage.allCases.count { updateStage(i, status: .completed) }
             if let source = state.processingSource {
-                onSourceAdded?(source)
+                onProcessingComplete?(source)
             }
         } else {
             state.isProcessingFailed = true

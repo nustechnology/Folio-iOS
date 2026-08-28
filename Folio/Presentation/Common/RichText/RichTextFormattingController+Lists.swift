@@ -229,18 +229,22 @@ extension RichTextFormattingController {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.headIndent = FolioRichTextFormat.listIndent
         paragraphStyle.firstLineHeadIndent = 0
+        let bodyFont = UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize)
 
         for (index, paragraph) in paragraphs.enumerated().reversed() {
             let nsString = mutable.string as NSString
-            if let existing = listMarker(in: paragraph, in: nsString) {
+            let currentParagraph = nsString.paragraphRange(for: NSRange(location: paragraph.location, length: 0))
+            mutable.addAttribute(.font, value: bodyFont, range: currentParagraph)
+
+            if let existing = listMarker(in: currentParagraph, in: nsString) {
                 mutable.replaceCharacters(in: existing.range, with: "")
             }
             let prefix = ordered ? "\(index + 1).\t" : FolioRichTextFormat.bulletMarker
-            mutable.replaceCharacters(in: NSRange(location: paragraph.location, length: 0), with: prefix)
-            let markerRange = NSRange(location: paragraph.location, length: (prefix as NSString).length)
-            mutable.addAttribute(.font, value: UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize), range: markerRange)
-            let currentParagraph = (mutable.string as NSString).paragraphRange(for: NSRange(location: paragraph.location, length: 0))
-            mutable.addAttribute(.paragraphStyle, value: paragraphStyle, range: currentParagraph)
+            mutable.replaceCharacters(in: NSRange(location: currentParagraph.location, length: 0), with: prefix)
+            let markerRange = NSRange(location: currentParagraph.location, length: (prefix as NSString).length)
+            mutable.addAttribute(.font, value: bodyFont, range: markerRange)
+            let updatedParagraph = (mutable.string as NSString).paragraphRange(for: NSRange(location: currentParagraph.location, length: 0))
+            mutable.addAttribute(.paragraphStyle, value: paragraphStyle, range: updatedParagraph)
         }
     }
 
@@ -259,7 +263,7 @@ extension RichTextFormattingController {
         }
     }
 
-    private func renumberOrderedList(containing location: Int, in mutable: NSMutableAttributedString, caretLocation: Int) -> Int {
+    func renumberOrderedList(containing location: Int, in mutable: NSMutableAttributedString, caretLocation: Int) -> Int {
         let paragraphs = allParagraphRanges(in: mutable.string as NSString)
         guard let index = paragraphs.firstIndex(where: { NSLocationInRange(location, $0) }),
               listMarker(in: paragraphs[index], in: mutable.string as NSString)?.isOrdered == true else { return caretLocation }
@@ -275,7 +279,7 @@ extension RichTextFormattingController {
         return renumberOrderedList(paragraphs: Array(paragraphs[start...end]), in: mutable, caretLocation: caretLocation)
     }
 
-    private func renumberOrderedList(startingAt location: Int, in mutable: NSMutableAttributedString, caretLocation: Int) -> Int {
+    func renumberOrderedList(startingAt location: Int, in mutable: NSMutableAttributedString, caretLocation: Int) -> Int {
         let paragraphs = allParagraphRanges(in: mutable.string as NSString)
         guard let index = paragraphs.firstIndex(where: { NSLocationInRange(location, $0) }),
               listMarker(in: paragraphs[index], in: mutable.string as NSString)?.isOrdered == true else { return caretLocation }
@@ -287,7 +291,7 @@ extension RichTextFormattingController {
         return renumberOrderedList(paragraphs: Array(paragraphs[index...end]), in: mutable, caretLocation: caretLocation)
     }
 
-    private func renumberOrderedList(paragraphs: [NSRange], in mutable: NSMutableAttributedString, caretLocation: Int) -> Int {
+    func renumberOrderedList(paragraphs: [NSRange], in mutable: NSMutableAttributedString, caretLocation: Int) -> Int {
         var adjustedCaret = caretLocation
         for (offset, paragraph) in paragraphs.enumerated().reversed() {
             let string = mutable.string as NSString
@@ -300,7 +304,7 @@ extension RichTextFormattingController {
         return adjustedCaret
     }
 
-    private func allParagraphRanges(in string: NSString) -> [NSRange] {
+    func allParagraphRanges(in string: NSString) -> [NSRange] {
         var paragraphs: [NSRange] = []
         var location = 0
         while location < string.length {
