@@ -3,6 +3,7 @@ import SwiftUI
 struct SourceListView: View {
     @StateObject private var viewModel: SourceListViewModel
     @State private var actionSheetSource: Source?
+    @State private var addSourceViewModel: FolioAddSourceViewModel?
     let workspaceTitle: String
     let onBackToSpaces: () -> Void
     let onOpenAccountSettings: () -> Void
@@ -37,10 +38,30 @@ struct SourceListView: View {
                     .frame(maxHeight: .infinity)
             }
         }
-        .task { viewModel.send(.appeared) }
+        .task {
+            viewModel.send(.appeared)
+            if addSourceViewModel == nil {
+                let vm = FolioAddSourceViewModel(
+                    uploadUseCase: viewModel.uploadSourceUseCase,
+                    spaceId: viewModel.spaceId
+                )
+                vm.onProcessingComplete = { [weak viewModel] _ in
+                    viewModel?.send(.sourceUploaded)
+                }
+                addSourceViewModel = vm
+            }
+        }
         .sheet(item: Binding(
             get: { viewModel.state.presentedSheet },
-            set: { _ in viewModel.send(.dismissSheet) }
+            set: { _ in
+                viewModel.send(.dismissSheet)
+                if let vm = addSourceViewModel {
+                    let isTerminal = vm.state.isProcessingComplete || vm.state.isProcessingFailed
+                    if !vm.state.isProcessing || isTerminal {
+                        vm.handle(.dismissProcessing)
+                    }
+                }
+            }
         )) { sheet in
             sheetContent(sheet)
         }
@@ -73,21 +94,7 @@ struct SourceListView: View {
     private func sheetContent(_ sheet: SourceListViewModel.State.Sheet) -> some View {
         switch sheet {
         case .addSource:
-            FolioAddSourceSheet(
-                uploadUseCase: viewModel.uploadSourceUseCase,
-                spaceId: viewModel.spaceId,
-                onSourceOpened: { source in
-                    viewModel.send(.sourceUploaded)
-                    onSourceOpened(source)
-                },
-                onAskSource: { source in
-                    viewModel.send(.sourceUploaded)
-                    onAskSource(source)
-                },
-                onSourceAdded: { _ in
-                    viewModel.send(.sourceUploaded)
-                }
-            )
+            addSourceSheet
         case .editSource:
             EditSourceSheet(viewModel: viewModel)
         case .processing(let source):
@@ -129,6 +136,25 @@ struct SourceListView: View {
                 selectedValue: viewModel.state.sortOption,
                 onSelect: { viewModel.send(.sortSelected($0)) }
             )
+        }
+    }
+
+    private var addSourceSheet: some View {
+        let onOpened: (Source) -> Void = { source in
+            onSourceOpened(source)
+        }
+        let onAsk: (Source) -> Void = { source in
+            onAskSource(source)
+        }
+        if let addSourceViewModel {
+            return AnyView(FolioAddSourceSheet(
+                viewModel: addSourceViewModel,
+                onSourceOpened: onOpened,
+                onAskSource: onAsk,
+                onProcessingComplete: { _ in viewModel.send(.sourceUploaded) }
+            ))
+        } else {
+            return AnyView(EmptyView())
         }
     }
 
@@ -186,7 +212,8 @@ struct SourceListView: View {
                 title: message,
                 systemImage: "wifi.slash",
                 actionTitle: String(localized: "Retry"),
-                action: { viewModel.send(.retry) }
+                action: { viewModel.send(.retry) },
+                onRefresh: { await viewModel.refresh() }
             )
         case .empty:
             emptyContent
@@ -246,96 +273,108 @@ struct SourceListView: View {
     }
 
     private var noSearchResultsContent: some View {
-        VStack(spacing: 0) {
-            Spacer()
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: 0) {
+                    Spacer(minLength: 40)
 
-            VStack(spacing: 0) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 18, weight: .regular))
-                    .foregroundStyle(Color.folioInkSoft)
-                    .frame(width: 44, height: 44)
-                    .background(
-                        Circle()
-                            .fill(Color.folioSurfaceStrong)
-                    )
-                    .overlay(
-                        Circle()
-                            .stroke(Color.folioInkSoft, lineWidth: 1)
-                    )
-                    .clipShape(Circle())
+                    VStack(spacing: 0) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 18, weight: .regular))
+                            .foregroundStyle(Color.folioInkSoft)
+                            .frame(width: 44, height: 44)
+                            .background(
+                                Circle()
+                                    .fill(Color.folioSurfaceStrong)
+                            )
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.folioInkSoft, lineWidth: 1)
+                            )
+                            .clipShape(Circle())
 
-                Spacer().frame(height: FolioSpacing.xl3)
+                        Spacer().frame(height: FolioSpacing.xl3)
 
-                Text(String(localized: "No results found"))
-                    .font(.system(size: FolioFontSize.headline, weight: .semibold))
-                    .foregroundStyle(Color.folioTextPrimary)
-                    .multilineTextAlignment(.center)
+                        Text(String(localized: "No results found"))
+                            .font(.system(size: FolioFontSize.headline, weight: .semibold))
+                            .foregroundStyle(Color.folioTextPrimary)
+                            .multilineTextAlignment(.center)
 
-                Spacer().frame(height: FolioSpacing.sm)
+                        Spacer().frame(height: FolioSpacing.sm)
 
-                Text(String(localized: "Try a different search term or clear your search."))
-                    .font(.system(size: FolioFontSize.body, weight: .regular))
-                    .foregroundStyle(Color.folioInkSoft)
-                    .multilineTextAlignment(.center)
+                        Text(String(localized: "Try a different search term or clear your search."))
+                            .font(.system(size: FolioFontSize.body, weight: .regular))
+                            .foregroundStyle(Color.folioInkSoft)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    Spacer(minLength: 40)
+                }
+                .frame(width: geometry.size.width)
+                .frame(minHeight: geometry.size.height)
+                .padding(.horizontal, FolioSpacing.xl3)
             }
-
-            Spacer()
+            .refreshable { await viewModel.refresh() }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, FolioSpacing.xl3)
     }
 
     private var emptyContent: some View {
-        VStack(spacing: 0) {
-            Spacer()
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: 0) {
+                    Spacer(minLength: 40)
 
-            VStack(spacing: 0) {
-                Image(systemName: "doc.fill")
-                    .font(.system(size: 18, weight: .regular))
-                    .foregroundStyle(Color.folioInkSoft)
-                    .frame(width: FolioSize.fieldHeightSm, height: FolioSize.fieldHeightSm)
-                    .background(
-                        Circle()
-                            .fill(Color.folioSurfaceStrong)
-                    )
-                    .overlay(
-                        Circle()
-                            .stroke(Color.folioLine, lineWidth: 1)
-                    )
-                    .clipShape(Circle())
+                    VStack(spacing: 0) {
+                        Image(systemName: "doc.fill")
+                            .font(.system(size: 18, weight: .regular))
+                            .foregroundStyle(Color.folioInkSoft)
+                            .frame(width: FolioSize.fieldHeightSm, height: FolioSize.fieldHeightSm)
+                            .background(
+                                Circle()
+                                    .fill(Color.folioSurfaceStrong)
+                            )
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.folioLine, lineWidth: 1)
+                            )
+                            .clipShape(Circle())
 
-                Spacer().frame(height: FolioSpacing.xl3)
+                        Spacer().frame(height: FolioSpacing.xl3)
 
-                Text(String(localized: "No sources yet"))
-                    .font(.system(size: FolioFontSize.headline, weight: .semibold))
-                    .foregroundStyle(Color.folioTextPrimary)
-                    .multilineTextAlignment(.center)
+                        Text(String(localized: "No sources yet"))
+                            .font(.system(size: FolioFontSize.headline, weight: .semibold))
+                            .foregroundStyle(Color.folioTextPrimary)
+                            .multilineTextAlignment(.center)
 
-                Spacer().frame(height: FolioSpacing.sm)
+                        Spacer().frame(height: FolioSpacing.sm)
 
-                Text(String(localized: "Add a file, web article, or manual text source."))
-                    .font(.system(size: FolioFontSize.body, weight: .regular))
-                    .foregroundStyle(Color.folioInkSoft)
-                    .multilineTextAlignment(.center)
+                        Text(String(localized: "Add a file, web article, or manual text source."))
+                            .font(.system(size: FolioFontSize.body, weight: .regular))
+                            .foregroundStyle(Color.folioInkSoft)
+                            .multilineTextAlignment(.center)
 
-                Spacer().frame(height: FolioSpacing.xl4)
+                        Spacer().frame(height: FolioSpacing.xl4)
 
-                Button(action: { viewModel.send(.addTapped) }) {
-                    Text(String(localized: "Add source"))
-                        .font(.system(size: FolioFontSize.bodyLarge, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, FolioSpacing.xl3)
-                        .padding(.vertical, 12)
-                        .background(Color.folioOlive)
-                        .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg))
+                        Button(action: { viewModel.send(.addTapped) }) {
+                            Text(String(localized: "Add source"))
+                                .font(.system(size: FolioFontSize.bodyLarge, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, FolioSpacing.xl3)
+                                .padding(.vertical, 12)
+                                .background(Color.folioOlive)
+                                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg))
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Spacer(minLength: 40)
                 }
-                .buttonStyle(.plain)
+                .frame(width: geometry.size.width)
+                .frame(minHeight: geometry.size.height)
+                .padding(.horizontal, FolioSpacing.xl3)
             }
-
-            Spacer()
+            .refreshable { await viewModel.refresh() }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, FolioSpacing.xl3)
     }
 
     private func sourceList(_ sources: [Source]) -> some View {
@@ -501,29 +540,44 @@ private struct SourceMessageState: View {
     var systemImage: String?
     let actionTitle: String
     let action: () -> Void
+    var onRefresh: (() async -> Void)?
 
     var body: some View {
-        VStack(spacing: FolioSpacing.lg) {
-            if let systemImage {
-                Image(systemName: systemImage)
-                    .font(.system(size: FolioFontSize.display))
-                    .foregroundStyle(Color.folioInkSoft)
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: FolioSpacing.lg) {
+                    Spacer(minLength: 20)
+                    if let systemImage {
+                        Image(systemName: systemImage)
+                            .font(.system(size: FolioFontSize.display))
+                            .foregroundStyle(Color.folioInkSoft)
+                    }
+                    Text(title)
+                        .font(.system(size: FolioFontSize.headline, weight: .semibold))
+                        .foregroundStyle(Color.folioTextPrimary)
+                        .multilineTextAlignment(.center)
+                    Button(action: action) {
+                        Text(actionTitle)
+                            .font(.system(size: FolioFontSize.body, weight: .semibold))
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.folioOlive)
+                    .padding(.horizontal, FolioSpacing.xl)
+                    .padding(.vertical, FolioSpacing.sm)
+                    Spacer(minLength: 20)
+                }
+                .padding(FolioSpacing.xl4)
+                .frame(width: geometry.size.width)
+                .frame(minHeight: geometry.size.height)
             }
-            Text(title)
-                .font(.system(size: FolioFontSize.headline, weight: .semibold))
-                .foregroundStyle(Color.folioTextPrimary)
-                .multilineTextAlignment(.center)
-            Button(action: action) {
-                Text(actionTitle)
-                    .font(.system(size: FolioFontSize.body, weight: .semibold))
+            .refreshable {
+                if let onRefresh {
+                    await onRefresh()
+                } else {
+                    action()
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.folioOlive)
-            .padding(.horizontal, FolioSpacing.xl)
-            .padding(.vertical, FolioSpacing.sm)
         }
-        .padding(FolioSpacing.xl4)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -635,7 +689,7 @@ private struct EditSourceSheet: View {
 extension FolioSourceFilter {
     var displayTitle: String {
         switch self {
-        case .all: return String(localized: "All")
+        case .all: return "ALL"
         case .files: return "FILE"
         case .web: return "WEB"
         case .text: return "TEXT"

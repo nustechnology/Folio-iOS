@@ -279,4 +279,49 @@ final class RichTextListsTests: XCTestCase {
         XCTAssertEqual(paragraphStyle?.headIndent, 0)
         XCTAssertEqual(result?.selectedRange, NSRange(location: "replacement".count, length: 0))
     }
+
+    func testApplyHeadingRemovesListItemMarkerAndAppliesHeadingFont() {
+        let text = NSAttributedString(string: "1.\tHi\n2.\tHow\n3.\tWhat\n4.\tDo")
+        let controller = RichTextFormattingController()
+
+        let result = controller.applyHeading(
+            fontSize: FolioRichTextFormat.heading1FontSize,
+            in: text,
+            selectedRange: NSRange(location: 7, length: 0)
+        )
+
+        XCTAssertNotNil(result)
+        let formattedString = result!.attributedText.string
+        XCTAssertTrue(formattedString.contains("1.\tHi\nHow\n"))
+
+        let howRange = (formattedString as NSString).range(of: "How")
+        let font = result!.attributedText.attribute(.font, at: howRange.location, effectiveRange: nil) as? UIFont
+        XCTAssertEqual(font?.pointSize, FolioRichTextFormat.heading1FontSize)
+
+        let html = FolioRichTextEditor.htmlFromAttributedText(result!.attributedText)
+        XCTAssertTrue(html.contains("<h1>How</h1>"))
+        XCTAssertFalse(html.contains("<li><strong>How</strong></li>"))
+    }
+
+    func testApplyListStyleOnHeadingResetsFontToBodyAndAddsMarker() {
+        let mutable = NSMutableAttributedString(string: "How")
+        let headingFont = UIFont.systemFont(ofSize: FolioRichTextFormat.heading1FontSize, weight: .bold)
+        mutable.addAttribute(.font, value: headingFont, range: NSRange(location: 0, length: 3))
+
+        let controller = RichTextFormattingController()
+        let result = controller.applyListStyle(
+            ordered: true,
+            in: mutable,
+            selectedRange: NSRange(location: 0, length: 3)
+        )
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result!.attributedText.string, "1.\tHow")
+        let howRange = (result!.attributedText.string as NSString).range(of: "How")
+        let font = result!.attributedText.attribute(.font, at: howRange.location, effectiveRange: nil) as? UIFont
+        XCTAssertEqual(font?.pointSize, FolioRichTextFormat.bodyFontSize)
+
+        let html = FolioRichTextEditor.htmlFromAttributedText(result!.attributedText)
+        XCTAssertEqual(html, "<ol><li>How</li></ol>")
+    }
 }

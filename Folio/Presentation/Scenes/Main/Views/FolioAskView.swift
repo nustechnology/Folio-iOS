@@ -24,6 +24,7 @@ struct FolioAskView: View {
     @State private var showScopeSheet = false
     @State private var showConversationSheet = false
     @State private var showAddSourceSheet = false
+    @State private var addSourceViewModel: FolioAddSourceViewModel?
 
     init(
         viewModel: FolioAskViewModel,
@@ -85,13 +86,14 @@ struct FolioAskView: View {
             )
         }
         .sheet(isPresented: $showAddSourceSheet) {
-            if let uploadUseCase = uploadSourceUseCase, let spaceId {
-                FolioAddSourceSheet(
-                    uploadUseCase: uploadUseCase,
-                    spaceId: spaceId,
-                    onSourceOpened: { source in onSourceAdded?(source) },
-                    onSourceAdded: { source in onSourceAdded?(source) }
-                )
+            askAddSourceSheet
+        }
+        .onChange(of: showAddSourceSheet) { _, isPresented in
+            if !isPresented, let vm = addSourceViewModel {
+                let isTerminal = vm.state.isProcessingComplete || vm.state.isProcessingFailed
+                if !vm.state.isProcessing || isTerminal {
+                    vm.handle(.dismissProcessing)
+                }
             }
         }
         .sheet(isPresented: $showScopeSheet) {
@@ -131,6 +133,28 @@ struct FolioAskView: View {
         }
     }
 
+    private var askAddSourceSheet: some View {
+        if let vm = addSourceViewModel {
+            return AnyView(FolioAddSourceSheet(
+                viewModel: vm,
+                onSourceOpened: { source in onSourceAdded?(source) },
+                onAskSource: { source in onSourceAdded?(source) },
+                onProcessingComplete: { source in onSourceAdded?(source) }
+            ))
+        } else {
+            return AnyView(EmptyView())
+        }
+    }
+
+    private func ensureAddSourceViewModel() {
+        guard addSourceViewModel == nil, let uploadSourceUseCase, let spaceId else { return }
+        let vm = FolioAddSourceViewModel(uploadUseCase: uploadSourceUseCase, spaceId: spaceId)
+        vm.onProcessingComplete = { [onSourceAdded] source in
+            onSourceAdded?(source)
+        }
+        addSourceViewModel = vm
+    }
+
     @ViewBuilder
     private var content: some View {
         let hasEvidence = viewModel.hasEvidence
@@ -139,7 +163,10 @@ struct FolioAskView: View {
 
         VStack(spacing: 0) {
             if !hasEvidence {
-                AskNoEvidenceBanner(onAddSource: { showAddSourceSheet = true })
+                AskNoEvidenceBanner(onAddSource: {
+                    ensureAddSourceViewModel()
+                    showAddSourceSheet = true
+                })
                     .padding(.top, 16)
                     .padding(.horizontal, 20)
             }

@@ -439,7 +439,7 @@ extension FolioRichTextEditor {
             } else if isHeadingFont(font, size: size) {
                 flushList()
                 let tag = size >= FolioRichTextFormat.heading1FontSize ? "h1" : (size >= FolioRichTextFormat.heading2FontSize ? "h2" : "h3")
-                blocks.append("<\(tag)>\(inlineHTML(for: text, in: attributedText, range: contentRange, skipBold: true))</\(tag)>")
+                blocks.append("<\(tag)>\(inlineHTML(for: text, in: attributedText, range: contentRange, skipBold: true, skipFontSize: true))</\(tag)>")
                 lastParagraphWasListItem = false
             } else if text.hasPrefix(FolioRichTextFormat.bulletMarker) {
                 if openListTag != "ul" {
@@ -484,7 +484,13 @@ extension FolioRichTextEditor {
         return blocks.joined(separator: "\n")
     }
 
-    private static func inlineHTML(for text: String, in attributed: NSAttributedString, range: NSRange, skipBold: Bool) -> String {
+    private static func inlineHTML(
+        for text: String,
+        in attributed: NSAttributedString,
+        range: NSRange,
+        skipBold: Bool,
+        skipFontSize: Bool = false
+    ) -> String {
         var result = ""
         attributed.enumerateAttributes(in: range, options: []) { attrs, attrRange, _ in
             var segment = (attributed.string as NSString).substring(with: attrRange)
@@ -506,11 +512,11 @@ extension FolioRichTextEditor {
                 }
                 if traits.contains(.traitItalic) { segment = "<em>\(segment)</em>" }
                 let size = font.pointSize
-                if abs(size - defaultBodyFontSize) > 0.1 {
+                if !skipFontSize, abs(size - defaultBodyFontSize) > 0.1 {
                     segment = "<span style=\"font-size:\(Int(size))px\">\(segment)</span>"
                 }
             }
-        result += segment
+            result += segment
         }
         return result
     }

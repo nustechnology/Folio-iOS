@@ -2,19 +2,22 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct FolioAddSourceSheet: View {
-    @StateObject private var viewModel: FolioAddSourceViewModel
+    @ObservedObject var viewModel: FolioAddSourceViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var isFileImporterPresented = false
 
     var onSourceOpened: ((Source) -> Void)?
     var onAskSource: ((Source) -> Void)?
-    var onSourceAdded: ((Source) -> Void)?
+    var onProcessingComplete: ((Source) -> Void)?
 
-    init(uploadUseCase: any UploadSourceUseCaseProtocol, spaceId: String, onSourceOpened: ((Source) -> Void)? = nil, onAskSource: ((Source) -> Void)? = nil, onSourceAdded: ((Source) -> Void)? = nil) {
-        _viewModel = StateObject(wrappedValue: FolioAddSourceViewModel(uploadUseCase: uploadUseCase, spaceId: spaceId))
+    init(viewModel: FolioAddSourceViewModel, onSourceOpened: ((Source) -> Void)? = nil, onAskSource: ((Source) -> Void)? = nil, onProcessingComplete: ((Source) -> Void)? = nil) {
+        _viewModel = ObservedObject(wrappedValue: viewModel)
         self.onSourceOpened = onSourceOpened
         self.onAskSource = onAskSource
-        self.onSourceAdded = onSourceAdded
+        self.onProcessingComplete = onProcessingComplete
+        if let onProcessingComplete {
+            viewModel.onProcessingComplete = onProcessingComplete
+        }
     }
 
     private func heightForTab(_ tab: FolioAddSourceViewModel.AddSourceTab) -> PresentationDetent {
@@ -53,17 +56,10 @@ struct FolioAddSourceSheet: View {
             selection: Binding(get: { currentDetent }, set: { _ in })
         )
         .presentationDragIndicator(.visible)
-        .interactiveDismissDisabled(viewModel.isDismissalLocked)
         .presentationBackground(Color.folioHomeSheetBackground)
         .presentationCornerRadius(24)
-        .onAppear {
-            viewModel.onSourceAdded = onSourceAdded
-        }
         .onChange(of: viewModel.state.shouldDismiss) { _, shouldDismiss in
             if shouldDismiss { dismiss() }
-        }
-        .onDisappear {
-            viewModel.handle(.dismissProcessing)
         }
         .deleteConfirmationOverlay(
             isPresented: viewModel.state.showDeleteConfirmation,
