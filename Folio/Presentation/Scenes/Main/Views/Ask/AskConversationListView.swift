@@ -18,7 +18,6 @@ struct AskConversationListView: View {
         }
         .background(Color.folioCanvas)
         .task { viewModel.handle(.onAppear) }
-        .refreshable { await viewModel.refresh() }
         .sheet(isPresented: $showNewConversationSheet) {
             newConversationSheet
         }
@@ -87,7 +86,7 @@ struct AskConversationListView: View {
                             onMenu: { actionSheetTarget = conversation }
                         )
                         .onAppear {
-                            if index == viewModel.filteredConversations.index(before: viewModel.filteredConversations.endIndex) {
+                            if index == viewModel.filteredConversations.count - 1 {
                                 viewModel.handle(.loadMore)
                             }
                         }
@@ -114,12 +113,13 @@ struct AskConversationListView: View {
             }
             .padding(FolioSpacing.xl2)
         }
+        .refreshable { await viewModel.refresh() }
     }
 
     private var emptyState: some View {
         VStack(spacing: FolioSpacing.xl) {
-            Image(systemName: "bubble.left.and.bubble.right.fill")
-                .font(.system(size: FolioFontSize.subheadline, weight: .medium))
+            Image(systemName: "sparkles")
+                .font(.system(size: FolioFontSize.bodyLarge, weight: .medium))
                 .foregroundStyle(Color.folioInkSoft)
                 .frame(width: FolioSize.fieldHeightSm, height: FolioSize.fieldHeightSm)
                 .background(Color.folioSurfaceStrong)
@@ -133,7 +133,7 @@ struct AskConversationListView: View {
                 Text(String(localized: "No conversations yet"))
                     .font(.system(size: FolioFontSize.body, weight: .semibold))
                     .foregroundStyle(Color.folioInk)
-                Text(String(localized: "Ask a question to start your first conversation."))
+                Text(String(localized: "Ask a question to start a grounded conversation."))
                     .font(.system(size: FolioFontSize.bodySmall, weight: .regular))
                     .foregroundStyle(Color.folioInkSoft)
                     .multilineTextAlignment(.center)
@@ -150,7 +150,7 @@ struct AskConversationListView: View {
             }
             .buttonStyle(.plain)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .containerRelativeFrame(.vertical)
     }
 
@@ -408,11 +408,11 @@ private struct AskConversationRow: View {
 
     private var cardContent: some View {
         HStack(alignment: .top, spacing: FolioSpacing.lg) {
-            Image(systemName: "bubble.left.and.bubble.right.fill")
-                .font(.system(size: FolioFontSize.bodyLarge, weight: .semibold))
-                .foregroundStyle(Color.folioHomeTypeFileText)
+            Image(systemName: "sparkles")
+                .font(.system(size: FolioFontSize.body, weight: .semibold))
+                .foregroundStyle(Color.folioOliveDark)
                 .frame(width: FolioSize.chipHeight, height: FolioSize.chipHeight)
-                .background(Color.folioHomeTypeFileBackground)
+                .background(Color.folioOlive.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
 
             VStack(alignment: .leading, spacing: 6) {

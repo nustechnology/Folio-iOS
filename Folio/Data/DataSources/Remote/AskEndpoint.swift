@@ -21,6 +21,7 @@ struct AskConversationListEndpoint: APIEndpoint {
   var method: HTTPMethod { .get }
   var requiresAuthentication: Bool { true }
   var body: Data? { nil }
+  var cachePolicy: URLRequest.CachePolicy { .reloadIgnoringLocalCacheData }
   var queryItems: [URLQueryItem]? {
     var items: [URLQueryItem] = []
     if let page = query.page { items.append(URLQueryItem(name: "page", value: String(page))) }

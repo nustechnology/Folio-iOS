@@ -891,8 +891,15 @@
     "Ask a question" : {
 
     },
-    "Ask a question to start your first conversation." : {
-
+    "Ask a question to start a grounded conversation." : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hãy đặt câu hỏi để bắt đầu một cuộc trò chuyện có cơ sở."
+          }
+        }
+      }
     },
     "Ask a question…" : {
 

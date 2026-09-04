@@ -59,6 +59,7 @@ final class FolioAskViewModel: ViewModelProtocol {
     private let fetchAskConversationDetailUseCase: any FetchAskConversationDetailUseCaseProtocol
     private let sendFeedbackUseCase: any SendFeedbackUseCaseProtocol
     private let createSavedAnswerNoteUseCase: any CreateSavedAnswerNoteUseCaseProtocol
+    var onConversationCreated: (() -> Void)?
 
     var isStreaming: Bool {
         state.messages.last(where: { $0.role == .assistant })?.isStreaming ?? false
@@ -316,8 +317,10 @@ final class FolioAskViewModel: ViewModelProtocol {
     private func handle(_ event: AskAnswerStreamEvent, messageID: String) {
         switch event {
         case .start(let conversationId, let serverMessageID):
+            let isNew = self.conversationId == nil
             self.conversationId = conversationId
             updateMessage(id: messageID) { $0.serverMessageID = serverMessageID }
+            if isNew { onConversationCreated?() }
         case .token(let text):
             updateMessage(id: messageID) { $0.content += text }
         case .citations(let citations):
