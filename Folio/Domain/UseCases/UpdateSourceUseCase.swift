@@ -1,7 +1,7 @@
 import Foundation
 
 protocol UpdateSourceUseCaseProtocol {
-    func execute(id: String, title: String, author: String) async throws -> Source
+    func execute(id: String, title: String, author: String, content: String?) async throws -> Source
 }
 
 final class UpdateSourceUseCase: UpdateSourceUseCaseProtocol {
@@ -11,7 +11,7 @@ final class UpdateSourceUseCase: UpdateSourceUseCaseProtocol {
         self.repository = repository
     }
 
-    func execute(id: String, title: String, author: String) async throws -> Source {
-        try await repository.updateSource(id: id, title: title, author: author)
+    func execute(id: String, title: String, author: String, content: String?) async throws -> Source {
+        try await repository.updateSource(id: id, title: title, author: author, content: content)
     }
 }

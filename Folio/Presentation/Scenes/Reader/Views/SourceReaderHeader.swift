@@ -141,12 +141,12 @@ struct SourceReaderHeader: View {
     }
 
     private var headerTitle: String {
-        if source.sourceType == .file, !source.fileName.isEmpty {
-            return source.fileName
-        }
         let title = source.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return title.isEmpty ? String(localized: "Untitled Source") : title
+        if !title.isEmpty { return title }
+        if !source.fileName.isEmpty { return source.fileName }
+        return String(localized: "Untitled Source")
     }
+
 
     private var authorText: String {
         let author = source.author.trimmingCharacters(in: .whitespacesAndNewlines)

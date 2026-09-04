@@ -9,4 +9,18 @@ final class FolioTextFieldTests: XCTestCase {
     func testTruncatedTextLeavesTextUnchangedWithoutMaximumLength() {
         XCTAssertEqual(FolioTextField.truncatedText("12345", maxLength: nil), "12345")
     }
+
+    func testPlaceholderTextFieldDoesNotControlFocusByDefault() {
+        let field = PlaceholderUITextField(
+            placeholder: "",
+            placeholderColor: .clear,
+            font: .systemFont(ofSize: 14),
+            textColor: .label,
+            keyboardType: .default,
+            isSecureTextEntry: false,
+            text: .constant("")
+        )
+
+        XCTAssertNil(field.isFirstResponder)
+    }
 }

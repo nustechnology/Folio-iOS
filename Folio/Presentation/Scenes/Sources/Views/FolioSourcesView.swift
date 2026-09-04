@@ -229,11 +229,15 @@ private struct FolioSourceCard: View {
         Button(action: onTap) {
             FolioCard(
                 content: HStack(alignment: .top, spacing: 12) {
-                    FolioKindBadge(title: source.kind.badge)
+                    FolioKindBadge(
+                        title: source.kind.badge,
+                        backgroundColor: source.kind.backgroundColor,
+                        textColor: source.kind.textColor
+                    )
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(source.title)
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(Color.folioInk)
                             .lineLimit(2)
                             .frame(maxWidth: .infinity, alignment: .leading)

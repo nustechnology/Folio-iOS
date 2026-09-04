@@ -238,25 +238,31 @@ struct FolioAddSourceSheet: View {
         VStack(alignment: .leading, spacing: FolioSpacing.lg) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(String(localized: "Article URL"))
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.folioAmber)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.folioHomeTypeTextText)
 
-                TextField(String(localized: "https://example.org/care-technology-adoption"), text: Binding(
-                    get: { viewModel.state.webURL },
-                    set: { viewModel.handle(.webURLChanged($0)) }
-                ))
-                .font(.system(size: 14, weight: .regular))
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .keyboardType(.URL)
+                PlaceholderUITextField(
+                    placeholder: String(localized: "https://example.org/care-technology-adoption"),
+                    placeholderColor: UIColor(Color.folioInkSoft),
+                    font: .systemFont(ofSize: 14, weight: .regular),
+                    textColor: UIColor(Color.folioInk),
+                    keyboardType: .URL,
+                    isSecureTextEntry: false,
+                    autocorrectionType: .no,
+                    autocapitalizationType: .none,
+                    text: Binding(
+                        get: { viewModel.state.webURL },
+                        set: { viewModel.handle(.webURLChanged($0)) }
+                    )
+                )
                 .padding(.horizontal, 16)
                 .frame(height: 48)
-                .background(Color.folioSurfaceStrong)
+                .background(.white)
                 .overlay(
-                    RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
-                        .stroke(viewModel.state.webURLError != nil ? Color.folioDanger : Color.folioAmber, lineWidth: 1.5)
+                    RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous)
+                        .stroke(viewModel.state.webURLError != nil ? Color.folioDanger : Color.folioFieldBorder, lineWidth: 1)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous))
 
                 if let error = viewModel.state.webURLError {
                     Text(error)
@@ -268,22 +274,31 @@ struct FolioAddSourceSheet: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(String(localized: "Title"))
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.folioAmber)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.folioHomeTypeTextText)
 
-                TextField(String(localized: "Care Technology Adoption Survey 2026"), text: Binding(
-                    get: { viewModel.state.webTitle },
-                    set: { viewModel.handle(.webTitleChanged($0)) }
-                ))
-                .font(.system(size: 14, weight: .regular))
+                PlaceholderUITextField(
+                    placeholder: String(localized: "Care Technology Adoption Survey 2026"),
+                    placeholderColor: UIColor(Color.folioInkSoft),
+                    font: .systemFont(ofSize: 14, weight: .regular),
+                    textColor: UIColor(Color.folioInk),
+                    keyboardType: .default,
+                    isSecureTextEntry: false,
+                    autocorrectionType: .default,
+                    autocapitalizationType: .sentences,
+                    text: Binding(
+                        get: { viewModel.state.webTitle },
+                        set: { viewModel.handle(.webTitleChanged($0)) }
+                    )
+                )
                 .padding(.horizontal, 16)
                 .frame(height: 48)
-                .background(Color.folioSurfaceStrong)
+                .background(.white)
                 .overlay(
-                    RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
-                        .stroke(Color.folioAmber, lineWidth: 1.5)
+                    RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous)
+                        .stroke(Color.folioFieldBorder, lineWidth: 1)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous))
 
                 HStack {
                     Spacer()
@@ -295,22 +310,31 @@ struct FolioAddSourceSheet: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(String(localized: "Author"))
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.folioAmber)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.folioHomeTypeTextText)
 
-                TextField(String(localized: "Care Systems Association"), text: Binding(
-                    get: { viewModel.state.webAuthor },
-                    set: { viewModel.handle(.webAuthorChanged($0)) }
-                ))
-                .font(.system(size: 14, weight: .regular))
+                PlaceholderUITextField(
+                    placeholder: String(localized: "Care Systems Association"),
+                    placeholderColor: UIColor(Color.folioInkSoft),
+                    font: .systemFont(ofSize: 14, weight: .regular),
+                    textColor: UIColor(Color.folioInk),
+                    keyboardType: .default,
+                    isSecureTextEntry: false,
+                    autocorrectionType: .default,
+                    autocapitalizationType: .words,
+                    text: Binding(
+                        get: { viewModel.state.webAuthor },
+                        set: { viewModel.handle(.webAuthorChanged($0)) }
+                    )
+                )
                 .padding(.horizontal, 16)
                 .frame(height: 48)
-                .background(Color.folioSurfaceStrong)
+                .background(.white)
                 .overlay(
-                    RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
-                        .stroke(Color.folioAmber, lineWidth: 1.5)
+                    RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous)
+                        .stroke(Color.folioFieldBorder, lineWidth: 1)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous))
 
                 HStack {
                     Spacer()
@@ -328,22 +352,31 @@ struct FolioAddSourceSheet: View {
         VStack(alignment: .leading, spacing: FolioSpacing.lg) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(String(localized: "Title"))
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.folioAmber)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.folioHomeTypeTextText)
 
-                TextField(String(localized: "Provider workshop evidence"), text: Binding(
-                    get: { viewModel.state.manualTitle },
-                    set: { viewModel.handle(.manualTitleChanged($0)) }
-                ))
-                .font(.system(size: 14, weight: .regular))
+                PlaceholderUITextField(
+                    placeholder: String(localized: "Provider workshop evidence"),
+                    placeholderColor: UIColor(Color.folioInkSoft),
+                    font: .systemFont(ofSize: 14, weight: .regular),
+                    textColor: UIColor(Color.folioInk),
+                    keyboardType: .default,
+                    isSecureTextEntry: false,
+                    autocorrectionType: .default,
+                    autocapitalizationType: .sentences,
+                    text: Binding(
+                        get: { viewModel.state.manualTitle },
+                        set: { viewModel.handle(.manualTitleChanged($0)) }
+                    )
+                )
                 .padding(.horizontal, 16)
                 .frame(height: 48)
-                .background(Color.folioSurfaceStrong)
+                .background(.white)
                 .overlay(
-                    RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
-                        .stroke(Color.folioAmber, lineWidth: 1.5)
+                    RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous)
+                        .stroke(Color.folioFieldBorder, lineWidth: 1)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous))
 
                 HStack {
                     Spacer()
@@ -355,22 +388,31 @@ struct FolioAddSourceSheet: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(String(localized: "Author"))
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.folioAmber)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.folioHomeTypeTextText)
 
-                TextField(String(localized: "Internal Research"), text: Binding(
-                    get: { viewModel.state.manualAuthor },
-                    set: { viewModel.handle(.manualAuthorChanged($0)) }
-                ))
-                .font(.system(size: 14, weight: .regular))
+                PlaceholderUITextField(
+                    placeholder: String(localized: "Internal Research"),
+                    placeholderColor: UIColor(Color.folioInkSoft),
+                    font: .systemFont(ofSize: 14, weight: .regular),
+                    textColor: UIColor(Color.folioInk),
+                    keyboardType: .default,
+                    isSecureTextEntry: false,
+                    autocorrectionType: .default,
+                    autocapitalizationType: .words,
+                    text: Binding(
+                        get: { viewModel.state.manualAuthor },
+                        set: { viewModel.handle(.manualAuthorChanged($0)) }
+                    )
+                )
                 .padding(.horizontal, 16)
                 .frame(height: 48)
-                .background(Color.folioSurfaceStrong)
+                .background(.white)
                 .overlay(
-                    RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
-                        .stroke(Color.folioAmber, lineWidth: 1.5)
+                    RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous)
+                        .stroke(Color.folioFieldBorder, lineWidth: 1)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous))
 
                 HStack {
                     Spacer()
@@ -382,8 +424,8 @@ struct FolioAddSourceSheet: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(String(localized: "Content"))
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(Color.folioAmber)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.folioHomeTypeTextText)
 
                 ZStack(alignment: .topLeading) {
                     if viewModel.state.manualContent.isEmpty {
@@ -403,12 +445,12 @@ struct FolioAddSourceSheet: View {
                     .frame(minHeight: 180)
                     .padding(12)
                 }
-                .background(Color.folioSurfaceStrong)
+                .background(.white)
                 .overlay(
-                    RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
-                        .stroke(viewModel.state.manualContentError != nil ? Color.folioDanger : Color.folioAmber, lineWidth: 1.5)
+                    RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous)
+                        .stroke(viewModel.state.manualContentError != nil ? Color.folioDanger : Color.folioFieldBorder, lineWidth: 1)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous))
 
                 HStack {
                     Spacer()

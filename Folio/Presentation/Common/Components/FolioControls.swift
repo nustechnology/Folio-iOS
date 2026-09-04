@@ -1,4 +1,78 @@
 import SwiftUI
+import UIKit
+
+struct PlaceholderUITextField: UIViewRepresentable {
+    let placeholder: String
+    let placeholderColor: UIColor
+    let font: UIFont
+    let textColor: UIColor
+    let keyboardType: UIKeyboardType
+    let isSecureTextEntry: Bool
+    var autocorrectionType: UITextAutocorrectionType = .default
+    var autocapitalizationType: UITextAutocapitalizationType = .sentences
+    @Binding var text: String
+    var isFirstResponder: Bool?
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    func makeUIView(context: Context) -> UITextField {
+        let field = UITextField()
+        field.delegate = context.coordinator
+        field.font = font
+        field.textColor = textColor
+        field.keyboardType = keyboardType
+        field.autocorrectionType = autocorrectionType
+        field.autocapitalizationType = autocapitalizationType
+        field.textContentType = isSecureTextEntry ? .password : nil
+        field.isSecureTextEntry = isSecureTextEntry
+        updatePlaceholder(field)
+        field.addTarget(context.coordinator, action: #selector(Coordinator.textDidChange(_:)), for: .editingChanged)
+        return field
+    }
+
+    func updateUIView(_ uiView: UITextField, context: Context) {
+        uiView.text = text
+        uiView.keyboardType = keyboardType
+        uiView.isSecureTextEntry = isSecureTextEntry
+        updatePlaceholder(uiView)
+        if let isFirstResponder {
+            if isFirstResponder && !uiView.isFirstResponder {
+                uiView.becomeFirstResponder()
+            } else if !isFirstResponder && uiView.isFirstResponder {
+                uiView.resignFirstResponder()
+            }
+        }
+    }
+
+    private func updatePlaceholder(_ field: UITextField) {
+        field.attributedPlaceholder = NSAttributedString(
+            string: placeholder,
+            attributes: [
+                .foregroundColor: placeholderColor,
+                .font: font
+            ]
+        )
+    }
+
+    final class Coordinator: NSObject, UITextFieldDelegate {
+        var parent: PlaceholderUITextField
+
+        init(_ parent: PlaceholderUITextField) {
+            self.parent = parent
+        }
+
+        @objc func textDidChange(_ textField: UITextField) {
+            parent.text = textField.text ?? ""
+        }
+
+        func textFieldDidChangeSelection(_ notification: Notification) {
+            guard let textField = notification.object as? UITextField else { return }
+            parent.text = textField.text ?? ""
+        }
+    }
+}
 
 struct FolioCard<Content: View>: View {
     let content: Content
@@ -201,6 +275,18 @@ struct FolioTextField: View {
 
     @State private var isPasswordVisible = false
 
+    private var disablesTextAssistance: Bool {
+        isSecure || keyboardType == .URL || keyboardType == .emailAddress
+    }
+
+    private var autocorrectionType: UITextAutocorrectionType {
+        disablesTextAssistance ? .no : .default
+    }
+
+    private var autocapitalizationType: UITextAutocapitalizationType {
+        disablesTextAssistance ? .none : .sentences
+    }
+
     static func truncatedText(_ text: String, maxLength: Int?) -> String {
         guard let maxLength else { return text }
         return String(text.prefix(max(0, maxLength)))
@@ -253,18 +339,17 @@ struct FolioTextField: View {
 
     private var singleLineField: some View {
         HStack {
-            Group {
-                if isSecure && !isPasswordVisible {
-                    SecureField(placeholder, text: $text)
-                } else {
-                    TextField(placeholder, text: $text)
-                }
-            }
-            .font(.system(size: 14, weight: .regular))
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-            .foregroundStyle(Color.folioInk)
-            .keyboardType(keyboardType)
+            PlaceholderUITextField(
+                placeholder: placeholder,
+                placeholderColor: UIColor(Color.folioInkSoft),
+                font: .systemFont(ofSize: 14, weight: .regular),
+                textColor: UIColor(Color.folioInk),
+                keyboardType: keyboardType,
+                isSecureTextEntry: isSecure && !isPasswordVisible,
+                autocorrectionType: autocorrectionType,
+                autocapitalizationType: autocapitalizationType,
+                text: $text
+            )
 
             if isSecure {
                 Button {
@@ -341,11 +426,17 @@ struct FolioSearchField: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.white.opacity(0.75))
 
-            TextField(placeholder, text: $text)
-                .font(.system(size: 14, weight: .regular))
-                .foregroundStyle(Color.white)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
+            PlaceholderUITextField(
+                placeholder: placeholder,
+                placeholderColor: UIColor(Color.white.opacity(0.6)),
+                font: .systemFont(ofSize: 14, weight: .regular),
+                textColor: UIColor(Color.white),
+                keyboardType: .default,
+                isSecureTextEntry: false,
+                autocorrectionType: .no,
+                autocapitalizationType: .none,
+                text: $text
+            )
         }
         .padding(.horizontal, 14)
         .frame(height: 38)

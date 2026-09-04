@@ -57,7 +57,11 @@ struct AskConversationListView: View {
             searchPlaceholder: String(localized: "Search conversations..."),
             searchText: Binding(
                 get: { viewModel.state.searchQuery },
-                set: { viewModel.handle(.searchQueryChanged($0)) }
+                set: { query in
+                    Task { @MainActor in
+                        viewModel.handle(.searchQueryChanged(query))
+                    }
+                }
             ),
             onClearSearch: { viewModel.handle(.searchQueryChanged("")) }
         )
@@ -317,9 +321,15 @@ private struct RenameConversationSheet: View {
                 .padding(.horizontal, FolioSpacing.xl3)
                 .padding(.bottom, FolioSpacing.sm)
 
-            TextField(String(localized: "Untitled"), text: $title)
-                .font(.system(size: 15, weight: .regular))
-                .foregroundStyle(Color.folioInk)
+            PlaceholderUITextField(
+                placeholder: String(localized: "Untitled"),
+                placeholderColor: UIColor(Color.folioInkSoft),
+                font: .systemFont(ofSize: 15, weight: .regular),
+                textColor: UIColor(Color.folioInk),
+                keyboardType: .default,
+                isSecureTextEntry: false,
+                text: $title
+            )
                 .padding(.horizontal, 14)
                 .frame(height: 50)
                 .background(Color.folioSurfaceStrong)

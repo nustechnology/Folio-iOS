@@ -10,6 +10,7 @@ final class SourceReaderViewModel: ObservableObject {
         var isEditing = false
         var editTitle = ""
         var editAuthor = ""
+        var editContent = ""
         var editError: String?
         var showEditSheet = false
         var showDeleteConfirmation = false
@@ -62,6 +63,7 @@ final class SourceReaderViewModel: ObservableObject {
         case editTapped
         case editTitleChanged(String)
         case editAuthorChanged(String)
+        case editContentChanged(String)
         case cancelEdit
         case editConfirmed
         case deleteTapped
@@ -87,12 +89,15 @@ final class SourceReaderViewModel: ObservableObject {
             guard let source else { return }
             state.editTitle = source.title
             state.editAuthor = source.author
+            state.editContent = source.content
             state.editError = nil
             state.showEditSheet = true
         case .editTitleChanged(let value):
             state.editTitle = value
         case .editAuthorChanged(let value):
             state.editAuthor = value
+        case .editContentChanged(let value):
+            state.editContent = value
         case .cancelEdit:
             state.showEditSheet = false
             state.editError = nil
@@ -162,8 +167,9 @@ final class SourceReaderViewModel: ObservableObject {
         defer { state.isEditing = false }
         guard let source else { return }
         let author = state.editAuthor.trimmingCharacters(in: .whitespacesAndNewlines)
+        let content = state.editContent
         do {
-            let updated = try await updateSourceUseCase.execute(id: source.id, title: title, author: author)
+            let updated = try await updateSourceUseCase.execute(id: source.id, title: title, author: author, content: content.isEmpty ? nil : content)
             Logger.debug("Source updated: \(updated.title)")
             state.source = updated.withStructuredContent(updated.structuredContent ?? state.source?.structuredContent)
             state.showEditSheet = false

@@ -168,7 +168,11 @@ struct SourceListView: View {
                 searchPlaceholder: String(localized: "Search sources..."),
                 searchText: Binding(
                     get: { viewModel.state.searchQuery },
-                    set: { viewModel.send(.searchQueryChanged($0)) }
+                    set: { query in
+                        Task { @MainActor in
+                            viewModel.send(.searchQueryChanged(query))
+                        }
+                    }
                 ),
                 onClearSearch: { viewModel.send(.clearSearch) },
                 onSortTapped: { viewModel.send(.sortTapped) },
@@ -178,7 +182,9 @@ struct SourceListView: View {
             HStack {
                 ForEach(viewModel.state.filters) { filter in
                     Button {
-                        viewModel.send(.selectFilter(filter))
+                        Task { @MainActor in
+                            viewModel.send(.selectFilter(filter))
+                        }
                     } label: {
                         FolioPill(
                             title: filter.displayTitle,
@@ -443,7 +449,7 @@ private struct SourceCard: View {
 
             VStack(alignment: .leading, spacing: FolioSpacing.xs) {
                 Text(source.title)
-                    .font(.custom("CormorantGaramond-SemiBold", size: 20))
+                    .font(.custom("CormorantGaramond-SemiBold", size: 18))
                     .foregroundStyle(Color.folioTextPrimary)
                     .lineLimit(2)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -489,7 +495,7 @@ private struct SourceCard: View {
                 .padding(.trailing, -4)
             }
         }
-        .padding(FolioSpacing.xl)
+        .padding(FolioSpacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.folioCardBg)
         .overlay(
@@ -504,10 +510,26 @@ private struct SourceCard: View {
     private var fileBadge: some View {
         Text(source.badgeText)
             .font(.system(size: FolioFontSize.caption2, weight: .semibold))
-            .foregroundStyle(Color.folioAccent)
+            .foregroundStyle(badgeTextColor)
             .frame(width: FolioSize.cardImage, height: FolioSize.cardImage)
-            .background(Color.folioAccentLight)
+            .background(badgeBackgroundColor)
             .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
+    }
+
+    private var badgeBackgroundColor: Color {
+        switch source.sourceType {
+        case .file: return Color.folioHomeTypeFileBackground
+        case .web: return Color.folioHomeTypeWebBackground
+        case .manual: return Color.folioHomeTypeTextBackground
+        }
+    }
+
+    private var badgeTextColor: Color {
+        switch source.sourceType {
+        case .file: return Color.folioHomeTypeFileText
+        case .web: return Color.folioHomeTypeWebText
+        case .manual: return Color.folioHomeTypeTextText
+        }
     }
 
     private var statusTitle: String {
@@ -589,22 +611,36 @@ private struct EditSourceSheet: View {
     private enum Field: Hashable {
         case title
         case author
+        case content
     }
 
+    private let maximumContentLength = 100_000
+
     var body: some View {
-        VStack(alignment: .leading, spacing: FolioSpacing.xl) {
-            Text(String(localized: "Edit Source"))
-                .font(.system(size: FolioFontSize.heading, weight: .regular, design: .serif))
-                .foregroundStyle(Color.folioTextPrimary)
-                .padding(.top, FolioSpacing.xl5)
-                .padding(.bottom, FolioSpacing.sm)
+        ScrollView {
+            VStack(alignment: .leading, spacing: FolioSpacing.xl) {
+                Text(String(localized: "Edit source"))
+                    .font(.system(size: FolioFontSize.heading, weight: .regular, design: .serif))
+                    .foregroundStyle(Color.folioTextPrimary)
+                    .padding(.top, FolioSpacing.md)
+                    .padding(.bottom, FolioSpacing.xs)
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text(String(localized: "Title"))
-                    .font(.system(size: FolioFontSize.body, weight: .medium))
-                    .foregroundStyle(Color.folioInkSoft)
-                TextField(String(localized: "Title"), text: $viewModel.editTitle)
-                    .font(.system(size: FolioFontSize.bodyLarge))
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(String(localized: "Title"))
+                        .font(.system(size: FolioFontSize.body, weight: .medium))
+                        .foregroundStyle(Color.folioInkSoft)
+                    PlaceholderUITextField(
+                        placeholder: String(localized: "Title"),
+                        placeholderColor: UIColor(Color.folioInkSoft),
+                        font: .systemFont(ofSize: CGFloat(FolioFontSize.bodyLarge), weight: .regular),
+                        textColor: UIColor(Color.folioInk),
+                        keyboardType: .default,
+                        isSecureTextEntry: false,
+                        autocorrectionType: .default,
+                        autocapitalizationType: .sentences,
+                        text: $viewModel.editTitle,
+                        isFirstResponder: focusedField == .title
+                    )
                     .padding(.horizontal, FolioSpacing.xl)
                     .frame(height: FolioSize.fieldHeightXs)
                     .background(.white)
@@ -613,15 +649,25 @@ private struct EditSourceSheet: View {
                             .stroke(Color.folioBorderLight, lineWidth: 1)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                    .focused($focusedField, equals: .title)
-            }
+                    .onTapGesture { focusedField = .title }
+                }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text(String(localized: "Author / Publisher"))
-                    .font(.system(size: FolioFontSize.body, weight: .medium))
-                    .foregroundStyle(Color.folioInkSoft)
-                TextField(String(localized: "Author"), text: $viewModel.editAuthor)
-                    .font(.system(size: FolioFontSize.bodyLarge))
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(String(localized: "Author"))
+                        .font(.system(size: FolioFontSize.body, weight: .medium))
+                        .foregroundStyle(Color.folioInkSoft)
+                    PlaceholderUITextField(
+                        placeholder: String(localized: "Author"),
+                        placeholderColor: UIColor(Color.folioInkSoft),
+                        font: .systemFont(ofSize: CGFloat(FolioFontSize.bodyLarge), weight: .regular),
+                        textColor: UIColor(Color.folioInk),
+                        keyboardType: .default,
+                        isSecureTextEntry: false,
+                        autocorrectionType: .default,
+                        autocapitalizationType: .words,
+                        text: $viewModel.editAuthor,
+                        isFirstResponder: focusedField == .author
+                    )
                     .padding(.horizontal, FolioSpacing.xl)
                     .frame(height: FolioSize.fieldHeightXs)
                     .background(.white)
@@ -630,61 +676,88 @@ private struct EditSourceSheet: View {
                             .stroke(Color.folioBorderLight, lineWidth: 1)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                    .focused($focusedField, equals: .author)
-            }
-
-            if let error = viewModel.state.mutationError {
-                Text(error)
-                    .font(.system(size: FolioFontSize.small))
-                    .foregroundStyle(Color.folioDanger)
-            }
-
-            HStack(spacing: FolioSpacing.lg) {
-                Button {
-                    focusedField = nil
-                    dismiss()
-                } label: {
-                    Text(String(localized: "Cancel"))
-                        .font(.system(size: FolioFontSize.bodyLarge, weight: .medium))
-                        .foregroundStyle(Color.folioTextSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 13)
-                        .background(Color.folioCanvas)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: FolioRadius.md)
-                                .stroke(Color.folioBorder, lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                        .contentShape(RoundedRectangle(cornerRadius: FolioRadius.md))
+                    .onTapGesture { focusedField = .author }
                 }
-                .buttonStyle(.plain)
 
-                Button {
-                    focusedField = nil
-                    viewModel.send(.editConfirmed)
-                } label: {
-                    Text(String(localized: "Save"))
-                        .font(.system(size: FolioFontSize.bodyLarge, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 13)
-                        .background(Color.folioOlive)
-                        .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                        .contentShape(RoundedRectangle(cornerRadius: FolioRadius.md))
+                if viewModel.state.editSource?.sourceType == .manual {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(String(localized: "Content"))
+                            .font(.system(size: FolioFontSize.body, weight: .medium))
+                            .foregroundStyle(Color.folioInkSoft)
+                        TextEditor(text: $viewModel.editContent)
+                            .font(.system(size: FolioFontSize.bodyLarge, design: .default))
+                            .scrollContentBackground(.hidden)
+                            .padding(FolioSpacing.md)
+                            .frame(minHeight: 120, maxHeight: 200)
+                            .background(.white)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: FolioRadius.md)
+                                    .stroke(Color.folioBorderLight, lineWidth: 1)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
+                            .onTapGesture { focusedField = .content }
+                        Text("\(viewModel.editContent.count.formatted())/\(maximumContentLength.formatted())")
+                            .font(.system(size: FolioFontSize.small))
+                            .foregroundStyle(viewModel.editContent.count > maximumContentLength ? Color.folioDanger : Color.folioInkSoft)
+                    }
                 }
-                .buttonStyle(.plain)
-                .disabled(viewModel.isEditing)
+
+                if let error = viewModel.state.mutationError {
+                    Text(error)
+                        .font(.system(size: FolioFontSize.small))
+                        .foregroundStyle(Color.folioDanger)
+                }
+
+                HStack(spacing: FolioSpacing.lg) {
+                    Button {
+                        focusedField = nil
+                        dismiss()
+                    } label: {
+                        Text(String(localized: "Cancel"))
+                            .font(.system(size: FolioFontSize.bodyLarge, weight: .medium))
+                            .foregroundStyle(Color.folioTextSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(.clear)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: FolioRadius.md)
+                                    .stroke(Color.folioBorder, lineWidth: 1)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
+                            .contentShape(RoundedRectangle(cornerRadius: FolioRadius.md))
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        focusedField = nil
+                        viewModel.send(.editConfirmed)
+                    } label: {
+                        Text(String(localized: "Save"))
+                            .font(.system(size: FolioFontSize.bodyLarge, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color.folioOlive)
+                            .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
+                            .contentShape(RoundedRectangle(cornerRadius: FolioRadius.md))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.isEditing)
+                }
             }
+            .padding(.horizontal, FolioSpacing.xl3)
+            .padding(.bottom, FolioSpacing.lg)
+            .padding(.top, FolioSpacing.sm)
+            .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, FolioSpacing.xl3)
-        .padding(.bottom, FolioSpacing.xl4)
-        .padding(.top, FolioSpacing.lg)
-        .frame(maxWidth: .infinity)
+        .scrollDismissesKeyboard(.interactively)
         .presentationBackground(Color.white)
-        .presentationDetents([.height(350)])
+        .presentationDetents(viewModel.state.editSource?.sourceType == .manual ? [.medium, .large] : [.height(315), .medium])
         .presentationDragIndicator(.visible)
     }
 }
+
+
 
 extension FolioSourceFilter {
     var displayTitle: String {

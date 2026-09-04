@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum FolioTab: String, CaseIterable, Identifiable, Equatable {
     case sources
@@ -69,6 +70,22 @@ enum FolioSourceKind: String, Equatable {
         case .file: return "FILE"
         case .web: return "WEB"
         case .text: return "TEXT"
+        }
+    }
+
+    var backgroundColor: Color {
+        switch self {
+        case .file: return .folioHomeTypeFileBackground
+        case .web: return .folioHomeTypeWebBackground
+        case .text: return .folioHomeTypeTextBackground
+        }
+    }
+
+    var textColor: Color {
+        switch self {
+        case .file: return .folioHomeTypeFileText
+        case .web: return .folioHomeTypeWebText
+        case .text: return .folioHomeTypeTextText
         }
     }
 }
