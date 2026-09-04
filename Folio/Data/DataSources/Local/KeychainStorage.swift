@@ -8,6 +8,8 @@ protocol KeychainClient {
 }
 
 final class KeychainStorage: LocalStorageProtocol {
+    private static let legacyService = "com.nustechnology.Folio"
+
     private let client: KeychainClient
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -15,10 +17,11 @@ final class KeychainStorage: LocalStorageProtocol {
 
     init(
         client: KeychainClient = SystemKeychainClient(),
-        service: String = Bundle.main.bundleIdentifier ?? "com.nustechnology.Folio"
+        service: String = Bundle.main.bundleIdentifier ?? "com.nus.folio"
     ) {
         self.client = client
         self.service = service
+        migrateFromLegacyIfNeeded()
     }
 
     func save<T: Codable>(_ value: T, forKey key: String) throws {
@@ -26,14 +29,45 @@ final class KeychainStorage: LocalStorageProtocol {
     }
 
     func load<T: Codable>(forKey key: String) throws -> T? {
-        guard let data = try client.loadData(service: service, account: key) else {
-            return nil
+        if let data = try client.loadData(service: service, account: key) {
+            return try decoder.decode(T.self, from: data)
         }
-        return try decoder.decode(T.self, from: data)
+        if service != Self.legacyService,
+           let data = try client.loadData(service: Self.legacyService, account: key) {
+            return try decoder.decode(T.self, from: data)
+        }
+        return nil
     }
 
     func remove(forKey key: String) throws {
-        try client.removeData(service: service, account: key)
+        var firstError: Error?
+        do {
+            try client.removeData(service: service, account: key)
+        } catch {
+            firstError = error
+        }
+        if service != Self.legacyService {
+            do {
+                try client.removeData(service: Self.legacyService, account: key)
+            } catch {
+                if firstError == nil { firstError = error }
+            }
+        }
+        if let firstError { throw firstError }
+    }
+
+    private func migrateFromLegacyIfNeeded() {
+        guard service != Self.legacyService else { return }
+        let knownKeys = ["session", "user", "auth"]
+        for key in knownKeys {
+            guard let data = try? client.loadData(service: Self.legacyService, account: key) else { continue }
+            do {
+                try client.saveData(data, service: service, account: key)
+                try client.removeData(service: Self.legacyService, account: key)
+            } catch {
+                break
+            }
+        }
     }
 
 }

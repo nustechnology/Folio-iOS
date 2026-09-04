@@ -2,7 +2,7 @@
 
 Native iOS client for Folio — private research, grounded answers. Sources, notes, and citations in one private archive.
 
-**Bundle ID:** `com.nustechnology.Folio`
+**Bundle ID:** `com.nus.folio`
 
 ## Tech Stack
 
@@ -11,7 +11,7 @@ Native iOS client for Folio — private research, grounded answers. Sources, not
 - **Architecture:** Clean Architecture + MVVM — dependency flow: **Presentation → Domain ← Data**
 - **DI:** Manual `AppDIContainer` in `FolioApp` (no Swinject/Resolver yet)
 - **Async:** Swift Concurrency (`async/await`, `@MainActor`)
-- **Min Deployment Target:** iOS 26.0 | **Xcode:** 26.6+
+- **Min Deployment Target:** iOS 17.0 | **Xcode:** 15.0+
 - **Dependencies:** Zero external dependencies (Apple frameworks only: SwiftUI, Foundation, Combine)
 
 ## Project Structure
@@ -155,8 +155,8 @@ final class MainViewModel: ViewModelProtocol {
 
 | Config | API Base URL | Display Name | Bundle ID |
 |--------|-------------|-------------|-----------|
-| Debug | folio.nustechnology.com | Folio Dev | `com.nustechnology.Folio` |
-| Release | folio.nustechnology.com | Folio | `com.nustechnology.Folio` |
+| Debug | folio.nustechnology.com | Folio Dev | `com.nus.folio` |
+| Release | folio.nustechnology.com | Folio | `com.nus.folio` |
 
 Config files in `Configuration/`:
 - `Shared.xcconfig` — deployment target
