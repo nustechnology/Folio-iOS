@@ -10,6 +10,7 @@ enum SourceHTMLBuilder {
         <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline';">
         <style>
         \(css)
         </style>
@@ -66,6 +67,7 @@ enum SourceHTMLBuilder {
         var html = ""
         var paragraph: [String] = []
         var list: [String] = []
+        var tableLines: [String] = []
 
         func flushParagraph() {
             guard !paragraph.isEmpty else { return }
@@ -79,8 +81,30 @@ enum SourceHTMLBuilder {
             list = []
         }
 
+        func flushTable() {
+            guard !tableLines.isEmpty else { return }
+            if let table = buildTableHTML(fromMarkdownLines: tableLines) {
+                html += table
+            } else {
+                for line in tableLines {
+                    paragraph.append(line)
+                }
+                flushParagraph()
+            }
+            tableLines = []
+        }
+
         for raw in lines {
             let line = raw.trimmingCharacters(in: .whitespaces)
+
+            if isMarkdownTableLine(line) {
+                flushList()
+                flushParagraph()
+                tableLines.append(line)
+                continue
+            } else {
+                flushTable()
+            }
 
             if line.isEmpty {
                 flushList()
@@ -120,6 +144,7 @@ enum SourceHTMLBuilder {
 
         flushList()
         flushParagraph()
+        flushTable()
         return html
     }
 
@@ -172,9 +197,62 @@ enum SourceHTMLBuilder {
     // MARK: - Sheets
 
     private static func tableHTML(from content: String) -> String {
+        let lines = content.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+
+        if let markdownTable = buildTableHTML(fromMarkdownLines: lines) {
+            return markdownTable
+        }
+
         let rows = parseCSVRows(content)
         guard !rows.isEmpty else { return documentHTML(from: content) }
 
+        return renderTable(rows: rows)
+    }
+
+    private static func isMarkdownTableLine(_ line: String) -> Bool {
+        line.hasPrefix("|") && line.hasSuffix("|") && line.contains("|")
+    }
+
+    private static func isMarkdownTableSeparator(_ line: String) -> Bool {
+        guard isMarkdownTableLine(line) else { return false }
+        let inner = line.trimmingCharacters(in: CharacterSet(charactersIn: "|"))
+        let components = inner.components(separatedBy: "|")
+        return !components.isEmpty && components.allSatisfy { comp in
+            let trimmed = comp.trimmingCharacters(in: .whitespaces)
+            return trimmed.allSatisfy { $0 == "-" || $0 == ":" } && !trimmed.isEmpty
+        }
+    }
+
+    private static func parseMarkdownTableRow(_ line: String) -> [String] {
+        var trimmedLine = line
+        if trimmedLine.hasPrefix("|") { trimmedLine.removeFirst() }
+        if trimmedLine.hasSuffix("|") { trimmedLine.removeLast() }
+        return trimmedLine.components(separatedBy: "|").map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+
+    private static func buildTableHTML(fromMarkdownLines lines: [String]) -> String? {
+        guard !lines.isEmpty else { return nil }
+
+        var parsedRows: [[String]] = []
+        var separatorFound = false
+
+        for line in lines {
+            guard isMarkdownTableLine(line) else { return nil }
+            if isMarkdownTableSeparator(line) {
+                separatorFound = true
+                continue
+            }
+            parsedRows.append(parseMarkdownTableRow(line))
+        }
+
+        guard !parsedRows.isEmpty, (separatorFound || lines.count >= 2) else { return nil }
+        return renderTable(rows: parsedRows)
+    }
+
+    private static func renderTable(rows: [[String]]) -> String {
+        guard !rows.isEmpty else { return "" }
         var html = "<div class=\"table-wrap\"><table>"
         html += "<thead><tr>" + rows[0].map { "<th>\(escaped($0))</th>" }.joined() + "</tr></thead>"
         html += "<tbody>"
@@ -355,8 +433,15 @@ enum SourceHTMLBuilder {
             options: [.regularExpression, .caseInsensitive]
         )
 
+        // Ensure all <table> tags are wrapped inside <div class="table-wrap"> for horizontal scroll support
+        if result.contains("<table") {
+            result = result.replacingOccurrences(of: "(?<!<div class=\"table-wrap\">)(<table[^>]*>)", with: "<div class=\"table-wrap\">$1", options: .regularExpression)
+            result = result.replacingOccurrences(of: "(</table>)(?!</div>)", with: "$1</div>", options: .regularExpression)
+        }
+
         return result
     }
+
 
     private static func sanitizeAttributes(_ attrString: String, tag: String) -> String {
         guard let attrRegex = try? NSRegularExpression(pattern: "(\\w[\\w-]*)\\s*=\\s*(\"[^\"]*\"|'[^']*')") else {
@@ -430,11 +515,36 @@ enum SourceHTMLBuilder {
           font-style: italic;
         }
         a { color: #5D86B3; overflow-wrap: anywhere; }
-        table { border-collapse: collapse; width: 100%; font-size: 13px; }
-        th, td { border: 1px solid #D6C29C; padding: 8px 10px; text-align: left; vertical-align: top; }
-        th { background: #F6F1E5; font-weight: 600; }
-        tr:nth-child(even) td { background: #FCF9F0; }
-        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table {
+          border-collapse: collapse;
+          width: 100%;
+          font-size: 13px;
+          margin: 14px 0;
+          background: #FAF8F5;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: inset 0 0 0 1px #E5DEC9;
+        }
+        th, td {
+          border: 1px solid #E5DEC9;
+          padding: 10px 12px;
+          text-align: left;
+          vertical-align: middle;
+        }
+        th {
+          white-space: nowrap;
+          background: #EFEAD9;
+          font-weight: 600;
+          color: #13332A;
+        }
+        tr:nth-child(even) td { background: #F5F0E1; }
+        tr:nth-child(odd) td { background: #FAF7EE; }
+        .table-wrap {
+          width: 100%;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          margin-bottom: 16px;
+        }
         .page-divider {
           margin: 4px 0 8px;
           font-size: 17px;
@@ -461,3 +571,4 @@ enum SourceHTMLBuilder {
         """
     }
 }
+

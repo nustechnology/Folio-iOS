@@ -170,7 +170,8 @@ final class WorkspaceListViewModel: ObservableObject {
     }
 
     func refresh() async {
-        await loadFirstPage()
+        let refreshTask = Task { await loadFirstPage() }
+        await refreshTask.value
     }
 
     private func loadFirstPage() async {

@@ -47,10 +47,11 @@ struct SourcePaginationDTO: Decodable {
 struct UpdateSourceRequestDTO: Encodable {
     let title: String
     let author: String
+    let content: String?
 }
 
 struct StructuredContentDTO: Decodable {
-    let html: String
+    let html: String?
     let type: String?
 }
 
@@ -101,7 +102,7 @@ struct SourceDTO: Decodable {
             characterCount: characterCount ?? 0,
             content: content ?? "",
             structuredContent: structuredContent.map {
-                SourceStructuredContent(html: $0.html, type: $0.type ?? "")
+                SourceStructuredContent(html: $0.html ?? "", type: $0.type ?? "")
             },
             processingState: SourceProcessingState(rawValue: processingState) ?? .added,
             processingError: processingError ?? "",

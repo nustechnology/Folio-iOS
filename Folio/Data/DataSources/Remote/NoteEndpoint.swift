@@ -10,6 +10,7 @@ struct NoteListEndpoint: APIEndpoint {
   var method: HTTPMethod { .get }
   var requiresAuthentication: Bool { true }
   var body: Data? { nil }
+  var cachePolicy: URLRequest.CachePolicy { .reloadRevalidatingCacheData }
   var queryItems: [URLQueryItem]? {
     var items: [URLQueryItem] = []
     if let search = query.search, !search.isEmpty {

@@ -34,8 +34,17 @@ struct AnswerScopeSheet: View {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.folioInkSoft)
-                TextField("Search sources", text: $query)
-                    .font(.system(size: 15, weight: .regular))
+                PlaceholderUITextField(
+                    placeholder: String(localized: "Search sources"),
+                    placeholderColor: UIColor(Color.folioInkSoft),
+                    font: .systemFont(ofSize: 15, weight: .regular),
+                    textColor: UIColor(Color.folioInk),
+                    keyboardType: .default,
+                    isSecureTextEntry: false,
+                    autocorrectionType: .no,
+                    autocapitalizationType: .none,
+                    text: $query
+                )
             }
             .padding(.horizontal, 14)
             .frame(height: 48)

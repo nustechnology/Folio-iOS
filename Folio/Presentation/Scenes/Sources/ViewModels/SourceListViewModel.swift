@@ -52,6 +52,7 @@ final class SourceListViewModel: ObservableObject {
     @Published private(set) var state = State()
     @Published var editTitle = ""
     @Published var editAuthor = ""
+    @Published var editContent = ""
     @Published var isEditing = false
     @Published var isDeleting = false
 
@@ -145,6 +146,7 @@ final class SourceListViewModel: ObservableObject {
         case .ellipsisTapped(let source):
             editTitle = source.title
             editAuthor = source.author
+            editContent = source.content
             state.mutationError = nil
             state.editSource = source
             state.presentedSheet = .editSource(source)
@@ -370,13 +372,14 @@ final class SourceListViewModel: ObservableObject {
         }
         let newTitle = editTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let newAuthor = editAuthor.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newContent = editContent
         guard !newTitle.isEmpty else {
             state.mutationError = String(localized: "Title cannot be empty")
             isEditing = false
             return
         }
         do {
-            let updated = try await updateSourceUseCase.execute(id: source.id, title: newTitle, author: newAuthor)
+            let updated = try await updateSourceUseCase.execute(id: source.id, title: newTitle, author: newAuthor, content: newContent.isEmpty ? nil : newContent)
             Logger.debug("Source updated: \(updated.title)")
             if let index = state.allSources.firstIndex(where: { $0.id == source.id }) {
                 state.allSources[index] = updated
@@ -411,7 +414,8 @@ final class SourceListViewModel: ObservableObject {
     }
 
     func refresh() async {
-        await loadFirstPage()
+        let refreshTask = Task { await loadFirstPage() }
+        await refreshTask.value
     }
 
     var didTapReadySource: Source? {

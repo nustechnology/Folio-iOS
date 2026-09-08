@@ -2,6 +2,15 @@ import XCTest
 @testable import Folio
 
 final class CitationRichTextViewTests: XCTestCase {
+    func testPlainTextContentIsRenderedWhenItHasNoHTMLBlockTag() {
+        let attributed = CitationRichTextView.inlineAttributedString(
+            content: "The evidence indicates that 0 sources are shown.",
+            citationCount: 0
+        )
+
+        XCTAssertEqual(attributed.string, "The evidence indicates that 0 sources are shown.")
+    }
+
     func testValidCitationMarkerIsRenderedAsCitationLink() {
         let attributed = CitationRichTextView.inlineAttributedString(
             content: "<p>Evidence [1] supports the claim.</p>",

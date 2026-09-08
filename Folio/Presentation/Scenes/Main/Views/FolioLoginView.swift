@@ -222,7 +222,7 @@ private struct PreviewLoginFetchSourcesUseCase: FetchSourcesUseCaseProtocol {
 }
 
 private struct PreviewLoginUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
-    func execute(id: String, title: String, author: String) async throws -> Source { fatalError("Preview") }
+    func execute(id: String, title: String, author: String, content: String?) async throws -> Source { fatalError("Preview") }
 }
 
 private struct PreviewLoginFetchSourceDetailUseCase: FetchSourceDetailUseCaseProtocol {

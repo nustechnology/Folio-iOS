@@ -71,6 +71,12 @@ struct FolioRichTextEditor: UIViewRepresentable {
         if textView.attributedText != attributedText {
             textView.attributedText = attributedText
             (textView as? FolioTextView)?.applyBlockquotePresentation()
+            textView.layoutManager.ensureLayout(for: textView.textContainer)
+            textView.setNeedsLayout()
+            DispatchQueue.main.async {
+                textView.layoutManager.ensureLayout(for: textView.textContainer)
+                textView.setNeedsLayout()
+            }
         }
         if Self.shouldSynchronizeSelection(
             current: textView.selectedRange,
@@ -353,6 +359,12 @@ extension FolioRichTextEditor {
     }
 
     static func attributedTextFromHTML(_ html: String) -> NSAttributedString {
+        if !html.contains("<") {
+            return NSAttributedString(
+                string: html,
+                attributes: [.font: makeBodyFont(bold: false, italic: false)]
+            )
+        }
         if containsOnlySupportedSemanticTags(in: html), let parsed = parseSemanticHTML(html) {
             return parsed
         }
@@ -1074,9 +1086,21 @@ final class FolioTextView: UITextView {
         }
     }
 
+    private var lastLayoutBoundsSize: CGSize = .zero
+
     override func layoutSubviews() {
         super.layoutSubviews()
+        if bounds.size != lastLayoutBoundsSize {
+            lastLayoutBoundsSize = bounds.size
+            layoutManager.ensureLayout(for: textContainer)
+        }
         setNeedsDisplay()
+    }
+
+    override func safeAreaInsetsDidChange() {
+        super.safeAreaInsetsDidChange()
+        layoutManager.ensureLayout(for: textContainer)
+        setNeedsLayout()
     }
 
 

@@ -264,114 +264,174 @@ private struct SourceReaderEditSheet: View {
     private enum Field: Hashable {
         case title
         case author
+        case content
     }
+
+    private let maximumContentLength = 100_000
     
     var body: some View {
-        VStack(alignment: .leading, spacing: FolioSpacing.xl) {
-            Text(String(localized: "Edit Source"))
-                .font(.system(size: FolioFontSize.heading, weight: .regular, design: .serif))
-                .foregroundStyle(Color.folioTextPrimary)
-                .padding(.top, FolioSpacing.xl5)
-                .padding(.bottom, FolioSpacing.sm)
-            
-            VStack(alignment: .leading, spacing: 6) {
-                Text(String(localized: "Title"))
-                    .font(.system(size: FolioFontSize.body, weight: .medium))
-                    .foregroundStyle(Color.folioInkSoft)
-                TextField(String(localized: "Title"), text: Binding(
-                    get: { viewModel.state.editTitle },
-                    set: { viewModel.send(.editTitleChanged($0)) }
-                ))
-                .font(.system(size: FolioFontSize.bodyLarge))
-                .padding(.horizontal, FolioSpacing.xl)
-                .frame(height: FolioSize.fieldHeightXs)
-                .background(.white)
-                .overlay(
-                    RoundedRectangle(cornerRadius: FolioRadius.md)
-                        .stroke(Color.folioBorderLight, lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                .focused($focusedField, equals: .title)
-            }
-            
-            VStack(alignment: .leading, spacing: 6) {
-                Text(String(localized: "Author / Publisher"))
-                    .font(.system(size: FolioFontSize.body, weight: .medium))
-                    .foregroundStyle(Color.folioInkSoft)
-                TextField(String(localized: "Author"), text: Binding(
-                    get: { viewModel.state.editAuthor },
-                    set: { viewModel.send(.editAuthorChanged($0)) }
-                ))
-                .font(.system(size: FolioFontSize.bodyLarge))
-                .padding(.horizontal, FolioSpacing.xl)
-                .frame(height: FolioSize.fieldHeightXs)
-                .background(.white)
-                .overlay(
-                    RoundedRectangle(cornerRadius: FolioRadius.md)
-                        .stroke(Color.folioBorderLight, lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                .focused($focusedField, equals: .author)
-            }
-            
-            if let error = viewModel.state.editError {
-                Text(error)
-                    .font(.system(size: FolioFontSize.small))
-                    .foregroundStyle(Color.folioDanger)
-            }
-            
-            HStack(spacing: FolioSpacing.lg) {
-                Button {
-                    focusedField = nil
-                    viewModel.send(.cancelEdit)
-                } label: {
-                    Text(String(localized: "Cancel"))
-                        .font(.system(size: FolioFontSize.bodyLarge, weight: .medium))
-                        .foregroundStyle(Color.folioTextSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 13)
-                        .background(Color.folioCanvas)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: FolioRadius.md)
-                                .stroke(Color.folioBorder, lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                }
-                .buttonStyle(.plain)
+        ScrollView {
+            VStack(alignment: .leading, spacing: FolioSpacing.xl) {
+                Text(String(localized: "Edit source"))
+                    .font(.system(size: FolioFontSize.heading, weight: .regular, design: .serif))
+                    .foregroundStyle(Color.folioTextPrimary)
+                    .padding(.top, FolioSpacing.md)
+                    .padding(.bottom, FolioSpacing.xs)
                 
-                Button {
-                    focusedField = nil
-                    viewModel.send(.editConfirmed)
-                } label: {
-                    HStack(spacing: 6) {
-                        if viewModel.state.isEditing {
-                            ProgressView()
-                                .progressViewStyle(.circular)
-                                .tint(.white)
-                                .scaleEffect(0.8)
-                        }
-                        Text(String(localized: "Save"))
-                            .font(.system(size: FolioFontSize.bodyLarge, weight: .semibold))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
-                    .foregroundStyle(.white)
-                    .background(Color.folioOlive)
-                    .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(String(localized: "Title"))
+                        .font(.system(size: FolioFontSize.body, weight: .bold))
+                        .foregroundStyle(Color.folioHomeTypeTextText)
+                    PlaceholderUITextField(
+                        placeholder: String(localized: "Title"),
+                        placeholderColor: UIColor(Color.folioInkSoft),
+                        font: .systemFont(ofSize: CGFloat(FolioFontSize.bodyLarge), weight: .regular),
+                        textColor: UIColor(Color.folioInk),
+                        keyboardType: .default,
+                        isSecureTextEntry: false,
+                        autocorrectionType: .default,
+                        autocapitalizationType: .sentences,
+                        text: Binding(
+                            get: { viewModel.state.editTitle },
+                            set: { viewModel.send(.editTitleChanged($0)) }
+                        ),
+                        isFirstResponder: focusedField == .title
+                    )
+                    .padding(.horizontal, FolioSpacing.xl)
+                    .frame(height: FolioSize.fieldHeightXs)
+                    .background(.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: FolioRadius.lg)
+                            .stroke(Color.folioFieldBorder, lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg))
+                    .onTapGesture { focusedField = .title }
                 }
-                .buttonStyle(.plain)
-                .disabled(viewModel.state.isEditing)
+                
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(String(localized: "Author"))
+                        .font(.system(size: FolioFontSize.body, weight: .bold))
+                        .foregroundStyle(Color.folioHomeTypeTextText)
+                    PlaceholderUITextField(
+                        placeholder: String(localized: "Author"),
+                        placeholderColor: UIColor(Color.folioInkSoft),
+                        font: .systemFont(ofSize: CGFloat(FolioFontSize.bodyLarge), weight: .regular),
+                        textColor: UIColor(Color.folioInk),
+                        keyboardType: .default,
+                        isSecureTextEntry: false,
+                        autocorrectionType: .default,
+                        autocapitalizationType: .words,
+                        text: Binding(
+                            get: { viewModel.state.editAuthor },
+                            set: { viewModel.send(.editAuthorChanged($0)) }
+                        ),
+                        isFirstResponder: focusedField == .author
+                    )
+                    .padding(.horizontal, FolioSpacing.xl)
+                    .frame(height: FolioSize.fieldHeightXs)
+                    .background(.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: FolioRadius.lg)
+                            .stroke(Color.folioFieldBorder, lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg))
+                    .onTapGesture { focusedField = .author }
+                }
+
+                if viewModel.source?.sourceType == .manual {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(String(localized: "Content"))
+                            .font(.system(size: FolioFontSize.body, weight: .bold))
+                            .foregroundStyle(Color.folioHomeTypeTextText)
+                        TextEditor(text: Binding(
+                            get: { viewModel.state.editContent },
+                            set: { viewModel.send(.editContentChanged($0)) }
+                        ))
+                        .font(.system(size: FolioFontSize.bodyLarge, design: .default))
+                        .scrollContentBackground(.hidden)
+                        .padding(FolioSpacing.md)
+                        .frame(minHeight: 120, maxHeight: 200)
+                        .background(.white)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: FolioRadius.lg)
+                                .stroke(Color.folioFieldBorder, lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg))
+                        .onTapGesture { focusedField = .content }
+                        
+                        HStack {
+                            Spacer()
+                            Text("\(viewModel.state.editContent.count.formatted())/\(maximumContentLength.formatted())")
+                                .font(.system(size: FolioFontSize.small))
+                                .foregroundStyle(viewModel.state.editContent.count > maximumContentLength ? Color.folioDanger : Color.folioInkSoft)
+                        }
+                    }
+                }
+
+                
+                if let error = viewModel.state.editError {
+                    Text(error)
+                        .font(.system(size: FolioFontSize.small))
+                        .foregroundStyle(Color.folioDanger)
+                }
+                
+                HStack(spacing: FolioSpacing.lg) {
+                    Button {
+                        focusedField = nil
+                        viewModel.send(.cancelEdit)
+                    } label: {
+                        Text(String(localized: "Cancel"))
+                            .font(.system(size: FolioFontSize.bodyLarge, weight: .medium))
+                            .foregroundStyle(Color.folioTextSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(.clear)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: FolioRadius.md)
+                                    .stroke(Color.folioBorder, lineWidth: 1)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
+                    }
+                    .buttonStyle(.plain)
+                    
+                    Button {
+                        focusedField = nil
+                        viewModel.send(.editConfirmed)
+                    } label: {
+                        HStack(spacing: 6) {
+                            if viewModel.state.isEditing {
+                                ProgressView()
+                                    .progressViewStyle(.circular)
+                                    .tint(.white)
+                                    .scaleEffect(0.8)
+                            }
+                            Text(String(localized: "Save"))
+                                .font(.system(size: FolioFontSize.bodyLarge, weight: .semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .foregroundStyle(.white)
+                        .background(Color.folioOlive)
+                        .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.state.isEditing)
+                }
             }
+            .padding(.horizontal, FolioSpacing.xl3)
+            .padding(.bottom, FolioSpacing.lg)
+            .padding(.top, FolioSpacing.sm)
+            .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, FolioSpacing.xl3)
-        .padding(.bottom, FolioSpacing.xl4)
-        .padding(.top, FolioSpacing.lg)
-        .frame(maxWidth: .infinity)
-        .presentationBackground(Color.white)
-        .presentationDetents([.height(350)])
+        .scrollDismissesKeyboard(.interactively)
+        .presentationBackground(Color.folioHomeSheetBackground)
+        .presentationCornerRadius(FolioRadius.xl2)
+        .presentationDetents(viewModel.source?.sourceType == .manual ? [.height(580), .large] : [.height(315), .medium])
         .presentationDragIndicator(.visible)
     }
 }
+
+
 
 #Preview {
     FolioSourceReaderView(
@@ -411,8 +471,8 @@ private struct PreviewFetchSourceDetailUseCase: FetchSourceDetailUseCaseProtocol
 }
 
 private struct PreviewUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
-    func execute(id: String, title: String, author: String) async throws -> Source {
-        Source(id: id, researchSpaceId: "", sourceType: .file, title: title, author: author, sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", structuredContent: nil, processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
+    func execute(id: String, title: String, author: String, content: String?) async throws -> Source {
+        Source(id: id, researchSpaceId: "", sourceType: .file, title: title, author: author, sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: content ?? "", structuredContent: nil, processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
     }
 }
 

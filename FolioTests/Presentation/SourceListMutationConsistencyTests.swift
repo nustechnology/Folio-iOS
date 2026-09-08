@@ -233,7 +233,7 @@ private final class GatedFetchSourcesUseCase: FetchSourcesUseCaseProtocol {
 }
 
 private struct ReturningUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
-    func execute(id: String, title: String, author: String) async throws -> Source {
+    func execute(id: String, title: String, author: String, content: String?) async throws -> Source {
         source(id: id, title: title, author: author)
     }
 
@@ -261,7 +261,7 @@ private struct ReturningUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
 }
 
 private struct FailingUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
-    func execute(id: String, title: String, author: String) async throws -> Source { fatalError("Not used") }
+    func execute(id: String, title: String, author: String, content: String?) async throws -> Source { fatalError("Not used") }
 }
 
 private struct FailingFetchSourcesUseCase: FetchSourcesUseCaseProtocol {

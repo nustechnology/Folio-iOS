@@ -43,6 +43,27 @@ final class NetworkServiceTests: XCTestCase {
         XCTAssertEqual(URLProtocolStub.lastRequest?.url?.query, "sort=recently-updated&page=3&limit=25")
     }
 
+    func testListEndpointsBypassLocalCache() {
+        XCTAssertEqual(
+            WorkspaceEndpoint.list(query: .initial).cachePolicy,
+            .reloadIgnoringLocalCacheData
+        )
+        XCTAssertEqual(
+            SourceListEndpoint(query: SourceListQuery(spaceId: "space")).cachePolicy,
+            .reloadIgnoringLocalCacheData
+        )
+        XCTAssertEqual(
+            NoteListEndpoint(query: NoteListQuery(spaceId: "space")).cachePolicy,
+            .reloadIgnoringLocalCacheData
+        )
+        XCTAssertEqual(
+            AskConversationListEndpoint(
+                query: AskConversationListQuery(spaceId: "space", page: 1, limit: 10, search: nil)
+            ).cachePolicy,
+            .reloadIgnoringLocalCacheData
+        )
+    }
+
     func testUpdateSpaceUsesPatchMethod() {
         let endpoint = WorkspaceEndpoint.update(id: "space-id", name: "Research", objective: "Objective")
 

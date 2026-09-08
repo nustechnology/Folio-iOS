@@ -49,7 +49,11 @@ struct NoteListView: View {
     private var searchBinding: Binding<String> {
         Binding(
             get: { viewModel.state.searchQuery },
-            set: { viewModel.handle(.searchChanged($0)) }
+            set: { query in
+                Task { @MainActor in
+                    viewModel.handle(.searchChanged(query))
+                }
+            }
         )
     }
 

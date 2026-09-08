@@ -366,7 +366,8 @@ extension NoteListViewModel {
   }
 
   private func refresh() async {
-    await loadPage(replace: true)
+    let refreshTask = Task { await loadPage(replace: true) }
+    await refreshTask.value
   }
 
   private func retry() {

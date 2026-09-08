@@ -193,7 +193,11 @@ struct WorkspaceListView: View {
             userInitial: userInitial,
             searchText: Binding(
                 get: { viewModel.state.searchQuery },
-                set: { viewModel.send(.searchQueryChanged($0)) }
+                set: { query in
+                    Task { @MainActor in
+                        viewModel.send(.searchQueryChanged(query))
+                    }
+                }
             ),
             onOpenAccountSettings: onOpenAccountSettings,
             onClearSearch: { viewModel.send(.clearSearch) },

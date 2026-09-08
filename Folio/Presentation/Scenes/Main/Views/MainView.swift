@@ -67,9 +67,12 @@ struct MainView: View {
             FolioBackdrop()
             content
         }
+        .dismissKeyboardOnTapOutside()
         .task { viewModel.handle(.onAppear) }
         .onChange(of: viewModel.state.activeAskScope) { _, scopedSource in
-            askViewModel.handle(.scopeOptionSelected(sourceID: scopedSource?.id))
+            Task { @MainActor in
+                askViewModel.handle(.scopeOptionSelected(sourceID: scopedSource?.id))
+            }
         }
         .onChange(of: viewModel.state.isAuthenticated) { _, isAuthenticated in
             guard !isAuthenticated else { return }
@@ -150,11 +153,6 @@ struct MainView: View {
                     .padding(.bottom, 8)
                 }
             }
-            .modifier(KeyboardSafeAreaModifier(isEnabled: Self.shouldIgnoreKeyboardSafeArea(
-                showTabBar: showTabBar,
-                selectedTab: viewModel.state.selectedTab,
-                isKeyboardVisible: isKeyboardVisible
-            )))
     }
 
     static func shouldShowNotebookChrome(selectedTab: FolioTab, isKeyboardVisible: Bool) -> Bool {
@@ -558,8 +556,8 @@ private struct PreviewFetchSourcesUseCase: FetchSourcesUseCaseProtocol {
 }
 
 private struct PreviewUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
-    func execute(id: String, title: String, author: String) async throws -> Source {
-        Source(id: id, researchSpaceId: "", sourceType: .file, title: title, author: author, sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", structuredContent: nil, processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
+    func execute(id: String, title: String, author: String, content: String?) async throws -> Source {
+        Source(id: id, researchSpaceId: "", sourceType: .file, title: title, author: author, sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: content ?? "", structuredContent: nil, processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
     }
 }
 

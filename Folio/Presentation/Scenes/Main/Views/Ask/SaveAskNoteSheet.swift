@@ -48,9 +48,15 @@ struct SaveAskNoteSheet: View {
                 Text("Title")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color(hex: 0x966827))
-                TextField("Untitled Note", text: $title)
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundStyle(Color.folioInk)
+                PlaceholderUITextField(
+                    placeholder: String(localized: "Untitled Note"),
+                    placeholderColor: UIColor(Color.folioInkSoft),
+                    font: .systemFont(ofSize: 14, weight: .regular),
+                    textColor: UIColor(Color.folioInk),
+                    keyboardType: .default,
+                    isSecureTextEntry: false,
+                    text: $title
+                )
                     .padding(.horizontal, 14)
                     .frame(height: 48)
                     .background(Color.folioSurfaceStrong)

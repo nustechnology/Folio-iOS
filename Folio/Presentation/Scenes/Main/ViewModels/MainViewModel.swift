@@ -177,6 +177,7 @@ final class MainViewModel: ViewModelProtocol {
                 state.selectedTab = .sources
                 state.sourcesMode = .spaces
                 state.activeReaderID = nil
+                toastMessage = .success(String(localized: "Signed out successfully"))
                 signOutTask = nil
             }
         case .selectTab(let tab):

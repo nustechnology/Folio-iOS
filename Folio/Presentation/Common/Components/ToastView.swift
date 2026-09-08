@@ -28,40 +28,56 @@ struct ToastView: View {
     let style: ToastStyle
     let onDismiss: () -> Void
 
-    private var backgroundColor: Color {
+    private var iconName: String {
         switch style {
-        case .success: Color.folioOliveDark
+        case .success: "checkmark"
+        case .error: "exclamationmark.triangle"
+        case .info: "info.circle"
+        }
+    }
+
+    private var iconColor: Color {
+        switch style {
+        case .success: Color.folioHomeStatusReadyText
         case .error: Color.folioDanger
         case .info: Color.folioOlive
         }
     }
 
-    private var borderColor: Color {
+    private var iconBackgroundColor: Color {
         switch style {
-        case .success: Color.folioGold.opacity(0.4)
-        case .error: Color.folioDanger.opacity(0.5)
-        case .info: Color.folioGold.opacity(0.4)
+        case .success: Color.folioHomeStatusReadyBackground
+        case .error: Color.folioDanger.opacity(0.15)
+        case .info: Color.folioAccentLight
         }
     }
 
     var body: some View {
-        VStack {
-            Spacer()
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(iconBackgroundColor)
+                    .frame(width: 36, height: 36)
+
+                Image(systemName: iconName)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(iconColor)
+            }
+
             Text(message)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(backgroundColor)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(borderColor, lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .shadow(color: Color.black.opacity(0.15), radius: 12, y: 4)
-                .padding(.horizontal, 34)
-                .padding(.bottom, 40)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Color.folioHomeTextPrimary)
+                .lineLimit(2)
+
+            Spacer(minLength: 0)
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 4)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
         .task {
             try? await Task.sleep(nanoseconds: FolioDuration.toastDismiss)
             onDismiss()
@@ -71,14 +87,14 @@ struct ToastView: View {
 
 extension View {
     func folioToast(message: Binding<ToastMessage?>) -> some View {
-        overlay(alignment: .bottom) {
+        overlay(alignment: .top) {
             if let msg = message.wrappedValue {
                 ToastView(message: msg.text, style: msg.style) {
                     withAnimation(.easeOut(duration: FolioDuration.fast)) {
                         message.wrappedValue = nil
                     }
                 }
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
         .animation(.easeInOut(duration: FolioDuration.fast), value: message.wrappedValue)

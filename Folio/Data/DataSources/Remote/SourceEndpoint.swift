@@ -29,6 +29,7 @@ struct UpdateSourceEndpoint: APIEndpoint {
     let sourceId: String
     let title: String
     let author: String
+    let content: String?
 
     var path: String { "/api/v1/sources/\(sourceId)" }
     var method: HTTPMethod { .patch }
@@ -36,7 +37,7 @@ struct UpdateSourceEndpoint: APIEndpoint {
     var requiresAuthentication: Bool { true }
 
     var body: Data? {
-        try? JSONEncoder().encode(UpdateSourceRequestDTO(title: title, author: author))
+        try? JSONEncoder().encode(UpdateSourceRequestDTO(title: title, author: author, content: content))
     }
 }
 
