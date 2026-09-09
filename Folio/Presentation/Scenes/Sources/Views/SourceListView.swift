@@ -189,9 +189,9 @@ struct SourceListView: View {
                         FolioPill(
                             title: filter.displayTitle,
                             isSelected: viewModel.state.selectedFilter == filter,
-                            tint: .folioInk,
+                            tint: filter.selectedTint,
                             fontSize: 13,
-                            backgroundColor: .folioHomeTypeFileBackground
+                            backgroundColor: filter.selectedBackgroundColor
                         )
                     }
                     .buttonStyle(.plain)
@@ -738,8 +738,6 @@ private struct EditSourceSheet: View {
     }
 }
 
-
-
 extension FolioSourceFilter {
     var displayTitle: String {
         switch self {
@@ -749,6 +747,23 @@ extension FolioSourceFilter {
         case .text: return "TEXT"
         }
     }
-}
+    var selectedTint: Color {
+        switch self {
+        case .all: return .folioHomeTypeFileText
+        case .files: return .folioHomeTypeFileText
+        case .web: return .folioHomeTypeWebText
+        case .text: return .folioHomeTypeTextText
+        }
+    }
 
+    var selectedBackgroundColor: Color {
+        switch self {
+        case .all: return .folioHomeTypeFileBackground
+        case .files: return .folioHomeTypeFileBackground
+        case .web: return .folioHomeTypeWebBackground
+        case .text: return .folioHomeTypeTextBackground
+        }
+    }
+}
+    
 extension SourceListViewModel {}

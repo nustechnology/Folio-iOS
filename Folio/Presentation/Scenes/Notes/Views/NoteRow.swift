@@ -61,14 +61,20 @@ struct NoteRow: View {
                     HStack(spacing: 6) {
                         FolioKindBadge(
                             title: note.originType.title,
-                            backgroundColor: .folioHomeTypeFileBackground,
-                            textColor: .folioHomeTypeFileText
+                            backgroundColor: note.originType.badgeBackgroundColor,
+                            textColor: note.originType.badgeTextColor,
+                            style: .roundedRectangle(cornerRadius: FolioRadius.sm),
+                            horizontalPadding: FolioSpacing.lg,
+                            verticalPadding: FolioSpacing.sm
                         )
 
                         FolioKindBadge(
                             title: (note.citationCount ?? 0).noteCitationDisplayLabel,
-                            backgroundColor: .folioHomeTypeFileBackground,
-                            textColor: .folioHomeTypeFileText
+                            backgroundColor: note.originType.badgeBackgroundColor,
+                            textColor: note.originType.badgeTextColor,
+                            style: .roundedRectangle(cornerRadius: FolioRadius.sm),
+                            horizontalPadding: FolioSpacing.lg,
+                            verticalPadding: FolioSpacing.sm
                         )
                     }
 

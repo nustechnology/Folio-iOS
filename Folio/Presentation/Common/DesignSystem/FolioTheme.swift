@@ -177,6 +177,7 @@ enum FolioSize {
     static let workspaceActionSheetMaxH: CGFloat = 420
     static let noteDetailSheetMinH: CGFloat = 330
     static let noteDetailSheetMaxH: CGFloat = 600
+    static let noteDetailEditButtonMaxWidth: CGFloat = 136
     static let citationSheetMinH: CGFloat = 300
     static let citationSheetMaxH: CGFloat = 560
     static let noteEditSheetMinH: CGFloat = 500

@@ -224,6 +224,7 @@ struct FolioAskView: View {
                         .padding(.top, 16)
                         .padding(.bottom, 4)
                     }
+                    .defaultScrollAnchor(.bottom)
                     .onChange(of: viewModel.state.messages.count) { _, count in
                         guard count > 0, let lastID = viewModel.state.messages.last?.id else { return }
                         withAnimation(.easeOut(duration: 0.2)) {
