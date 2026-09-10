@@ -744,31 +744,50 @@ struct FolioAddSourceSheet: View {
     }
 
     private var completionActions: some View {
-        HStack(spacing: FolioSpacing.sm) {
-            FolioPrimaryButton(
-                title: String(localized: "Open source"),
-                action: {
-                    if let source = viewModel.state.processingSource {
-                        onSourceOpened?(source)
+        VStack(spacing: FolioSpacing.sm) {
+            HStack(spacing: FolioSpacing.sm) {
+                FolioPrimaryButton(
+                    title: String(localized: "Open source"),
+                    action: {
+                        if let source = viewModel.state.processingSource {
+                            onSourceOpened?(source)
+                        }
+                        dismiss()
                     }
-                    dismiss()
-                }
-            )
-            .frame(maxWidth: .infinity)
-            .frame(height: ProcessingLayout.buttonHeight)
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: ProcessingLayout.buttonHeight)
 
-            FolioSecondaryButton(
-                title: String(localized: "Ask"),
-                iconName: "sparkle",
-                action: {
-                    if let source = viewModel.state.processingSource {
-                        onAskSource?(source)
+                FolioSecondaryButton(
+                    title: String(localized: "Ask"),
+                    iconName: "sparkle",
+                    action: {
+                        if let source = viewModel.state.processingSource {
+                            onAskSource?(source)
+                        }
+                        dismiss()
                     }
-                    dismiss()
-                }
-            )
-            .frame(maxWidth: .infinity)
-            .frame(height: ProcessingLayout.buttonHeight)
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: ProcessingLayout.buttonHeight)
+            }
+
+            Button {
+                viewModel.handle(.resetToAddForm)
+            } label: {
+                Text(String(localized: "Add another source"))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.folioOliveDark)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.folioSurfaceStrong)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
+                            .stroke(Color.folioBorderLight, lineWidth: 1.5)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
+            }
+            .buttonStyle(.plain)
         }
     }
 }

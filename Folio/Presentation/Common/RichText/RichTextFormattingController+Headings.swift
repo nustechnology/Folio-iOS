@@ -76,13 +76,28 @@ extension RichTextFormattingController {
             let finalNsString = mutable.string as NSString
             let finalParagraph = finalNsString.paragraphRange(for: NSRange(location: currentParagraph.location, length: 0))
             if finalParagraph.length > 0 {
-                let newFont = allMatch
-                    ? UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize)
-                    : UIFont.systemFont(
-                        ofSize: fontSize,
-                        weight: FolioRichTextFormat.headingFontWeight(for: fontSize)
+                mutable.enumerateAttributes(in: finalParagraph, options: []) { attrs, attrRange, _ in
+                    let runFont = attrs[.font] as? UIFont ?? UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize)
+                    let isItalic = runFont.fontDescriptor.symbolicTraits.contains(.traitItalic)
+                    let isInlineBold = attrs[FolioRichTextFormat.inlineBoldAttribute] as? Bool == true
+
+                    let targetSize: CGFloat = allMatch ? FolioRichTextFormat.bodyFontSize : fontSize
+                    let weightResult = computeHeadingWeight(
+                        isInlineBold: isInlineBold,
+                        font: runFont,
+                        isApplyingHeading: !allMatch,
+                        fontSize: fontSize
                     )
-                mutable.addAttribute(.font, value: newFont, range: finalParagraph)
+                    let targetWeight = weightResult.weight
+
+                    if weightResult.isBold && !allMatch {
+                        mutable.addAttribute(FolioRichTextFormat.inlineBoldAttribute, value: true, range: attrRange)
+                    }
+
+                    let baseFont = UIFont.systemFont(ofSize: targetSize, weight: targetWeight)
+                    let finalFont = fontBySetting(.traitItalic, enabled: isItalic, in: baseFont)
+                    mutable.addAttribute(.font, value: finalFont, range: attrRange)
+                }
             }
         }
 
@@ -90,9 +105,10 @@ extension RichTextFormattingController {
         let finalNsString = mutable.string as NSString
         let finalLastParagraph = finalNsString.paragraphRange(for: NSRange(location: lastSelectedParagraph.location, length: 0))
         let newRange = NSRange(location: originalStart, length: max(0, NSMaxRange(finalLastParagraph) - originalStart))
+        let targetSelection = clampedSelectedRange.length > 0 ? clampedSelectedRange : newRange
         return Result(
             attributedText: mutable,
-            selectedRange: clampedSelection(newRange, to: mutable.length),
+            selectedRange: clampedSelection(targetSelection, to: mutable.length),
             typingAttributes: clampedSelectedRange.length == 0
                 ? typingAttributes(at: clampedSelectedRange.location, in: mutable)
                 : nil
@@ -262,17 +278,56 @@ extension RichTextFormattingController {
         var attributes = currentTypingAttributes
         let currentFont = attributes[.font] as? UIFont
             ?? UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize)
+        let isItalic = currentFont.fontDescriptor.symbolicTraits.contains(.traitItalic)
+        let isInlineBold = attributes[FolioRichTextFormat.inlineBoldAttribute] as? Bool == true
+
         let headingFont = UIFont.systemFont(
             ofSize: fontSize,
             weight: FolioRichTextFormat.headingFontWeight(for: fontSize)
         )
-        attributes[.font] = headingLevel(for: currentFont) == headingLevel(for: headingFont)
-            ? UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize)
-            : headingFont
+        let isTogglingOff = headingLevel(for: currentFont) == headingLevel(for: headingFont)
+        let targetSize: CGFloat = isTogglingOff ? FolioRichTextFormat.bodyFontSize : fontSize
+        let weightResult = computeHeadingWeight(
+            isInlineBold: isInlineBold,
+            font: currentFont,
+            isApplyingHeading: !isTogglingOff,
+            fontSize: fontSize
+        )
+        let targetWeight = weightResult.weight
+        if weightResult.isBold && !isTogglingOff {
+            attributes[FolioRichTextFormat.inlineBoldAttribute] = true
+        }
+
+        let baseFont = UIFont.systemFont(ofSize: targetSize, weight: targetWeight)
+        attributes[.font] = fontBySetting(.traitItalic, enabled: isItalic, in: baseFont)
         return Result(
             attributedText: attributedText,
             selectedRange: selectedRange,
             typingAttributes: attributes
         )
+    }
+
+    private struct HeadingWeightResult {
+        let weight: UIFont.Weight
+        let isBold: Bool
+        let isKnownBold: Bool
+    }
+
+    private func computeHeadingWeight(
+        isInlineBold: Bool,
+        font: UIFont,
+        isApplyingHeading: Bool,
+        fontSize: CGFloat
+    ) -> HeadingWeightResult {
+        let hasBoldTrait = font.fontDescriptor.symbolicTraits.contains(.traitBold)
+        let isBold = isInlineBold || hasBoldTrait
+        let isKnownBold = isInlineBold
+        let weight: UIFont.Weight
+        if isApplyingHeading {
+            weight = isKnownBold ? FolioRichTextFormat.inlineBoldFontWeight : FolioRichTextFormat.headingFontWeight(for: fontSize)
+        } else {
+            weight = isBold ? FolioRichTextFormat.inlineBoldFontWeight : .regular
+        }
+        return HeadingWeightResult(weight: weight, isBold: isBold, isKnownBold: isKnownBold)
     }
 }

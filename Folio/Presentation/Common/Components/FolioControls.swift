@@ -12,6 +12,7 @@ struct PlaceholderUITextField: UIViewRepresentable {
     var autocapitalizationType: UITextAutocapitalizationType = .sentences
     @Binding var text: String
     var isFirstResponder: Bool?
+    var onFocusChanged: ((Bool) -> Void)?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -27,6 +28,11 @@ struct PlaceholderUITextField: UIViewRepresentable {
         field.autocapitalizationType = autocapitalizationType
         field.textContentType = isSecureTextEntry ? .password : nil
         field.isSecureTextEntry = isSecureTextEntry
+        field.clipsToBounds = true
+        field.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
+        field.setContentCompressionResistancePriority(.defaultHigh, for: .vertical)
+        field.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        field.setContentHuggingPriority(.defaultHigh, for: .vertical)
         updatePlaceholder(field)
         field.addTarget(context.coordinator, action: #selector(Coordinator.textDidChange(_:)), for: .editingChanged)
         return field
@@ -39,7 +45,9 @@ struct PlaceholderUITextField: UIViewRepresentable {
         updatePlaceholder(uiView)
         if let isFirstResponder {
             if isFirstResponder && !uiView.isFirstResponder {
-                uiView.becomeFirstResponder()
+                DispatchQueue.main.async {
+                    uiView.becomeFirstResponder()
+                }
             } else if !isFirstResponder && uiView.isFirstResponder {
                 uiView.resignFirstResponder()
             }
@@ -70,6 +78,14 @@ struct PlaceholderUITextField: UIViewRepresentable {
         func textFieldDidChangeSelection(_ notification: Notification) {
             guard let textField = notification.object as? UITextField else { return }
             parent.text = textField.text ?? ""
+        }
+
+        func textFieldDidBeginEditing(_ textField: UITextField) {
+            parent.onFocusChanged?(true)
+        }
+
+        func textFieldDidEndEditing(_ textField: UITextField) {
+            parent.onFocusChanged?(false)
         }
     }
 }

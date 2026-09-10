@@ -78,7 +78,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         case selectTab(AddSourceTab), fileSelected(URL?), removeFile
         case webURLChanged(String), webTitleChanged(String), webAuthorChanged(String)
         case manualTitleChanged(String), manualAuthorChanged(String), manualContentChanged(String)
-        case addSource, dismissProcessing, openSource, openAsk
+        case addSource, dismissProcessing, openSource, openAsk, resetToAddForm
         case retryProcessing, deleteSourceTapped, deleteSourceConfirmed, dismissDeleteConfirmation
     }
 
@@ -184,6 +184,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             uploadTask = Task { await performUpload() }
 
         case .dismissProcessing: stopProcessing(); resetState()
+        case .resetToAddForm: resetState()
         case .openSource: break
         case .openAsk: break
 
