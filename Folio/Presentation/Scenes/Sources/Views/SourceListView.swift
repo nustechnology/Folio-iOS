@@ -97,9 +97,9 @@ struct SourceListView: View {
                 sourceType: viewModel.state.editSource?.sourceType ?? .file,
                 isEditing: viewModel.isEditing,
                 errorMessage: viewModel.state.mutationError,
-                maximumTitleLength: SourceReaderViewModel.maximumTitleLength,
-                maximumAuthorLength: SourceReaderViewModel.maximumAuthorLength,
-                maximumContentLength: SourceReaderViewModel.maximumContentLength,
+                maximumTitleLength: Source.maximumTitleLength,
+                maximumAuthorLength: Source.maximumAuthorLength,
+                maximumContentLength: Source.maximumContentLength,
                 onCancel: {},
                 onConfirm: { viewModel.send(.editConfirmed) }
             )

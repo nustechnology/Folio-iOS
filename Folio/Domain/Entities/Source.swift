@@ -1,6 +1,10 @@
 import Foundation
 
 struct Source: Identifiable, Equatable, Sendable {
+    static let maximumTitleLength = 255
+    static let maximumAuthorLength = 100
+    static let maximumContentLength = 100_000
+
     let id: String
     let researchSpaceId: String
     let sourceType: SourceType

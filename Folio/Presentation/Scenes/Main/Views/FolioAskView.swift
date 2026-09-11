@@ -88,11 +88,6 @@ struct FolioAskView: View {
         .sheet(isPresented: $showAddSourceSheet) {
             askAddSourceSheet
         }
-        .onChange(of: showAddSourceSheet) { _, isPresented in
-            if !isPresented {
-                addSourceViewModel?.handle(.dismissProcessing)
-            }
-        }
         .sheet(isPresented: $showScopeSheet) {
             AnswerScopeSheet(
                 selectedScope: viewModel.state.scope,

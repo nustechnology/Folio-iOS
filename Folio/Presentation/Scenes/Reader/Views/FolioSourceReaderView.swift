@@ -83,9 +83,9 @@ struct FolioSourceReaderView: View {
                     sourceType: viewModel.source?.sourceType ?? .file,
                     isEditing: viewModel.state.isEditing,
                     errorMessage: viewModel.state.editError,
-                    maximumTitleLength: SourceReaderViewModel.maximumTitleLength,
-                    maximumAuthorLength: SourceReaderViewModel.maximumAuthorLength,
-                    maximumContentLength: SourceReaderViewModel.maximumContentLength,
+                    maximumTitleLength: Source.maximumTitleLength,
+                    maximumAuthorLength: Source.maximumAuthorLength,
+                    maximumContentLength: Source.maximumContentLength,
                     onCancel: { viewModel.send(.cancelEdit) },
                     onConfirm: { viewModel.send(.editConfirmed) }
                 )
