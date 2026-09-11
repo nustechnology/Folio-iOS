@@ -5783,6 +5783,23 @@
           }
         }
       }
+    },
+    "Link: %@" : {
+      "comment" : "A label displaying the URL link of the web source.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link: %@"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link: %@"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

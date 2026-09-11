@@ -525,6 +525,23 @@ struct FolioAddSourceSheet: View {
                     if viewModel.state.isProcessingFailed {
                         failureBanner
                         failureActions
+                    } else if !viewModel.state.isProcessingComplete {
+                        Button {
+                            viewModel.handle(.resetToAddForm)
+                        } label: {
+                            Text(String(localized: "Add another source"))
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Color.folioOliveDark)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(Color.folioSurfaceStrong)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
+                                        .stroke(Color.folioBorderLight, lineWidth: 1.5)
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, FolioSpacing.xl3)

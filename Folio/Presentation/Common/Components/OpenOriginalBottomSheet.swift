@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OpenOriginalBottomSheet: View {
     let fileName: String
+    var sourceType: SourceType = .file
     let onCancel: () -> Void
     let onOpen: () -> Void
     @Environment(\.dismiss) private var dismiss
@@ -22,12 +23,21 @@ struct OpenOriginalBottomSheet: View {
                 .padding(.horizontal, FolioSpacing.xl3)
                 .padding(.bottom, FolioSpacing.xl3)
 
-            Text(String(localized: "File: \(fileName)"))
-                .font(.system(size: 13))
-                .foregroundStyle(Color.folioInkSoft)
-                .lineLimit(1)
-                .padding(.horizontal, FolioSpacing.xl3)
-                .padding(.bottom, FolioSpacing.xl4)
+            if sourceType == .web {
+                Text(String(localized: "Link: \(fileName)"))
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.folioInkSoft)
+                    .lineLimit(1)
+                    .padding(.horizontal, FolioSpacing.xl3)
+                    .padding(.bottom, FolioSpacing.xl4)
+            } else {
+                Text(String(localized: "File: \(fileName)"))
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.folioInkSoft)
+                    .lineLimit(1)
+                    .padding(.horizontal, FolioSpacing.xl3)
+                    .padding(.bottom, FolioSpacing.xl4)
+            }
 
             HStack(spacing: 10) {
                 Button {
