@@ -184,7 +184,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             uploadTask = Task { await performUpload() }
 
         case .dismissProcessing: stopProcessing(); resetState()
-        case .resetToAddForm: resetState()
+        case .resetToAddForm: stopProcessing(); resetState()
         case .openSource: break
         case .openAsk: break
 

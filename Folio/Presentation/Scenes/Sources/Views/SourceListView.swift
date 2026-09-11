@@ -55,7 +55,6 @@ struct SourceListView: View {
             get: { viewModel.state.presentedSheet },
             set: { _ in
                 viewModel.send(.dismissSheet)
-                addSourceViewModel?.handle(.dismissProcessing)
             }
         )) { sheet in
             sheetContent(sheet)
@@ -98,9 +97,9 @@ struct SourceListView: View {
                 sourceType: viewModel.state.editSource?.sourceType ?? .file,
                 isEditing: viewModel.isEditing,
                 errorMessage: viewModel.state.mutationError,
-                maximumTitleLength: 255,
-                maximumAuthorLength: 100,
-                maximumContentLength: 100_000,
+                maximumTitleLength: SourceReaderViewModel.maximumTitleLength,
+                maximumAuthorLength: SourceReaderViewModel.maximumAuthorLength,
+                maximumContentLength: SourceReaderViewModel.maximumContentLength,
                 onCancel: {},
                 onConfirm: { viewModel.send(.editConfirmed) }
             )
@@ -607,141 +606,6 @@ private struct SourceMessageState: View {
                 }
             }
         }
-    }
-}
-
-private struct EditSourceSheet: View {
-    @ObservedObject var viewModel: SourceListViewModel
-    @Environment(\.dismiss) private var dismiss
-
-    private let maximumContentLength = 100_000
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(String(localized: "Edit source"))
-                .font(.system(size: FolioFontSize.heading, weight: .regular, design: .serif))
-                .foregroundStyle(Color.folioTextPrimary)
-                .padding(.horizontal, FolioSpacing.xl3)
-                .padding(.top, FolioSpacing.xl5)
-                .padding(.bottom, FolioSpacing.xs)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: FolioSpacing.xl) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(String(localized: "Title"))
-                            .font(.system(size: FolioFontSize.body, weight: .medium))
-                            .foregroundStyle(Color.folioInkSoft)
-                        TextField(String(localized: "Title"), text: $viewModel.editTitle)
-                            .font(.system(size: FolioFontSize.bodyLarge, weight: .regular))
-                            .foregroundStyle(Color.folioInk)
-                            .autocapitalization(.sentences)
-                            .padding(.horizontal, FolioSpacing.xl)
-                            .frame(height: FolioSize.fieldHeightXs)
-                            .background(.white)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: FolioRadius.md)
-                                    .stroke(Color.folioBorderLight, lineWidth: 1)
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                    }
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(String(localized: "Author"))
-                            .font(.system(size: FolioFontSize.body, weight: .medium))
-                            .foregroundStyle(Color.folioInkSoft)
-                        TextField(String(localized: "Author"), text: $viewModel.editAuthor)
-                            .font(.system(size: FolioFontSize.bodyLarge, weight: .regular))
-                            .foregroundStyle(Color.folioInk)
-                            .autocapitalization(.words)
-                            .padding(.horizontal, FolioSpacing.xl)
-                            .frame(height: FolioSize.fieldHeightXs)
-                            .background(.white)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: FolioRadius.md)
-                                    .stroke(Color.folioBorderLight, lineWidth: 1)
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                    }
-
-                    if viewModel.state.editSource?.sourceType == .manual {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(String(localized: "Content"))
-                                .font(.system(size: FolioFontSize.body, weight: .medium))
-                                .foregroundStyle(Color.folioInkSoft)
-                            TextEditor(text: $viewModel.editContent)
-                                .font(.system(size: FolioFontSize.bodyLarge, design: .default))
-                                .scrollContentBackground(.hidden)
-                                .padding(FolioSpacing.md)
-                                .frame(minHeight: 120, maxHeight: 200)
-                                .background(.white)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: FolioRadius.md)
-                                        .stroke(Color.folioBorderLight, lineWidth: 1)
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                            Text("\(viewModel.editContent.count.formatted())/\(maximumContentLength.formatted())")
-                                .font(.system(size: FolioFontSize.small))
-                                .foregroundStyle(viewModel.editContent.count > maximumContentLength ? Color.folioDanger : Color.folioInkSoft)
-                        }
-                    }
-
-                    if let error = viewModel.state.mutationError {
-                        Text(error)
-                            .font(.system(size: FolioFontSize.small))
-                            .foregroundStyle(Color.folioDanger)
-                    }
-
-                    HStack(spacing: FolioSpacing.lg) {
-                        Button {
-                            dismissKeyboard()
-                            dismiss()
-                        } label: {
-                            Text(String(localized: "Cancel"))
-                                .font(.system(size: FolioFontSize.bodyLarge, weight: .medium))
-                                .foregroundStyle(Color.folioTextSecondary)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(.clear)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: FolioRadius.md)
-                                        .stroke(Color.folioBorder, lineWidth: 1)
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                                .contentShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                        }
-                        .buttonStyle(.plain)
-
-                        Button {
-                            dismissKeyboard()
-                            viewModel.send(.editConfirmed)
-                        } label: {
-                            Text(String(localized: "Save"))
-                                .font(.system(size: FolioFontSize.bodyLarge, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(Color.folioOlive)
-                                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                                .contentShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(viewModel.isEditing)
-                    }
-                }
-                .padding(.horizontal, FolioSpacing.xl3)
-                .padding(.bottom, FolioSpacing.lg)
-                .padding(.top, FolioSpacing.sm)
-                .frame(maxWidth: .infinity)
-            }
-        }
-        .scrollDismissesKeyboard(.interactively)
-        .presentationBackground(Color.white)
-        .presentationDetents(viewModel.state.editSource?.sourceType == .manual ? [.height(580)] : [.height(315)])
-        .presentationDragIndicator(.visible)
-    }
-
-    private func dismissKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 

@@ -102,7 +102,7 @@ struct EditSourceSheet: View {
 
             HStack {
                 if trimmedTitleCount > maximumTitleLength {
-                    Text(String(localized: "Title cannot exceed 255 characters"))
+                    Text(String(localized: "Title cannot exceed \(maximumTitleLength) characters"))
                         .font(.system(size: FolioFontSize.small))
                         .foregroundStyle(Color.folioDanger)
                 }
@@ -142,7 +142,7 @@ struct EditSourceSheet: View {
 
             HStack {
                 if trimmedAuthorCount > maximumAuthorLength {
-                    Text(String(localized: "Author cannot exceed 100 characters"))
+                    Text(String(localized: "Author cannot exceed \(maximumAuthorLength) characters"))
                         .font(.system(size: FolioFontSize.small))
                         .foregroundStyle(Color.folioDanger)
                 }
@@ -178,7 +178,7 @@ struct EditSourceSheet: View {
 
             HStack {
                 if trimmedContentCount > maximumContentLength {
-                    Text(String(localized: "Content exceeds maximum limit of 100,000 characters."))
+                    Text(String(localized: "Content exceeds maximum limit of \(maximumContentLength) characters."))
                         .font(.system(size: FolioFontSize.small))
                         .foregroundStyle(Color.folioDanger)
                 }

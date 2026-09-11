@@ -16,28 +16,23 @@ struct OpenOriginalBottomSheet: View {
                 .padding(.top, FolioSpacing.xl3)
                 .padding(.bottom, FolioSpacing.sm)
 
-            Text(String(localized: "Opens the original uploaded file in another app on your device."))
+            Text(sourceType == .web
+                ? String(localized: "Opens the original link in another app on your device.")
+                : String(localized: "Opens the original uploaded file in another app on your device."))
                 .font(.system(size: 14))
                 .foregroundStyle(Color.folioInkMuted)
                 .lineSpacing(6)
                 .padding(.horizontal, FolioSpacing.xl3)
                 .padding(.bottom, FolioSpacing.xl3)
 
-            if sourceType == .web {
-                Text(String(localized: "Link: \(fileName)"))
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.folioInkSoft)
-                    .lineLimit(1)
-                    .padding(.horizontal, FolioSpacing.xl3)
-                    .padding(.bottom, FolioSpacing.xl4)
-            } else {
-                Text(String(localized: "File: \(fileName)"))
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.folioInkSoft)
-                    .lineLimit(1)
-                    .padding(.horizontal, FolioSpacing.xl3)
-                    .padding(.bottom, FolioSpacing.xl4)
-            }
+            Text(sourceType == .web
+                ? String(localized: "Link: \(fileName)")
+                : String(localized: "File: \(fileName)"))
+                .font(.system(size: 13))
+                .foregroundStyle(Color.folioInkSoft)
+                .lineLimit(1)
+                .padding(.horizontal, FolioSpacing.xl3)
+                .padding(.bottom, FolioSpacing.xl4)
 
             HStack(spacing: 10) {
                 Button {
