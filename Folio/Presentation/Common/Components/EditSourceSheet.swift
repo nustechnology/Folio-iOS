@@ -35,7 +35,7 @@ struct EditSourceSheet: View {
     private var isOverLimit: Bool {
         trimmedTitleCount > maximumTitleLength
             || trimmedAuthorCount > maximumAuthorLength
-            || trimmedContentCount > maximumContentLength
+            || (sourceType == .manual && trimmedContentCount > maximumContentLength)
     }
 
     var body: some View {
