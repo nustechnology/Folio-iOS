@@ -7,10 +7,12 @@ struct NoteDetailView: View {
     let onConvert: () -> Void
     var onOpenSource: (String) -> Void = { _ in }
     var showsActions: Bool = true
-
+    
     @Environment(\.dismiss) private var dismiss
     @State private var selectedCitation: NoteCitation?
-
+    @State private var headerHeight: CGFloat = 0
+    @State private var sheetHeight: CGFloat = 0
+    
     static func citationMarkerNumbers(in content: String, citationCount: Int) -> [Int] {
         guard let regex = try? NSRegularExpression(pattern: #"\[(\d+)\]"#) else { return [] }
         let range = NSRange(location: 0, length: (content as NSString).length)
@@ -23,8 +25,69 @@ struct NoteDetailView: View {
             return number
         }
     }
-
+    
     var body: some View {
+        VStack(spacing: 0) {
+            header
+            
+            ScrollView {
+                VStack(alignment: .leading, spacing: FolioSpacing.md) {
+                    metadata
+                    
+                    FolioCard(
+                        content: CitationRichTextView(
+                            content: note.content,
+                            citationCount: note.citations.count,
+                            onCitationTapped: { index in
+                                selectedCitation = note.citations[index]
+                            }
+                        ),
+                        height: .minimum(160),
+                        backgroundColor: .folioHomeReadOnlyFieldBackground
+                    )
+                    
+                    if showsActions {
+                        actionButtons
+                    }
+                }
+                .padding(.horizontal, FolioSpacing.xl3)
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onChange(of: proxy.size.height, initial: true) { _, newHeight in
+                                guard SheetHeightMeasurement.needsUpdate(
+                                    current: sheetHeight,
+                                    measured: newHeight
+                                ) else { return }
+                                sheetHeight = newHeight
+                            }
+                    }
+                }
+            }
+        }
+        .background(Color.folioHomeSheetBackground)
+        .presentationBackground(Color.folioHomeSheetBackground)
+        .presentationCornerRadius(FolioRadius.xl2)
+        .presentationDragIndicator(.hidden)
+        .presentationDetents(
+            sheetHeight > 0
+            && headerHeight > 0
+            ? [.height(sheetHeight + headerHeight), .large]
+            : [.medium, .large]
+        )
+        .sheet(item: $selectedCitation) { citation in
+            CitationDetailSheet(
+                citation: citation,
+                onOpenSource: {
+                    selectedCitation = nil
+                    dismiss()
+                    onOpenSource(citation.sourceId)
+                }
+            )
+        }
+    }
+
+    private var header: some View {
         VStack(spacing: 0) {
             RoundedRectangle(cornerRadius: FolioRadius.handle)
                 .fill(Color.folioHomeSheetHandle)
@@ -60,71 +123,52 @@ struct NoteDetailView: View {
             }
             .padding(.horizontal, FolioSpacing.xl3)
             .padding(.bottom, FolioSpacing.xl3)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: FolioSpacing.md) {
-                    metadata
-
-                    FolioCard(
-                        content: CitationRichTextView(
-                            content: note.content,
-                            citationCount: note.citations.count,
-                            onCitationTapped: { index in
-                                selectedCitation = note.citations[index]
-                            }
-                        ),
-                        height: 160
-                    )
-
-                    if showsActions {
-                        actionButtons
+        }
+        .background {
+            GeometryReader { proxy in
+                Color.clear
+                    .onChange(of: proxy.size.height, initial: true) { _, newHeight in
+                        guard SheetHeightMeasurement.needsUpdate(
+                            current: headerHeight,
+                            measured: newHeight
+                        ) else { return }
+                        headerHeight = newHeight
                     }
-                }
-                .padding(.horizontal, FolioSpacing.xl3)
             }
         }
-        .background(Color.folioHomeSheetBackground)
-        .presentationBackground(Color.folioHomeSheetBackground)
-        .presentationCornerRadius(FolioRadius.xl2)
-        .folioDynamicSheet(minHeight: FolioSize.noteDetailSheetMinH, maxHeight: FolioSize.noteDetailSheetMaxH)
-        .presentationDragIndicator(.hidden)
-        .sheet(item: $selectedCitation) { citation in
-            CitationDetailSheet(
-                citation: citation,
-                onOpenSource: {
-                    selectedCitation = nil
-                    dismiss()
-                    onOpenSource(citation.sourceId)
-                }
-            )
-        }
     }
-
+    
     private var metadata: some View {
         HStack(spacing: FolioSpacing.sm) {
             FolioKindBadge(
                 title: note.originType.title,
-                backgroundColor: Color.folioHomeTypeFileBackground,
-                textColor: Color.folioHomeTypeFileText
+                backgroundColor: note.originType.badgeBackgroundColor,
+                textColor: note.originType.badgeTextColor,
+                style: .roundedRectangle(cornerRadius: FolioRadius.sm),
+                horizontalPadding: FolioSpacing.lg,
+                verticalPadding: FolioSpacing.sm
             )
-
+            
             if let citationCount = note.citationCount, note.hasCitations {
                 FolioKindBadge(
                     title: citationCount.noteCitationDisplayLabel,
-                    backgroundColor: Color.folioHomeTypeFileBackground,
-                    textColor: Color.folioHomeTypeFileText
+                    backgroundColor: note.originType.badgeBackgroundColor,
+                    textColor: note.originType.badgeTextColor,
+                    style: .roundedRectangle(cornerRadius: FolioRadius.sm),
+                    horizontalPadding: FolioSpacing.lg,
+                    verticalPadding: FolioSpacing.sm
                 )
             }
-
+            
             Spacer(minLength: 0)
-
+            
             VStack(alignment: .trailing, spacing: FolioSpacing.xs) {
                 detailDateRow(label: String(localized: "Updated"), date: note.updatedAt)
                 detailDateRow(label: String(localized: "Created"), date: note.createdAt)
             }
         }
     }
-
+    
     private func detailDateRow(label: String, date: Date) -> some View {
         HStack(spacing: FolioSpacing.xs) {
             Text("\(label) \(date.noteListDisplayLabel)")
@@ -132,29 +176,30 @@ struct NoteDetailView: View {
                 .foregroundStyle(Color.folioInkMuted)
         }
     }
-
+    
     private var actionButtons: some View {
         HStack(spacing: FolioSpacing.lg) {
             FolioSecondaryButton(
                 title: String(localized: "Convert to Source"),
                 action: onConvert
             )
-
+            
             FolioPrimaryButton(
                 title: String(localized: "Edit"),
                 action: onEdit
             )
+            .frame(maxWidth: FolioSize.noteDetailEditButtonMaxWidth)
         }
         .padding(.top, FolioSpacing.sm)
     }
-
+    
 }
 
 struct CitationRichTextView: View {
     let content: String
     let citationCount: Int
     var onCitationTapped: (Int) -> Void = { _ in }
-
+    
     var body: some View {
         CitationTextView(
             attributedText: Self.inlineAttributedString(content: content, citationCount: citationCount),
@@ -162,7 +207,7 @@ struct CitationRichTextView: View {
         )
         .frame(maxWidth: .infinity, alignment: .leading)
     }
-
+    
     static func inlineAttributedString(content: String, citationCount: Int) -> NSAttributedString {
         let attributed = NoteDisplayAttributedString.make(from: content)
         let string = attributed.string as NSString
@@ -170,7 +215,7 @@ struct CitationRichTextView: View {
         guard let regex = try? NSRegularExpression(pattern: #"\[(\d+)\]"#) else {
             return attributed
         }
-
+        
         let result = NSMutableAttributedString()
         var cursor = 0
         for match in regex.matches(in: string as String, range: fullRange) {
@@ -201,7 +246,7 @@ struct CitationRichTextView: View {
             ))
             cursor = NSMaxRange(match.range)
         }
-
+        
         if cursor < string.length {
             result.append(attributed.attributedSubstring(from: NSRange(
                 location: cursor,
@@ -215,11 +260,11 @@ struct CitationRichTextView: View {
 private struct CitationTextView: UIViewRepresentable {
     let attributedText: NSAttributedString
     let onCitationTapped: (Int) -> Void
-
+    
     func makeCoordinator() -> Coordinator {
         Coordinator(onCitationTapped: onCitationTapped)
     }
-
+    
     func makeUIView(context: Context) -> UITextView {
         let textView = UITextView()
         textView.delegate = context.coordinator
@@ -233,24 +278,24 @@ private struct CitationTextView: UIViewRepresentable {
         textView.linkTextAttributes = [:]
         return textView
     }
-
+    
     func updateUIView(_ textView: UITextView, context: Context) {
         context.coordinator.onCitationTapped = onCitationTapped
         textView.attributedText = attributedText
     }
-
+    
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
         guard let width = proposal.width else { return nil }
         return uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
     }
-
+    
     final class Coordinator: NSObject, UITextViewDelegate {
         var onCitationTapped: (Int) -> Void
-
+        
         init(onCitationTapped: @escaping (Int) -> Void) {
             self.onCitationTapped = onCitationTapped
         }
-
+        
         func textView(
             _ textView: UITextView,
             shouldInteractWith url: URL,

@@ -119,10 +119,10 @@ private struct QuickNoteRow: View {
                 HStack(spacing: 6) {
                     Text(note.originType.title)
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(Color.folioInkSoft)
+                        .foregroundStyle(originLabelTextColor)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Color.folioCanvas.opacity(0.6))
+                        .background(originLabelBackgroundColor)
                         .clipShape(Capsule(style: .continuous))
 
                     Text(note.updatedAt.miniRelativeLabel)
@@ -147,6 +147,24 @@ private struct QuickNoteRow: View {
         switch note.originType {
         case .userCreated: return "note.text"
         case .savedAssistantAnswer: return "sparkle"
+        }
+    }
+
+    private var originLabelTextColor: Color {
+        switch note.originType {
+        case .userCreated:
+            .folioInkSoft
+        case .savedAssistantAnswer:
+            .folioHomeTypeWebText
+        }
+    }
+
+    private var originLabelBackgroundColor: Color {
+        switch note.originType {
+        case .userCreated:
+            .folioCanvas.opacity(0.6)
+        case .savedAssistantAnswer:
+            .folioHomeTypeWebBackground
         }
     }
 }

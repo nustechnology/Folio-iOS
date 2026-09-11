@@ -7,5 +7,4 @@ DerivedData/
 .build/
 build/
 
-# macOS metadata
 .DS_Store
