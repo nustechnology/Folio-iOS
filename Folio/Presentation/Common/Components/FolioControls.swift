@@ -13,11 +13,11 @@ struct PlaceholderUITextField: UIViewRepresentable {
     @Binding var text: String
     var isFirstResponder: Bool?
     var onFocusChanged: ((Bool) -> Void)?
-
+    
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
-
+    
     func makeUIView(context: Context) -> UITextField {
         let field = UITextField()
         field.delegate = context.coordinator
@@ -37,7 +37,7 @@ struct PlaceholderUITextField: UIViewRepresentable {
         field.addTarget(context.coordinator, action: #selector(Coordinator.textDidChange(_:)), for: .editingChanged)
         return field
     }
-
+    
     func updateUIView(_ uiView: UITextField, context: Context) {
         uiView.text = text
         uiView.keyboardType = keyboardType
@@ -53,7 +53,7 @@ struct PlaceholderUITextField: UIViewRepresentable {
             }
         }
     }
-
+    
     private func updatePlaceholder(_ field: UITextField) {
         field.attributedPlaceholder = NSAttributedString(
             string: placeholder,
@@ -63,18 +63,18 @@ struct PlaceholderUITextField: UIViewRepresentable {
             ]
         )
     }
-
+    
     final class Coordinator: NSObject, UITextFieldDelegate {
         var parent: PlaceholderUITextField
-
+        
         init(_ parent: PlaceholderUITextField) {
             self.parent = parent
         }
-
+        
         @objc func textDidChange(_ textField: UITextField) {
             parent.text = textField.text ?? ""
         }
-
+        
         func textFieldDidChangeSelection(_ notification: Notification) {
             guard let textField = notification.object as? UITextField else { return }
             parent.text = textField.text ?? ""
@@ -91,35 +91,56 @@ struct PlaceholderUITextField: UIViewRepresentable {
 }
 
 struct FolioCard<Content: View>: View {
+    enum Height {
+        case fixed(CGFloat)
+        case minimum(CGFloat)
+    }
+
     let content: Content
-    var height: CGFloat?
+    var height: Height?
+    var backgroundColor: Color
+
+    init(
+        content: Content,
+        height: Height? = nil,
+        backgroundColor: Color = .folioSurfaceStrong
+    ) {
+        self.content = content
+        self.height = height
+        self.backgroundColor = backgroundColor
+    }
 
     var body: some View {
-        if let height {
-            ScrollView {
-                content
-                    .padding(FolioSpacing.xl)
-            }
-            .frame(height: height)
-            .scrollBounceBehavior(.basedOnSize)
-            .background(Color.folioSurfaceStrong)
+        cardBody
+            .background(backgroundColor)
             .overlay(
                 RoundedRectangle(cornerRadius: FolioRadius.md, style: .continuous)
                     .stroke(Color.folioLine.opacity(0.75), lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md, style: .continuous))
             .shadow(color: Color.black.opacity(0.03), radius: FolioRadius.md, y: 2)
-        } else {
-            content
-                .padding(FolioSpacing.xl)
-                .background(Color.folioSurfaceStrong)
-                .overlay(
-                    RoundedRectangle(cornerRadius: FolioRadius.md, style: .continuous)
-                        .stroke(Color.folioLine.opacity(0.75), lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md, style: .continuous))
-                .shadow(color: Color.black.opacity(0.03), radius: FolioRadius.md, y: 2)
+    }
+
+    @ViewBuilder
+    private var cardBody: some View {
+        switch height {
+        case .fixed(let value):
+            ScrollView {
+                paddedContent
+            }
+            .frame(height: value)
+            .scrollBounceBehavior(.basedOnSize)
+        case .minimum(let value):
+            paddedContent
+                .frame(minHeight: value, alignment: .topLeading)
+        case nil:
+            paddedContent
         }
+    }
+
+    private var paddedContent: some View {
+        content
+            .padding(FolioSpacing.xl)
     }
 }
 
@@ -129,11 +150,11 @@ struct FolioPill: View {
     var tint: Color = .folioGold
     var fontSize: CGFloat = FolioFontSize.small
     var backgroundColor: Color?
-
+    
     var selectedBackground: Color {
         backgroundColor ?? tint.opacity(0.18)
     }
-
+    
     var body: some View {
         Text(title)
             .font(.system(size: fontSize))
@@ -155,9 +176,9 @@ struct FolioPrimaryButton: View {
     var isEnabled: Bool = true
     var verticalPadding: CGFloat = 15
     let action: () -> Void
-
+    
     private var isDisabled: Bool { isLoading || !isEnabled }
-
+    
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
@@ -191,7 +212,7 @@ struct FolioSecondaryButton: View {
     var iconName: String?
     var isDisabled: Bool = false
     let action: () -> Void
-
+    
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
@@ -203,7 +224,7 @@ struct FolioSecondaryButton: View {
                     .font(.system(size: 15, weight: .medium))
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .padding(.vertical, 16)
             .foregroundStyle(Color.folioInk)
             .background(Color.folioSurfaceStrong)
             .overlay(
@@ -223,7 +244,7 @@ struct FolioDangerButton: View {
     var isLoading: Bool = false
     var isDisabled: Bool = false
     let action: () -> Void
-
+    
     var body: some View {
         Button(action: action) {
             Group {
@@ -255,7 +276,7 @@ struct FolioDestructiveFilledButton: View {
     let title: String
     var isDisabled: Bool = false
     let action: () -> Void
-
+    
     var body: some View {
         Button(action: action) {
             Text(title)
@@ -277,7 +298,7 @@ struct FolioTextField: View {
         case singleLine
         case multiline(minHeight: CGFloat = 100, maxHeight: CGFloat = 160)
     }
-
+    
     var label: String?
     var placeholder: String = ""
     @Binding var text: String
@@ -288,26 +309,26 @@ struct FolioTextField: View {
     var keyboardType: UIKeyboardType = .default
     var fieldBackground: Color = Color.folioSurfaceStrong
     var focused: FocusState<Bool>.Binding?
-
+    
     @State private var isPasswordVisible = false
-
+    
     private var disablesTextAssistance: Bool {
         isSecure || keyboardType == .URL || keyboardType == .emailAddress
     }
-
+    
     private var autocorrectionType: UITextAutocorrectionType {
         disablesTextAssistance ? .no : .default
     }
-
+    
     private var autocapitalizationType: UITextAutocapitalizationType {
         disablesTextAssistance ? .none : .sentences
     }
-
+    
     static func truncatedText(_ text: String, maxLength: Int?) -> String {
         guard let maxLength else { return text }
         return String(text.prefix(max(0, maxLength)))
     }
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             if let label = label {
@@ -315,9 +336,9 @@ struct FolioTextField: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Color.folioHomeTypeTextText)
             }
-
+            
             inputField
-
+            
             if let maxLength {
                 HStack {
                     Spacer()
@@ -327,7 +348,7 @@ struct FolioTextField: View {
                 }
                 .padding(.horizontal, 4)
             }
-
+            
             if let error {
                 Text(error)
                     .font(.system(size: 11, weight: .regular))
@@ -342,7 +363,7 @@ struct FolioTextField: View {
             }
         }
     }
-
+    
     @ViewBuilder
     private var inputField: some View {
         switch style {
@@ -352,7 +373,7 @@ struct FolioTextField: View {
             focusedInput(multilineField(minHeight: minHeight, maxHeight: maxHeight))
         }
     }
-
+    
     private var singleLineField: some View {
         HStack {
             PlaceholderUITextField(
@@ -366,7 +387,7 @@ struct FolioTextField: View {
                 autocapitalizationType: autocapitalizationType,
                 text: $text
             )
-
+            
             if isSecure {
                 Button {
                     isPasswordVisible.toggle()
@@ -378,8 +399,8 @@ struct FolioTextField: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(
                     isPasswordVisible
-                        ? String(localized: "Hide password")
-                        : String(localized: "Show password")
+                    ? String(localized: "Hide password")
+                    : String(localized: "Show password")
                 )
             }
         }
@@ -387,7 +408,7 @@ struct FolioTextField: View {
         .frame(height: 52)
         .fieldStyle(error: error, background: fieldBackground)
     }
-
+    
     private func multilineField(minHeight: CGFloat, maxHeight: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
             TextEditor(text: $text)
@@ -397,7 +418,7 @@ struct FolioTextField: View {
                 .frame(minHeight: minHeight, maxHeight: maxHeight)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-
+            
             if text.isEmpty {
                 Text(placeholder)
                     .font(.system(size: 14))
@@ -410,7 +431,7 @@ struct FolioTextField: View {
         .frame(minHeight: minHeight, maxHeight: maxHeight)
         .fieldStyle(error: error, background: fieldBackground)
     }
-
+    
     @ViewBuilder
     private func focusedInput<Content: View>(_ content: Content) -> some View {
         if let focused {
@@ -435,13 +456,13 @@ private extension View {
 struct FolioSearchField: View {
     let placeholder: String
     @Binding var text: String
-
+    
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Color.white.opacity(0.75))
-
+            
             PlaceholderUITextField(
                 placeholder: placeholder,
                 placeholderColor: UIColor(Color.white.opacity(0.6)),
@@ -464,7 +485,7 @@ struct FolioSearchField: View {
 struct FolioStatusBadge: View {
     let title: String
     let status: FolioSourceStatus
-
+    
     var backgroundColor: Color {
         switch status {
         case .ready: return .folioSuccess.opacity(0.42)
@@ -472,7 +493,7 @@ struct FolioStatusBadge: View {
         case .failed: return .folioDanger.opacity(0.42)
         }
     }
-
+    
     var body: some View {
         Text(title)
             .font(.system(size: 11, weight: .medium))
@@ -489,35 +510,61 @@ struct FolioStatusBadge: View {
 }
 
 struct FolioKindBadge: View {
+    enum Style {
+        case capsule
+        case roundedRectangle(cornerRadius: CGFloat)
+    }
+
     let title: String
     let backgroundColor: Color
     let textColor: Color
-
-    init(title: String, backgroundColor: Color = .folioSurface, textColor: Color = .folioInkSoft) {
+    let style: Style
+    let horizontalPadding: CGFloat
+    let verticalPadding: CGFloat
+    
+    init(
+        title: String,
+        backgroundColor: Color = .folioSurface,
+        textColor: Color = .folioInkSoft,
+        style: Style = .capsule,
+        horizontalPadding: CGFloat = 10,
+        verticalPadding: CGFloat = 5
+    ) {
         self.title = title
         self.backgroundColor = backgroundColor
         self.textColor = textColor
+        self.style = style
+        self.horizontalPadding = horizontalPadding
+        self.verticalPadding = verticalPadding
+    }
+    
+    var body: some View {
+        switch style {
+        case .capsule:
+            badgeBody(shape: Capsule(style: .continuous))
+        case .roundedRectangle(let cornerRadius):
+            badgeBody(shape: RoundedRectangle(cornerRadius: cornerRadius))
+        }
     }
 
-    var body: some View {
+    private func badgeBody<S: InsettableShape>(shape: S) -> some View {
         Text(title)
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(textColor)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, verticalPadding)
             .background(backgroundColor)
             .overlay(
-                Capsule(style: .continuous)
-                    .stroke(Color.folioLine.opacity(0.7), lineWidth: 1)
+                shape.stroke(Color.folioLine.opacity(0.7), lineWidth: 1)
             )
-            .clipShape(Capsule(style: .continuous))
+            .clipShape(shape)
     }
 }
 
 struct FolioCheckboxRow: View {
     let title: String
     @Binding var isOn: Bool
-
+    
     var body: some View {
         Button {
             isOn.toggle()
@@ -539,7 +586,7 @@ struct FolioEmptyStateView: View {
     let title: String
     let subtitle: String
     let iconName: String
-
+    
     var body: some View {
         VStack(spacing: 18) {
             Image(systemName: iconName)
@@ -550,9 +597,9 @@ struct FolioEmptyStateView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.folioLine, lineWidth: 1)
+                        .stroke(Color.folioLine, lineWidth: 1)
                 )
-
+            
             VStack(spacing: 8) {
                 Text(title)
                     .font(.system(size: 24, weight: .regular, design: .serif))
@@ -578,7 +625,7 @@ struct FolioBackButton: View {
     let title: String
     var subtitle: String?
     var action: (() -> Void)?
-
+    
     var body: some View {
         Button {
             action?()
@@ -590,12 +637,12 @@ struct FolioBackButton: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Color.folioInk)
                     }
-
+                    
                     Text(title)
                         .font(.custom("CormorantGaramond-Medium", size: 32))
                         .foregroundStyle(Color.folioGold)
                 }
-
+                
                 if let subtitle {
                     Text(subtitle)
                         .font(.system(size: 12, weight: .regular))
@@ -606,4 +653,28 @@ struct FolioBackButton: View {
         .buttonStyle(.plain)
         .disabled(action == nil)
     }
+}
+
+#Preview("FolioCard Height Modes") {
+    VStack(spacing: 16) {
+        FolioCard(
+            content: Text("Fixed height card")
+                .frame(maxWidth: .infinity, alignment: .leading),
+            height: .fixed(120)
+        )
+
+        FolioCard(
+            content: Text("Minimum height card")
+                .frame(maxWidth: .infinity, alignment: .leading),
+            height: .minimum(120)
+        )
+
+        FolioCard(
+            content: Text("Dynamic content with a minimum height that grows with its content.")
+                .frame(maxWidth: .infinity, alignment: .leading),
+            height: .minimum(80)
+        )
+    }
+    .padding()
+    .background(Color.folioCanvas)
 }

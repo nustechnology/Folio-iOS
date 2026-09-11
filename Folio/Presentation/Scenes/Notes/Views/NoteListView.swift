@@ -80,9 +80,9 @@ struct NoteListView: View {
                     FolioPill(
                         title: filter.title,
                         isSelected: viewModel.state.filter == filter,
-                        tint: .folioInk,
+                        tint: filter.selectedTint,
                         fontSize: 13,
-                        backgroundColor: .folioHomeTypeFileBackground
+                        backgroundColor: filter.selectedBackgroundColor
                     )
                 }
             }
@@ -308,6 +308,26 @@ struct NoteListView: View {
         guard let sourceID = pendingSourceID else { return }
         pendingSourceID = nil
         onSourceOpened(sourceID)
+    }
+}
+
+private extension NoteListViewModel.Filter {
+    var selectedTint: Color {
+        switch self {
+        case .all, .userCreated:
+            .folioInk
+        case .savedAnswers:
+            .folioHomeTypeWebText
+        }
+    }
+
+    var selectedBackgroundColor: Color {
+        switch self {
+        case .all, .userCreated:
+            .folioHomeTypeFileBackground
+        case .savedAnswers:
+            .folioHomeTypeWebBackground
+        }
     }
 }
 
