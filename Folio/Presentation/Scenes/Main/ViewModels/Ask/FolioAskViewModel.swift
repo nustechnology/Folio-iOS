@@ -447,12 +447,8 @@ final class FolioAskViewModel: ViewModelProtocol {
             return
         }
         let title = draft.title
-        let titleError = title.count > NoteLimits.maximumTitleLength
-        let plainText = NoteLimits.plainText(from: content).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !titleError,
-              content.utf8.count <= NoteLimits.maximumRawHTMLLength,
-              !plainText.isEmpty,
-              plainText.count <= NoteLimits.maximumContentLength
+        let validation = NoteLimits.validate(title: title, content: content)
+        guard validation.titleError == nil, validation.contentError == nil
         else {
             return
         }

@@ -101,8 +101,21 @@ final class NoteListViewModelTests: XCTestCase {
 
         XCTAssertEqual(
             viewModel.state.editContentError,
-            String(localized: "Content exceeds maximum length of 20,000 characters")
+            String.localizedStringWithFormat(
+                String(localized: "Content exceeds maximum length of %@ characters"),
+                NoteLimits.maximumContentLengthLabel
+            )
         )
+    }
+
+    func testNoteValidationChecksTitleAndContentLimits() {
+        let result = NoteLimits.validate(
+            title: String(repeating: "t", count: NoteLimits.maximumTitleLength + 1),
+            content: "<p>\(String(repeating: "c", count: NoteLimits.maximumContentLength + 1))</p>"
+        )
+
+        XCTAssertEqual(result.titleError, .titleTooLong)
+        XCTAssertEqual(result.contentError, .contentTooLong)
     }
 
     func testCreateContentValidationAllowsMarkupBeyondPlainTextLimit() {

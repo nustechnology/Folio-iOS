@@ -263,9 +263,8 @@ extension NoteListViewModel {
     case .createTitleChanged(let title):
       guard !state.isCreating else { return }
       state.createTitle = title
-      state.createTitleError = title.count > NoteLimits.maximumTitleLength
-        ? String(localized: "Title cannot exceed 150 characters")
-        : nil
+      state.createTitleError = NoteLimits.validate(title: title, content: state.createContent)
+        .titleError?.localizedMessage
     case .createContentChanged(let content):
       guard !state.isCreating else { return }
       state.createContent = content
@@ -477,25 +476,14 @@ extension NoteListViewModel {
 
   private func validateCreateDraft() {
     let title = state.createTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-    state.createTitleError = state.createTitle.count > NoteLimits.maximumTitleLength
-      ? String(localized: "Title cannot exceed 150 characters")
-      : nil
-    state.createContentError = contentValidationError(state.createContent)
+    let validation = NoteLimits.validate(title: state.createTitle, content: state.createContent)
+    state.createTitleError = validation.titleError?.localizedMessage
+    state.createContentError = validation.contentError?.localizedMessage
     if title.isEmpty { state.createTitleError = nil }
   }
 
   private func contentValidationError(_ html: String) -> String? {
-    if html.utf8.count > NoteLimits.maximumRawHTMLLength {
-      return String(localized: "Content exceeds maximum length of 200,000 characters")
-    }
-    let plainText = NoteLimits.plainText(from: html).trimmingCharacters(in: .whitespacesAndNewlines)
-    if plainText.isEmpty {
-      return String(localized: "Content cannot be empty")
-    }
-    if plainText.count > NoteLimits.maximumContentLength {
-      return String(localized: "Content exceeds maximum length of 20,000 characters")
-    }
-    return nil
+    NoteLimits.validate(title: "", content: html).contentError?.localizedMessage
   }
 
   private func requestCreateDismissal() {

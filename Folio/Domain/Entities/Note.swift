@@ -1,15 +1,91 @@
 import Foundation
 
+enum NoteValidationError: Equatable {
+  case titleTooLong
+  case rawHTMLTooLong
+  case contentEmpty
+  case contentTooLong
+
+  var localizedMessage: String {
+    switch self {
+    case .titleTooLong:
+      String.localizedStringWithFormat(
+        String(localized: "Title cannot exceed %@ characters"),
+        NoteLimits.maximumTitleLengthLabel
+      )
+    case .rawHTMLTooLong:
+      String.localizedStringWithFormat(
+        String(localized: "Content exceeds maximum length of %@ characters"),
+        NoteLimits.maximumRawHTMLLengthLabel
+      )
+    case .contentEmpty:
+      String(localized: "Content cannot be empty")
+    case .contentTooLong:
+      String.localizedStringWithFormat(
+        String(localized: "Content exceeds maximum length of %@ characters"),
+        NoteLimits.maximumContentLengthLabel
+      )
+    }
+  }
+}
+
+struct NoteValidationResult: Equatable {
+  let titleError: NoteValidationError?
+  let contentError: NoteValidationError?
+}
+
 enum NoteLimits {
   static let maximumTitleLength = 150
   static let maximumContentLength = 20_000
   static let maximumRawHTMLLength = 200_000
+  static let maximumTitleLengthLabel: String = {
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    return formatter.string(from: NSNumber(value: maximumTitleLength))
+      ?? "\(maximumTitleLength)"
+  }()
+  static let maximumRawHTMLLengthLabel: String = {
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    return formatter.string(from: NSNumber(value: maximumRawHTMLLength))
+      ?? "\(maximumRawHTMLLength)"
+  }()
   static let maximumContentLengthLabel: String = {
     let formatter = NumberFormatter()
     formatter.numberStyle = .decimal
     return formatter.string(from: NSNumber(value: maximumContentLength))
       ?? "\(maximumContentLength)"
   }()
+
+  static func validate(title: String, content: String) -> NoteValidationResult {
+    validate(
+      title: title,
+      serializedContent: content,
+      plainText: plainText(from: content)
+    )
+  }
+
+  static func validate(
+    title: String,
+    serializedContent: String,
+    plainText: String
+  ) -> NoteValidationResult {
+    let contentError: NoteValidationError?
+    if serializedContent.utf8.count > maximumRawHTMLLength {
+      contentError = .rawHTMLTooLong
+    } else if plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      contentError = .contentEmpty
+    } else if plainText.count > maximumContentLength {
+      contentError = .contentTooLong
+    } else {
+      contentError = nil
+    }
+
+    return NoteValidationResult(
+      titleError: title.count > maximumTitleLength ? .titleTooLong : nil,
+      contentError: contentError
+    )
+  }
 
   static func plainText(from html: String) -> String {
     let text = html.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)

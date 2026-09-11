@@ -54,7 +54,7 @@ struct NoteCreateForm: View {
 
                     HStack {
                         Spacer()
-                        Text("\(title.count) / 150")
+                        Text("\(title.count) / \(NoteLimits.maximumTitleLength)")
                             .font(.system(size: FolioFontSize.caption2))
                             .foregroundStyle(Color.folioInkSoft)
                     }
@@ -207,19 +207,27 @@ struct NoteCreateForm: View {
     }
 
     private var isSaveDisabled: Bool {
-        title.count > NoteLimits.maximumTitleLength
+        validation.titleError != nil
+            || validation.contentError != nil
             || titleError != nil
             || contentError != nil
-            || plainText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             || isSaving
     }
 
+    private var validation: NoteValidationResult {
+        NoteLimits.validate(
+            title: title,
+            serializedContent: serializedContent,
+            plainText: plainText
+        )
+    }
+
     private var plainText: String {
-        NoteLimits.plainText(from: serializedContent)
+        editingModel.plainText
     }
 
     private var serializedContent: String {
-        FolioRichTextEditor.htmlFromAttributedText(editingModel.attributedText)
+        editingModel.serializedContent
     }
 
     private func requestDismissal() {

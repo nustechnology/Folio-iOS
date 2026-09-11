@@ -5,7 +5,14 @@ import UIKit
 
 @MainActor
 final class NoteRichTextEditingModel: ObservableObject {
-    @Published var attributedText: NSAttributedString
+    @Published var attributedText: NSAttributedString {
+        willSet {
+            serializedContent = FolioRichTextEditor.htmlFromAttributedText(newValue)
+            plainText = NoteLimits.plainText(from: serializedContent)
+        }
+    }
+    private(set) var serializedContent: String
+    private(set) var plainText: String
     @Published var selectedRange = NSRange(location: 0, length: 0)
     @Published var typingAttributes: [NSAttributedString.Key: Any] = [:]
     @Published var isLinkPromptPresented = false
@@ -16,7 +23,10 @@ final class NoteRichTextEditingModel: ObservableObject {
     private let formattingController = RichTextFormattingController()
 
     init(attributedText: NSAttributedString, publishingHTML: @escaping (String) -> Void) {
+        let serializedContent = FolioRichTextEditor.htmlFromAttributedText(attributedText)
         self.attributedText = attributedText
+        self.serializedContent = serializedContent
+        self.plainText = NoteLimits.plainText(from: serializedContent)
         self.publishingHTML = publishingHTML
     }
 
@@ -41,7 +51,7 @@ final class NoteRichTextEditingModel: ObservableObject {
 
     func textChanged(_ value: NSAttributedString) {
         attributedText = value
-        publishContent(value)
+        publishContent()
     }
 
     func applyTrait(_ trait: UIFontDescriptor.SymbolicTraits) {
@@ -105,10 +115,10 @@ final class NoteRichTextEditingModel: ObservableObject {
     private func commitFormatting(_ value: NSAttributedString) {
         guard FolioRichTextEditor.shouldPublishContentChange(from: attributedText, to: value) else { return }
         attributedText = value
-        publishContent(value)
+        publishContent()
     }
 
-    private func publishContent(_ value: NSAttributedString) {
-        publishingHTML(FolioRichTextEditor.htmlFromAttributedText(value))
+    private func publishContent() {
+        publishingHTML(serializedContent)
     }
 }

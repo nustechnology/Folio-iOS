@@ -61,24 +61,18 @@ struct SaveAskNoteSheet: View {
     }
 
     private var titleError: String? {
-        draft.title.count > NoteLimits.maximumTitleLength
-            ? String(localized: "Title cannot exceed 150 characters")
-            : nil
+        validation.titleError?.localizedMessage
     }
 
     private var contentError: String? {
-        let serializedContent = FolioRichTextEditor.htmlFromAttributedText(editingModel.attributedText)
-        if serializedContent.utf8.count > NoteLimits.maximumRawHTMLLength {
-            return String(localized: "Content exceeds maximum length of 200,000 characters")
-        }
-        let plainText = NoteLimits.plainText(from: serializedContent)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        if plainText.isEmpty {
-            return String(localized: "Content cannot be empty")
-        }
-        if plainText.count > NoteLimits.maximumContentLength {
-            return String(localized: "Content exceeds maximum length of 20,000 characters")
-        }
-        return nil
+        validation.contentError?.localizedMessage
+    }
+
+    private var validation: NoteValidationResult {
+        NoteLimits.validate(
+            title: draft.title,
+            serializedContent: editingModel.serializedContent,
+            plainText: editingModel.plainText
+        )
     }
 }

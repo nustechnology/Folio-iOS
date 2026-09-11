@@ -316,7 +316,7 @@ final class FolioAskViewModelTests: XCTestCase {
         XCTAssertEqual(createNote.receivedConversationId, "conversation-1")
         XCTAssertEqual(createNote.receivedMessageId, "server-message-1")
 
-        await Task.yield()
+        await waitUntil("save draft to clear") { vm.saveDraft == nil }
         XCTAssertNil(vm.saveDraft)
         XCTAssertTrue(vm.state.messages.last?.isSavedAsNote == true)
     }
@@ -337,7 +337,7 @@ final class FolioAskViewModelTests: XCTestCase {
         vm.handle(.saveAsNoteConfirmed("<p>Answer</p>"))
 
         await createNote.waitUntilCalled()
-        await Task.yield()
+        await waitUntil("note-created callback") { callbackCount == 1 }
 
         XCTAssertEqual(callbackCount, 1)
     }
@@ -357,7 +357,7 @@ final class FolioAskViewModelTests: XCTestCase {
         vm.handle(.saveAsNoteConfirmed("<p>Edited answer</p>"))
 
         await createNote.waitUntilCalled()
-        await Task.yield()
+        await waitUntil("save error") { vm.saveError != nil }
 
         XCTAssertEqual(vm.saveDraft?.content, "<p>Edited answer</p>")
         XCTAssertNotNil(vm.saveError)
@@ -383,9 +383,7 @@ final class FolioAskViewModelTests: XCTestCase {
     }
 
     private func waitForAssistantAnswer(_ vm: FolioAskViewModel) async {
-        while vm.state.messages.last?.isStreaming == true {
-            await Task.yield()
-        }
+        await waitUntil("assistant answer") { vm.state.messages.last?.isStreaming != true }
     }
 
     private func readySource(id: String) -> FolioSource {
@@ -406,6 +404,21 @@ final class FolioAskViewModelTests: XCTestCase {
             chapterTitle: "", chapterText: "", calloutText: "",
             citationTitle: "", citationDetail: "", citationText: "",
             pageLabel: "1 of 1")
+    }
+}
+
+private func waitUntil(
+    _ description: String,
+    timeout: Duration = .seconds(1),
+    predicate: @escaping () -> Bool
+) async {
+    let deadline = ContinuousClock.now + timeout
+    while !predicate() {
+        guard ContinuousClock.now < deadline else {
+            XCTFail("Timed out waiting for \(description)")
+            return
+        }
+        await Task.yield()
     }
 }
 
@@ -468,9 +481,7 @@ private final class RecordingCreateSavedNote: CreateSavedAnswerNoteUseCaseProtoc
     }
 
     func waitUntilCalled() async {
-        while !wasCalled {
-            await Task.yield()
-        }
+        await waitUntil("saved note use case to be called") { self.wasCalled }
     }
 }
 
