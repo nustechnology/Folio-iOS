@@ -441,6 +441,7 @@ struct FolioAddSourceSheet: View {
                         set: { viewModel.handle(.manualContentChanged($0)) }
                     ))
                     .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(Color.folioInk)
                     .scrollContentBackground(.hidden)
                     .frame(minHeight: 180)
                     .padding(12)

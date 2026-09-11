@@ -430,28 +430,16 @@ private struct SourceReaderEditSheet: View {
                     }
                     .buttonStyle(.plain)
                     
-                    Button {
-                        focusedField = nil
-                        viewModel.send(.editConfirmed)
-                    } label: {
-                        HStack(spacing: 6) {
-                            if viewModel.state.isEditing {
-                                ProgressView()
-                                    .progressViewStyle(.circular)
-                                    .tint(.white)
-                                    .scaleEffect(0.8)
-                            }
-                            Text(String(localized: "Save"))
-                                .font(.system(size: FolioFontSize.bodyLarge, weight: .semibold))
+                    FolioPrimaryButton(
+                        title: String(localized: "Save"),
+                        isLoading: viewModel.state.isEditing,
+                        isEnabled: trimmedTitleCount <= maximumTitleLength && trimmedAuthorCount <= maximumAuthorLength && trimmedContentCount <= maximumContentLength,
+                        verticalPadding: 16,
+                        action: {
+                            focusedField = nil
+                            viewModel.send(.editConfirmed)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .foregroundStyle(.white)
-                        .background(Color.folioOlive)
-                        .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(viewModel.state.isEditing || trimmedTitleCount > maximumTitleLength || trimmedAuthorCount > maximumAuthorLength || trimmedContentCount > maximumContentLength)
+                    )
                 }
             }
             .padding(.horizontal, FolioSpacing.xl3)

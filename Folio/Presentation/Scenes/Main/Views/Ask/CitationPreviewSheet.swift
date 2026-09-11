@@ -68,20 +68,15 @@ struct CitationPreviewSheet: View {
                 }
                 .buttonStyle(.plain)
 
-                Button {
-                    onOpenInSource()
-                    dismiss()
-                } label: {
-                    Text("Open in source")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.white.opacity(citation.canOpenInSource ? 1 : 0.7))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.folioOliveDark.opacity(citation.canOpenInSource ? 1 : 0.35))
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .disabled(!citation.canOpenInSource)
+                FolioPrimaryButton(
+                    title: String(localized: "Open in source"),
+                    isEnabled: citation.canOpenInSource,
+                    verticalPadding: 12,
+                    action: {
+                        onOpenInSource()
+                        dismiss()
+                    }
+                )
             }
         }
         .padding(24)

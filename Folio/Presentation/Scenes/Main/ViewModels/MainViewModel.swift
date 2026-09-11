@@ -106,6 +106,10 @@ final class MainViewModel: ViewModelProtocol {
         self.fetchNotebookUseCase = fetchNotebookUseCase
         self.saveNotebookUseCase = saveNotebookUseCase
         state.sources = initialSources
+        if let dto: AuthTokenDTO = try? localStorage.load(forKey: StorageKey.authSession) {
+            let token = dto.toDomain()
+            state.isAuthenticated = token.isValid || !token.refreshToken.isEmpty
+        }
 #if DEBUG
         if initialSources.isEmpty {
             state.sourceFilters = FolioDesignFixtures.filters

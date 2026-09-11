@@ -123,20 +123,15 @@ struct SaveAskNoteSheet: View {
                 }
                 .buttonStyle(.plain)
 
-                Button {
-                    onSubmit(title.trimmingCharacters(in: .whitespacesAndNewlines))
-                    dismiss()
-                } label: {
-                    Text("Save note")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.white.opacity(titleTooLong ? 0.7 : 1))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.folioOliveDark.opacity(titleTooLong ? 0.35 : 1))
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .disabled(titleTooLong)
+                FolioPrimaryButton(
+                    title: String(localized: "Save note"),
+                    isEnabled: !titleTooLong,
+                    verticalPadding: 14,
+                    action: {
+                        onSubmit(title.trimmingCharacters(in: .whitespacesAndNewlines))
+                        dismiss()
+                    }
+                )
             }
         }
         .padding(24)

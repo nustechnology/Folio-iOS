@@ -663,6 +663,7 @@ private struct EditSourceSheet: View {
                                 .foregroundStyle(Color.folioInkSoft)
                             TextEditor(text: $viewModel.editContent)
                                 .font(.system(size: FolioFontSize.bodyLarge, design: .default))
+                                .foregroundStyle(Color.folioInk)
                                 .scrollContentBackground(.hidden)
                                 .padding(FolioSpacing.md)
                                 .frame(minHeight: 120, maxHeight: 200)
@@ -704,21 +705,15 @@ private struct EditSourceSheet: View {
                         }
                         .buttonStyle(.plain)
 
-                        Button {
-                            dismissKeyboard()
-                            viewModel.send(.editConfirmed)
-                        } label: {
-                            Text(String(localized: "Save"))
-                                .font(.system(size: FolioFontSize.bodyLarge, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(Color.folioOlive)
-                                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                                .contentShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(viewModel.isEditing)
+                        FolioPrimaryButton(
+                            title: String(localized: "Save"),
+                            isLoading: viewModel.isEditing,
+                            verticalPadding: 16,
+                            action: {
+                                dismissKeyboard()
+                                viewModel.send(.editConfirmed)
+                            }
+                        )
                     }
                 }
                 .padding(.horizontal, FolioSpacing.xl3)
