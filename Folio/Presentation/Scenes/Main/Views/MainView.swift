@@ -10,7 +10,6 @@ struct MainView: View {
     let convertNoteToSourceUseCase: (any ConvertNoteToSourceUseCaseProtocol)?
     let uploadSourceUseCase: (any UploadSourceUseCaseProtocol)?
     @State private var showAccountSheet = false
-    @State private var showAccountSettings = false
     @State private var showSignOutConfirmation = false
     @State private var selectedWorkspace: Workspace?
     @State private var sourceListViewModel: SourceListViewModel?
@@ -83,12 +82,6 @@ struct MainView: View {
             AccountBottomSheet(
                 displayName: viewModel.state.userDisplayName ?? "User",
                 emailAddress: viewModel.state.userEmail ?? "Unknown",
-                onOpenSettings: {
-                    showAccountSheet = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                        showAccountSettings = true
-                    }
-                },
                 onSignOut: {
                     showAccountSheet = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -111,20 +104,6 @@ struct MainView: View {
                     completeSignOut()
                 }
             )
-        }
-        .fullScreenCover(isPresented: $showAccountSettings) {
-            FolioBackdrop()
-                .overlay {
-                    FolioAccountSettingsView(
-                        displayName: viewModel.state.userDisplayName ?? "User",
-                        emailAddress: viewModel.state.userEmail ?? "",
-                        onSignOut: {
-                            showAccountSettings = false
-                            completeSignOut()
-                        }
-                    )
-                }
-                .folioToast(message: $viewModel.toastMessage)
         }
         .folioToast(message: $viewModel.toastMessage)
     }
@@ -246,7 +225,6 @@ struct MainView: View {
                         }
                     )
                 } else {
-                    let canReturnToConversationList = selectedWorkspace != nil && viewModel.state.activeAskScope == nil
                     let workspaceSources: [FolioSource] = {
                         if let loadedSources = sourceListViewModel?.state.allSources, !loadedSources.isEmpty {
                             return loadedSources.map { FolioSource(from: $0, workspaceID: selectedWorkspace?.id) }
@@ -258,12 +236,11 @@ struct MainView: View {
                         sources: workspaceSources,
                         spaceId: selectedWorkspace?.id,
                         workspaceTitle: selectedWorkspace?.name,
-                        onBackToSpaces: canReturnToConversationList
-                            ? {
-                                isAskConversationOpen = false
-                                askConversationListViewModel?.handle(.refresh)
-                            }
-                            : { showMySpaces() },
+                        onBackToSpaces: {
+                            viewModel.handle(.clearAskScope)
+                            isAskConversationOpen = false
+                            askConversationListViewModel?.handle(.refresh)
+                        },
                         onOpenSource: { folioSource in
                             Task {
                                 do {

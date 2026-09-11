@@ -10,7 +10,7 @@ enum SourceHTMLBuilder {
         <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline';">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline';">
         <style>
         \(css)
         </style>
@@ -201,14 +201,43 @@ enum SourceHTMLBuilder {
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
 
-        if let markdownTable = buildTableHTML(fromMarkdownLines: lines) {
-            return markdownTable
+        var blocks: [[String]] = []
+        var currentBlock: [String] = []
+        var currentIsTable = false
+
+        for line in lines {
+            let isTable = isMarkdownTableLine(line)
+            if currentBlock.isEmpty || isTable == currentIsTable {
+                currentBlock.append(line)
+                currentIsTable = isTable
+            } else {
+                blocks.append(currentBlock)
+                currentBlock = [line]
+                currentIsTable = isTable
+            }
+        }
+        if !currentBlock.isEmpty {
+            blocks.append(currentBlock)
         }
 
-        let rows = parseCSVRows(content)
-        guard !rows.isEmpty else { return documentHTML(from: content) }
+        let hasTableBlock = blocks.contains { $0.allSatisfy(isMarkdownTableLine) }
+        guard hasTableBlock else {
+            let rows = parseCSVRows(content)
+            guard !rows.isEmpty else { return documentHTML(from: content) }
+            return renderTable(rows: rows)
+        }
 
-        return renderTable(rows: rows)
+        var result = ""
+        for block in blocks {
+            if block.allSatisfy(isMarkdownTableLine) {
+                if let table = buildTableHTML(fromMarkdownLines: block) {
+                    result += table
+                }
+            } else {
+                result += documentHTML(from: block.joined(separator: "\n"))
+            }
+        }
+        return result
     }
 
     private static func isMarkdownTableLine(_ line: String) -> Bool {
@@ -233,13 +262,13 @@ enum SourceHTMLBuilder {
     }
 
     private static func buildTableHTML(fromMarkdownLines lines: [String]) -> String? {
-        guard !lines.isEmpty else { return nil }
+        let tableLines = lines.filter { isMarkdownTableLine($0) }
+        guard !tableLines.isEmpty else { return nil }
 
         var parsedRows: [[String]] = []
         var separatorFound = false
 
-        for line in lines {
-            guard isMarkdownTableLine(line) else { return nil }
+        for line in tableLines {
             if isMarkdownTableSeparator(line) {
                 separatorFound = true
                 continue
@@ -247,7 +276,7 @@ enum SourceHTMLBuilder {
             parsedRows.append(parseMarkdownTableRow(line))
         }
 
-        guard !parsedRows.isEmpty, (separatorFound || lines.count >= 2) else { return nil }
+        guard !parsedRows.isEmpty, (separatorFound || tableLines.count >= 2) else { return nil }
         return renderTable(rows: parsedRows)
     }
 
@@ -378,7 +407,7 @@ enum SourceHTMLBuilder {
         "h1", "h2", "h3", "p", "ul", "ol", "li",
         "blockquote", "a", "table", "thead", "tbody", "tr", "th", "td",
         "div", "span", "br", "strong", "em", "b", "i", "u",
-        "code", "pre", "hr", "sub", "sup"
+        "code", "pre", "hr", "sub", "sup", "img"
     ]
 
     private static func sanitize(_ html: String) -> String {
@@ -473,6 +502,28 @@ enum SourceHTMLBuilder {
                     result += " href=\"\(value)\""
                 }
             }
+
+            if tag == "img" {
+                if name == "src" {
+                    var value = nsAttrs.substring(with: match.range(at: 2))
+                    value = value.trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+                    let lower = value.lowercased()
+                    if lower.hasPrefix("https://") || (lower.hasPrefix("data:image/") && !lower.hasPrefix("data:image/svg+xml")) {
+                        result += " src=\"\(value)\""
+                    }
+                } else if name == "alt" || name == "title" {
+                    let full = nsAttrs.substring(with: match.range)
+                    result += " \(full)"
+                } else if name == "width" || name == "height" {
+                    let value = nsAttrs.substring(with: match.range(at: 2))
+                        .trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+                    let isNumeric = value.allSatisfy { $0.isNumber }
+                    let isPixelUnit = value.hasSuffix("px") && value.dropLast(2).allSatisfy { $0.isNumber }
+                    if isNumeric || isPixelUnit {
+                        result += " \(name)=\"\(value)\""
+                    }
+                }
+            }
         }
 
         return result
@@ -493,6 +544,13 @@ enum SourceHTMLBuilder {
           word-wrap: break-word;
           overflow-wrap: anywhere;
           -webkit-text-size-adjust: 100%;
+        }
+        img {
+          max-width: 100%;
+          height: auto;
+          display: block;
+          margin: 12px 0;
+          border-radius: 8px;
         }
         h1, h2, h3 {
           font-family: Georgia, "Times New Roman", serif;

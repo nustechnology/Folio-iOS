@@ -21,6 +21,10 @@ final class SourceReaderViewModel: ObservableObject {
         var toastMessage: ToastMessage?
     }
 
+    static let maximumTitleLength = 255
+    static let maximumAuthorLength = 100
+    static let maximumContentLength = 100_000
+
     @Published private(set) var state = State()
 
     private let sourceID: String
@@ -94,10 +98,13 @@ final class SourceReaderViewModel: ObservableObject {
             state.showEditSheet = true
         case .editTitleChanged(let value):
             state.editTitle = value
+            state.editError = nil
         case .editAuthorChanged(let value):
             state.editAuthor = value
+            state.editError = nil
         case .editContentChanged(let value):
             state.editContent = value
+            state.editError = nil
         case .cancelEdit:
             state.showEditSheet = false
             state.editError = nil
@@ -106,6 +113,20 @@ final class SourceReaderViewModel: ObservableObject {
             let title = state.editTitle.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !title.isEmpty else {
                 state.editError = String(localized: "Title cannot be empty")
+                return
+            }
+            guard title.count <= Self.maximumTitleLength else {
+                state.editError = String(localized: "Title cannot exceed 255 characters")
+                return
+            }
+            let author = state.editAuthor.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard author.count <= Self.maximumAuthorLength else {
+                state.editError = String(localized: "Author cannot exceed 100 characters")
+                return
+            }
+            let content = state.editContent.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard content.count <= Self.maximumContentLength else {
+                state.editError = String(localized: "Content exceeds maximum limit of 100,000 characters.")
                 return
             }
             state.isEditing = true
@@ -167,7 +188,7 @@ final class SourceReaderViewModel: ObservableObject {
         defer { state.isEditing = false }
         guard let source else { return }
         let author = state.editAuthor.trimmingCharacters(in: .whitespacesAndNewlines)
-        let content = state.editContent
+        let content = state.editContent.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
             let updated = try await updateSourceUseCase.execute(id: source.id, title: title, author: author, content: content.isEmpty ? nil : content)
             Logger.debug("Source updated: \(updated.title)")

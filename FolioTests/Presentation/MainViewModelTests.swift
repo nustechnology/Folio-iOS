@@ -549,6 +549,25 @@ final class SourceHTMLBuilderTests: XCTestCase {
         let result = SourceHTMLBuilder.fullHTML(for: makeSource(html: html))
         XCTAssertTrue(result.contains("Content-Security-Policy"), "CSP meta tag should be present")
         XCTAssertTrue(result.contains("default-src 'none'"), "CSP should block all default sources")
+        XCTAssertTrue(result.contains("img-src https: data:;"), "CSP should restrict img-src to https: and data: URIs")
+        XCTAssertFalse(result.contains("img-src http:"), "CSP should not allow http: for image sources")
+    }
+
+    func testDataURLImageSurvivesFullHTML() {
+        let html = "<img src=\"data:image/png;base64,iVBORw0KGgo=\" alt=\"test\">"
+        let result = SourceHTMLBuilder.fullHTML(for: makeSource(html: html))
+        XCTAssertTrue(result.contains("src=\"data:image/png;base64,iVBORw0KGgo=\""), "data:image/png src should survive sanitization")
+        XCTAssertTrue(result.contains("img-src https: data:;"), "CSP img-src must allow data: scheme")
+    }
+
+    func testSanitizeImgSrcAttribute() {
+        let html = "<img src=\"https://example.com/image.png\" alt=\"https\"><img src=\"http://example.com/image.png\" alt=\"http\"><img src=\"/relative/image.png\" alt=\"relative\"><img src=\"data:image/png;base64,iVBORw0KGgo=\" alt=\"raster_data\"><img src=\"data:image/svg+xml;base64,PHN2Zz4=\" alt=\"svg_data\">"
+        let result = SourceHTMLBuilder.fullHTML(for: makeSource(html: html))
+        XCTAssertTrue(result.contains("src=\"https://example.com/image.png\""), "https image src should be preserved")
+        XCTAssertTrue(result.contains("src=\"data:image/png;base64,iVBORw0KGgo=\""), "raster data:image/png src should be preserved")
+        XCTAssertFalse(result.contains("src=\"http://example.com/image.png\""), "http image src should be rejected")
+        XCTAssertFalse(result.contains("src=\"/relative/image.png\""), "relative image src without base URL should be rejected")
+        XCTAssertFalse(result.contains("src=\"data:image/svg+xml;base64,PHN2Zz4=\""), "data:image/svg+xml src should be rejected to prevent SVG script execution")
     }
 }
 

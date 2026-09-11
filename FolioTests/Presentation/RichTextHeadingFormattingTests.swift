@@ -330,4 +330,53 @@ final class RichTextHeadingApplicationTests: XCTestCase {
             )
         }
     }
+
+    func testTogglingHeadingOffPreservesBoldAndItalic() {
+        let controller = RichTextFormattingController()
+        let source = NSAttributedString(string: "Research Objective")
+        let h3Result = controller.applyHeading(
+            fontSize: FolioRichTextFormat.heading3FontSize,
+            in: source,
+            selectedRange: NSRange(location: 0, length: source.length)
+        )!
+        let italicResult = controller.toggleTrait(
+            .traitItalic,
+            in: h3Result.attributedText,
+            selectedRange: h3Result.selectedRange!
+        )!
+        let boldItalicResult = controller.toggleTrait(
+            .traitBold,
+            in: italicResult.attributedText,
+            selectedRange: italicResult.selectedRange!
+        )!
+
+        // Ensure H3, Bold, and Italic are all active
+        let h3State = controller.activeFormats(
+            in: boldItalicResult.attributedText,
+            selectedRange: boldItalicResult.selectedRange!
+        )
+        XCTAssertTrue(h3State.isHeading3)
+        XCTAssertTrue(h3State.isBold)
+        XCTAssertTrue(h3State.isItalic)
+
+        // Toggle H3 off -> should return to body text with bold and italic preserved
+        let plainResult = controller.applyHeading(
+            fontSize: FolioRichTextFormat.heading3FontSize,
+            in: boldItalicResult.attributedText,
+            selectedRange: boldItalicResult.selectedRange!
+        )!
+
+        let finalState = controller.activeFormats(
+            in: plainResult.attributedText,
+            selectedRange: plainResult.selectedRange!
+        )
+        XCTAssertFalse(finalState.isHeading3)
+        XCTAssertTrue(finalState.isBold)
+        XCTAssertTrue(finalState.isItalic)
+
+        let font = plainResult.attributedText.attribute(.font, at: 0, effectiveRange: nil) as? UIFont
+        XCTAssertEqual(font?.pointSize, FolioRichTextFormat.bodyFontSize)
+        XCTAssertTrue(font?.fontDescriptor.symbolicTraits.contains(.traitBold) == true)
+        XCTAssertTrue(font?.fontDescriptor.symbolicTraits.contains(.traitItalic) == true)
+    }
 }

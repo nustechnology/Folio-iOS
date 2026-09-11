@@ -3,7 +3,6 @@ import SwiftUI
 struct AccountBottomSheet: View {
     let displayName: String
     let emailAddress: String
-    let onOpenSettings: () -> Void
     let onSignOut: () -> Void
 
     var body: some View {
@@ -51,43 +50,26 @@ struct AccountBottomSheet: View {
     }
 
     private var accountCard: some View {
-        Button(action: onOpenSettings) {
-            HStack(spacing: 14) {
-                Text(displayName.firstLetter.capitalized)
+        HStack(spacing: 14) {
+            FolioAvatarView(initial: displayName.firstLetter, size: 40, fillColor: .folioHomeSearchField)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(displayName)
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Color.white)
-                    .frame(width: 40, height: 40)
-                    .background(Color.folioHomeSearchField)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(Color.black.opacity(0.06), lineWidth: 1)
-                    )
-                    .shadow(color: Color.black.opacity(0.06), radius: 8, y: 3)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(displayName)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Color.white)
-
-                    Text(emailAddress)
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundStyle(Color.white.opacity(0.68))
-                }
-
-                Spacer(minLength: 0)
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.6))
+                Text(emailAddress)
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(Color.white.opacity(0.68))
             }
-            .padding(.horizontal, 16)
-            .frame(maxWidth: .infinity, minHeight: 72)
-            .background(Color.folioHomeHeader)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .shadow(color: Color.black.opacity(0.12), radius: 12, y: 5)
+
+            Spacer(minLength: 0)
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity, minHeight: 72)
+        .background(Color.folioHomeHeader)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .shadow(color: Color.black.opacity(0.12), radius: 12, y: 5)
         .padding(.horizontal, 18)
-        .accessibilityLabel("Profile settings")
     }
 }

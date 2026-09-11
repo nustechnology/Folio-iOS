@@ -36,6 +36,7 @@ final class MainViewModel: ViewModelProtocol {
         case openSource(id: String, workspaceID: String)
         case sourceDeleted(source: Source)
         case openAskForSource(source: Source, kind: FolioSourceKind)
+        case clearAskScope
     }
 
     private let fetchUsersUseCase: any FetchUsersUseCaseProtocol
@@ -235,6 +236,8 @@ final class MainViewModel: ViewModelProtocol {
             state.activeReaderID = nil
             state.activeAskScope = source
             state.sourcesMode = .spaces
+        case .clearAskScope:
+            state.activeAskScope = nil
         }
     }
 

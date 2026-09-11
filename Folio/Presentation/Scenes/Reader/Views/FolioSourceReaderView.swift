@@ -267,75 +267,106 @@ private struct SourceReaderEditSheet: View {
         case content
     }
 
-    private let maximumContentLength = 100_000
+    private let maximumTitleLength = SourceReaderViewModel.maximumTitleLength
+    private let maximumAuthorLength = SourceReaderViewModel.maximumAuthorLength
+    private let maximumContentLength = SourceReaderViewModel.maximumContentLength
+    
+    private var trimmedTitleCount: Int {
+        viewModel.state.editTitle.trimmingCharacters(in: .whitespacesAndNewlines).count
+    }
+
+    private var trimmedAuthorCount: Int {
+        viewModel.state.editAuthor.trimmingCharacters(in: .whitespacesAndNewlines).count
+    }
+
+    private var trimmedContentCount: Int {
+        viewModel.state.editContent.trimmingCharacters(in: .whitespacesAndNewlines).count
+    }
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: FolioSpacing.xl) {
-                Text(String(localized: "Edit source"))
-                    .font(.system(size: FolioFontSize.heading, weight: .regular, design: .serif))
-                    .foregroundStyle(Color.folioTextPrimary)
-                    .padding(.top, FolioSpacing.md)
-                    .padding(.bottom, FolioSpacing.xs)
+        VStack(alignment: .leading, spacing: 0) {
+            Text(String(localized: "Edit source"))
+                .font(.system(size: FolioFontSize.heading, weight: .regular, design: .serif))
+                .foregroundStyle(Color.folioTextPrimary)
+                .padding(.horizontal, FolioSpacing.xl3)
+                .padding(.top, FolioSpacing.xl5)
+                .padding(.bottom, FolioSpacing.xs)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: FolioSpacing.xl) {
                 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(String(localized: "Title"))
                         .font(.system(size: FolioFontSize.body, weight: .bold))
                         .foregroundStyle(Color.folioHomeTypeTextText)
-                    PlaceholderUITextField(
-                        placeholder: String(localized: "Title"),
-                        placeholderColor: UIColor(Color.folioInkSoft),
-                        font: .systemFont(ofSize: CGFloat(FolioFontSize.bodyLarge), weight: .regular),
-                        textColor: UIColor(Color.folioInk),
-                        keyboardType: .default,
-                        isSecureTextEntry: false,
-                        autocorrectionType: .default,
-                        autocapitalizationType: .sentences,
+                    TextField(
+                        String(localized: "Title"),
                         text: Binding(
                             get: { viewModel.state.editTitle },
                             set: { viewModel.send(.editTitleChanged($0)) }
-                        ),
-                        isFirstResponder: focusedField == .title
+                        )
                     )
+                    .font(.system(size: FolioFontSize.bodyLarge, weight: .regular))
+                    .foregroundStyle(Color.folioInk)
+                    .autocapitalization(.sentences)
+                    .focused($focusedField, equals: .title)
                     .padding(.horizontal, FolioSpacing.xl)
                     .frame(height: FolioSize.fieldHeightXs)
                     .background(.white)
                     .overlay(
                         RoundedRectangle(cornerRadius: FolioRadius.lg)
-                            .stroke(Color.folioFieldBorder, lineWidth: 1)
+                            .stroke(trimmedTitleCount > maximumTitleLength ? Color.folioDanger : Color.folioFieldBorder, lineWidth: 1)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg))
-                    .onTapGesture { focusedField = .title }
+                    
+                    HStack {
+                        if trimmedTitleCount > maximumTitleLength {
+                            Text(String(localized: "Title cannot exceed 255 characters"))
+                                .font(.system(size: FolioFontSize.small))
+                                .foregroundStyle(Color.folioDanger)
+                        }
+                        Spacer()
+                        Text(String(localized: "\(trimmedTitleCount)/255"))
+                            .font(.system(size: FolioFontSize.small))
+                            .foregroundStyle(trimmedTitleCount > maximumTitleLength ? Color.folioDanger : Color.folioInkSoft)
+                    }
                 }
                 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(String(localized: "Author"))
                         .font(.system(size: FolioFontSize.body, weight: .bold))
                         .foregroundStyle(Color.folioHomeTypeTextText)
-                    PlaceholderUITextField(
-                        placeholder: String(localized: "Author"),
-                        placeholderColor: UIColor(Color.folioInkSoft),
-                        font: .systemFont(ofSize: CGFloat(FolioFontSize.bodyLarge), weight: .regular),
-                        textColor: UIColor(Color.folioInk),
-                        keyboardType: .default,
-                        isSecureTextEntry: false,
-                        autocorrectionType: .default,
-                        autocapitalizationType: .words,
+                    TextField(
+                        String(localized: "Author"),
                         text: Binding(
                             get: { viewModel.state.editAuthor },
                             set: { viewModel.send(.editAuthorChanged($0)) }
-                        ),
-                        isFirstResponder: focusedField == .author
+                        )
                     )
+                    .font(.system(size: FolioFontSize.bodyLarge, weight: .regular))
+                    .foregroundStyle(Color.folioInk)
+                    .autocapitalization(.words)
+                    .focused($focusedField, equals: .author)
                     .padding(.horizontal, FolioSpacing.xl)
                     .frame(height: FolioSize.fieldHeightXs)
                     .background(.white)
                     .overlay(
                         RoundedRectangle(cornerRadius: FolioRadius.lg)
-                            .stroke(Color.folioFieldBorder, lineWidth: 1)
+                            .stroke(trimmedAuthorCount > maximumAuthorLength ? Color.folioDanger : Color.folioFieldBorder, lineWidth: 1)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg))
-                    .onTapGesture { focusedField = .author }
+                    
+                    HStack {
+                        if trimmedAuthorCount > maximumAuthorLength {
+                            Text(String(localized: "Author cannot exceed 100 characters"))
+                                .font(.system(size: FolioFontSize.small))
+                                .foregroundStyle(Color.folioDanger)
+                        }
+                        Spacer()
+                        Text(String(localized: "\(trimmedAuthorCount)/100"))
+                            .font(.system(size: FolioFontSize.small))
+                            .foregroundStyle(trimmedAuthorCount > maximumAuthorLength ? Color.folioDanger : Color.folioInkSoft)
+                    }
                 }
 
                 if viewModel.source?.sourceType == .manual {
@@ -354,16 +385,21 @@ private struct SourceReaderEditSheet: View {
                         .background(.white)
                         .overlay(
                             RoundedRectangle(cornerRadius: FolioRadius.lg)
-                                .stroke(Color.folioFieldBorder, lineWidth: 1)
+                                .stroke(trimmedContentCount > maximumContentLength ? Color.folioDanger : Color.folioFieldBorder, lineWidth: 1)
                         )
                         .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg))
-                        .onTapGesture { focusedField = .content }
+                        .focused($focusedField, equals: .content)
                         
                         HStack {
+                            if trimmedContentCount > maximumContentLength {
+                                Text(String(localized: "Content exceeds maximum limit of 100,000 characters."))
+                                    .font(.system(size: FolioFontSize.small))
+                                    .foregroundStyle(Color.folioDanger)
+                            }
                             Spacer()
-                            Text("\(viewModel.state.editContent.count.formatted())/\(maximumContentLength.formatted())")
+                            Text(String(localized: "\(trimmedContentCount)/100,000"))
                                 .font(.system(size: FolioFontSize.small))
-                                .foregroundStyle(viewModel.state.editContent.count > maximumContentLength ? Color.folioDanger : Color.folioInkSoft)
+                                .foregroundStyle(trimmedContentCount > maximumContentLength ? Color.folioDanger : Color.folioInkSoft)
                         }
                     }
                 }
@@ -415,18 +451,18 @@ private struct SourceReaderEditSheet: View {
                         .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
                     }
                     .buttonStyle(.plain)
-                    .disabled(viewModel.state.isEditing)
+                    .disabled(viewModel.state.isEditing || trimmedTitleCount > maximumTitleLength || trimmedAuthorCount > maximumAuthorLength || trimmedContentCount > maximumContentLength)
                 }
             }
             .padding(.horizontal, FolioSpacing.xl3)
             .padding(.bottom, FolioSpacing.lg)
             .padding(.top, FolioSpacing.sm)
-            .frame(maxWidth: .infinity)
+            }
         }
         .scrollDismissesKeyboard(.interactively)
         .presentationBackground(Color.folioHomeSheetBackground)
         .presentationCornerRadius(FolioRadius.xl2)
-        .presentationDetents(viewModel.source?.sourceType == .manual ? [.height(580), .large] : [.height(315), .medium])
+        .presentationDetents(viewModel.source?.sourceType == .manual ? [.height(580)] : [.height(315)])
         .presentationDragIndicator(.visible)
     }
 }
