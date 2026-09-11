@@ -24,6 +24,34 @@ final class CitationRichTextViewTests: XCTestCase {
         )
     }
 
+    func testCitationMarkerCanRenderWithoutHighlight() {
+        let attributed = CitationRichTextView.inlineAttributedString(
+            content: "<p>Evidence [1] supports the claim.</p>",
+            citationCount: 1,
+            highlightCitations: false
+        )
+        let markerRange = (attributed.string as NSString).range(of: "[1]")
+
+        XCTAssertNil(attributed.attribute(NSAttributedString.Key.backgroundColor, at: markerRange.location, effectiveRange: nil))
+        XCTAssertEqual(
+            attributed.attribute(.link, at: markerRange.location, effectiveRange: nil) as? URL,
+            URL(string: "folio-citation://1")
+        )
+    }
+
+    func testCitationMarkerUsesBlueHighlight() {
+        let attributed = CitationRichTextView.inlineAttributedString(
+            content: "<p>Evidence [1] supports the claim.</p>",
+            citationCount: 1
+        )
+        let markerRange = (attributed.string as NSString).range(of: "[1]")
+
+        XCTAssertEqual(
+            attributed.attribute(.backgroundColor, at: markerRange.location, effectiveRange: nil) as? UIColor,
+            UIColor(FolioTheme.accentBg)
+        )
+    }
+
     func testOutOfRangeCitationMarkerIsNotRenderedAsCitationLink() {
         let attributed = CitationRichTextView.inlineAttributedString(
             content: "<p>Evidence [2] is unavailable.</p>",

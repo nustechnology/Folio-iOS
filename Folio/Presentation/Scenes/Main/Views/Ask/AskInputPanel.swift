@@ -36,17 +36,17 @@ struct AskInputPanel: View {
                 Button(action: onScopeTap) {
                     HStack(spacing: 6) {
                         Text(scopeChipLabel)
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: 12))
                             .foregroundStyle(Color.folioInk)
                             .lineLimit(1)
                         Image(systemName: "chevron.down")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(Color.folioInkMuted)
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(Color(hex: 0xE7EEF5))
-                    .clipShape(Capsule())
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 10)
+                    .background(Color.folioHomeTypeFileBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.plain)
                 .disabled(!hasEvidence)
@@ -65,7 +65,7 @@ struct AskInputPanel: View {
                     .padding(.horizontal, 18)
                     .padding(.vertical, 10)
                     .background(Color.folioOliveDark.opacity(canSubmit ? 1 : 0.4))
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .disabled(!canSubmit)

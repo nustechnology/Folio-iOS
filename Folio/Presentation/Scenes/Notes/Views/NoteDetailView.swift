@@ -198,17 +198,26 @@ struct NoteDetailView: View {
 struct CitationRichTextView: View {
     let content: String
     let citationCount: Int
+    var highlightCitations = true
     var onCitationTapped: (Int) -> Void = { _ in }
     
     var body: some View {
         CitationTextView(
-            attributedText: Self.inlineAttributedString(content: content, citationCount: citationCount),
+            attributedText: Self.inlineAttributedString(
+                content: content,
+                citationCount: citationCount,
+                highlightCitations: highlightCitations
+            ),
             onCitationTapped: onCitationTapped
         )
         .frame(maxWidth: .infinity, alignment: .leading)
     }
     
-    static func inlineAttributedString(content: String, citationCount: Int) -> NSAttributedString {
+    static func inlineAttributedString(
+        content: String,
+        citationCount: Int,
+        highlightCitations: Bool = true
+    ) -> NSAttributedString {
         let attributed = NoteDisplayAttributedString.make(from: content)
         let string = attributed.string as NSString
         let fullRange = NSRange(location: 0, length: string.length)
@@ -235,15 +244,15 @@ struct CitationRichTextView: View {
                 cursor = NSMaxRange(match.range)
                 continue
             }
-            result.append(NSAttributedString(
-                string: "[\(number)]",
-                attributes: [
-                    .font: UIFont.systemFont(ofSize: FolioFontSize.caption2, weight: .semibold),
-                    .foregroundColor: UIColor(Color.folioInk),
-                    .backgroundColor: UIColor(Color.folioGold.opacity(0.3)),
-                    .link: url
-                ]
-            ))
+            var attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: FolioFontSize.caption2, weight: .semibold),
+                .foregroundColor: UIColor(Color.folioInk),
+                .link: url
+            ]
+            if highlightCitations {
+                attributes[.backgroundColor] = UIColor(FolioTheme.accentBg)
+            }
+            result.append(NSAttributedString(string: "[\(number)]", attributes: attributes))
             cursor = NSMaxRange(match.range)
         }
         

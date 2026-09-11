@@ -64,6 +64,26 @@ final class NoteEndpointTests: XCTestCase {
         XCTAssertNil(payload["originType"])
     }
 
+    func testCreateEndpointEncodesAskOriginMetadata() throws {
+        let endpoint = CreateNoteEndpoint(
+            spaceId: "space-1",
+            request: CreateNoteRequestDTO(
+                title: "Answer",
+                content: "<p>Body</p>",
+                origin: NoteOriginDTO(conversationId: "conversation-1", messageId: "message-1")
+            )
+        )
+
+        let body = try XCTUnwrap(endpoint.body)
+        let payload = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: body) as? [String: Any]
+        )
+        let origin = try XCTUnwrap(payload["origin"] as? [String: String])
+
+        XCTAssertEqual(origin["conversationId"], "conversation-1")
+        XCTAssertEqual(origin["messageId"], "message-1")
+    }
+
     func testConvertToSourceEndpointUsesNoteScopedPostWithTitleBody() throws {
         let endpoint = ConvertNoteToSourceEndpoint(
             spaceId: "space-1", noteId: "note-42", title: "Snapshot title")

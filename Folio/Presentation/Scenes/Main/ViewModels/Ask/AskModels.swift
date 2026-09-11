@@ -55,11 +55,35 @@ struct SaveAskNoteDraft: Identifiable, Equatable {
     let messageID: String
     let serverMessageID: String?
     let initialTitle: String
-    let content: String
+    let initialContent: String
+    var title: String
+    var content: String
     let limitation: String?
     let citations: [AskCitation]
 
     var id: String { messageID }
+
+    init(
+        messageID: String,
+        serverMessageID: String?,
+        initialTitle: String,
+        content: String,
+        limitation: String?,
+        citations: [AskCitation]
+    ) {
+        self.messageID = messageID
+        self.serverMessageID = serverMessageID
+        self.initialTitle = initialTitle
+        self.initialContent = content
+        self.title = initialTitle
+        self.content = content
+        self.limitation = limitation
+        self.citations = citations
+    }
+
+    var hasUnsavedChanges: Bool {
+        title != initialTitle || content != initialContent
+    }
 }
 
 /// First letter of the display name, falling back to the first letter of the email.
