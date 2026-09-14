@@ -525,7 +525,7 @@ struct FolioAddSourceSheet: View {
                     if viewModel.state.isProcessingFailed {
                         failureBanner
                         failureActions
-                    } else if !viewModel.state.isProcessingComplete {
+                    } else if !viewModel.state.isProcessing && !viewModel.state.isProcessingComplete {
                         Button {
                             viewModel.handle(.resetToAddForm)
                         } label: {
