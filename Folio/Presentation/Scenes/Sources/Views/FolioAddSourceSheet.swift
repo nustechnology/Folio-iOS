@@ -68,6 +68,13 @@ struct FolioAddSourceSheet: View {
             onCancel: { viewModel.handle(.dismissDeleteConfirmation) },
             onDelete: { viewModel.handle(.deleteSourceConfirmed) }
         )
+        .deleteConfirmationOverlay(
+            isPresented: viewModel.state.showCancelProcessingConfirmation,
+            title: String(localized: "Cancel processing?"),
+            message: String(localized: "The source will be deleted and you'll return to the add form."),
+            onCancel: { viewModel.handle(.dismissCancelProcessing) },
+            onDelete: { viewModel.handle(.confirmCancelProcessing) }
+        )
     }
 
     private var formView: some View {
@@ -525,9 +532,13 @@ struct FolioAddSourceSheet: View {
                     if viewModel.state.isProcessingFailed {
                         failureBanner
                         failureActions
-                    } else if !viewModel.state.isProcessing && !viewModel.state.isProcessingComplete {
+                    } else if !viewModel.state.isProcessingComplete {
                         Button {
-                            viewModel.handle(.resetToAddForm)
+                            if viewModel.state.isProcessing {
+                                viewModel.handle(.cancelProcessingTapped)
+                            } else {
+                                viewModel.handle(.resetToAddForm)
+                            }
                         } label: {
                             Text(String(localized: "Add another source"))
                                 .font(.system(size: 15, weight: .semibold))

@@ -71,6 +71,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         var manualContentError: String?
 
         var showDeleteConfirmation = false
+        var showCancelProcessingConfirmation = false
         var shouldDismiss = false
     }
 
@@ -80,6 +81,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         case manualTitleChanged(String), manualAuthorChanged(String), manualContentChanged(String)
         case addSource, dismissProcessing, openSource, openAsk, resetToAddForm
         case retryProcessing, deleteSourceTapped, deleteSourceConfirmed, dismissDeleteConfirmation
+        case cancelProcessingTapped, confirmCancelProcessing, dismissCancelProcessing
     }
 
     @Published private(set) var state = State()
@@ -184,7 +186,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             uploadTask = Task { await performUpload() }
 
         case .dismissProcessing: stopProcessing(); resetState()
-        case .resetToAddForm: stopProcessing(); resetState()
+        case .resetToAddForm: resetState()
         case .openSource: break
         case .openAsk: break
 
@@ -230,6 +232,15 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
                 state.shouldDismiss = true
             }
         case .dismissDeleteConfirmation: state.showDeleteConfirmation = false
+
+        case .cancelProcessingTapped:
+            state.showCancelProcessingConfirmation = true
+        case .confirmCancelProcessing:
+            state.showCancelProcessingConfirmation = false
+            stopProcessing()
+            resetState()
+        case .dismissCancelProcessing:
+            state.showCancelProcessingConfirmation = false
         }
     }
 

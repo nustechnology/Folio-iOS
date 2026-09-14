@@ -1150,6 +1150,22 @@
         }
       }
     },
+    "Cancel processing?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel processing?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hủy xử lý?"
+          }
+        }
+      }
+    },
     "Capture and review" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4888,6 +4904,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Không gian đã chọn không còn khả dụng."
+          }
+        }
+      }
+    },
+    "The source will be deleted and you'll return to the add form." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The source will be deleted and you'll return to the add form."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nguồn sẽ bị xóa và bạn sẽ quay lại biểu mẫu thêm."
           }
         }
       }
