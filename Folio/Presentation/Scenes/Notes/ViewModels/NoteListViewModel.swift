@@ -263,8 +263,7 @@ extension NoteListViewModel {
     case .createTitleChanged(let title):
       guard !state.isCreating else { return }
       state.createTitle = title
-      state.createTitleError = NoteLimits.validate(title: title, content: state.createContent)
-        .titleError?.localizedMessage
+      state.createTitleError = NoteLimits.validateTitle(title)?.localizedMessage
     case .createContentChanged(let content):
       guard !state.isCreating else { return }
       state.createContent = content

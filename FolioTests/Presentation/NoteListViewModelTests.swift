@@ -118,6 +118,14 @@ final class NoteListViewModelTests: XCTestCase {
         XCTAssertEqual(result.contentError, .contentTooLong)
     }
 
+    func testTitleValidationDoesNotRequireContent() {
+        XCTAssertEqual(
+            NoteLimits.validateTitle(String(repeating: "t", count: NoteLimits.maximumTitleLength + 1)),
+            .titleTooLong
+        )
+        XCTAssertNil(NoteLimits.validateTitle("Valid title"))
+    }
+
     func testCreateContentValidationAllowsMarkupBeyondPlainTextLimit() {
         let viewModel = makeViewModelForEditing()
         let plainText = String(repeating: "x", count: NoteLimits.maximumContentLength)

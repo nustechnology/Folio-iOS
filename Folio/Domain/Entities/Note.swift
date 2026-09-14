@@ -38,24 +38,15 @@ enum NoteLimits {
   static let maximumTitleLength = 150
   static let maximumContentLength = 20_000
   static let maximumRawHTMLLength = 200_000
-  static let maximumTitleLengthLabel: String = {
+  static let maximumTitleLengthLabel = lengthLabel(maximumTitleLength)
+  static let maximumRawHTMLLengthLabel = lengthLabel(maximumRawHTMLLength)
+  static let maximumContentLengthLabel = lengthLabel(maximumContentLength)
+
+  private static func lengthLabel(_ value: Int) -> String {
     let formatter = NumberFormatter()
     formatter.numberStyle = .decimal
-    return formatter.string(from: NSNumber(value: maximumTitleLength))
-      ?? "\(maximumTitleLength)"
-  }()
-  static let maximumRawHTMLLengthLabel: String = {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    return formatter.string(from: NSNumber(value: maximumRawHTMLLength))
-      ?? "\(maximumRawHTMLLength)"
-  }()
-  static let maximumContentLengthLabel: String = {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    return formatter.string(from: NSNumber(value: maximumContentLength))
-      ?? "\(maximumContentLength)"
-  }()
+    return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
+  }
 
   static func validate(title: String, content: String) -> NoteValidationResult {
     validate(
@@ -82,9 +73,13 @@ enum NoteLimits {
     }
 
     return NoteValidationResult(
-      titleError: title.count > maximumTitleLength ? .titleTooLong : nil,
+      titleError: validateTitle(title),
       contentError: contentError
     )
+  }
+
+  static func validateTitle(_ title: String) -> NoteValidationError? {
+    title.count > maximumTitleLength ? .titleTooLong : nil
   }
 
   static func plainText(from html: String) -> String {
