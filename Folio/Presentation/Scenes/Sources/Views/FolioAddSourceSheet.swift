@@ -31,7 +31,7 @@ struct FolioAddSourceSheet: View {
     }
 
     private var currentDetent: PresentationDetent {
-        viewModel.state.isProcessing ? processingDetent : heightForTab(viewModel.state.selectedTab)
+        viewModel.state.isAddingNewSource || !viewModel.state.isProcessing ? heightForTab(viewModel.state.selectedTab) : processingDetent
     }
 
     private var processingDetent: PresentationDetent {
@@ -45,12 +45,13 @@ struct FolioAddSourceSheet: View {
 
     var body: some View {
         Group {
-            if viewModel.state.isProcessing {
-                processingView
-            } else {
+            if viewModel.state.isAddingNewSource || !viewModel.state.isProcessing {
                 formView
+            } else {
+                processingView
             }
         }
+        .onAppear { viewModel.handle(.showAddForm) }
         .presentationDetents(
             [currentDetent],
             selection: Binding(get: { currentDetent }, set: { _ in })
@@ -540,7 +541,7 @@ struct FolioAddSourceSheet: View {
                                 viewModel.handle(.resetToAddForm)
                             }
                         } label: {
-                            Text(String(localized: "Add another source"))
+                            Text(viewModel.state.isProcessing ? String(localized: "Cancel") : String(localized: "Add another source"))
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(Color.folioOliveDark)
                                 .frame(maxWidth: .infinity)
@@ -799,23 +800,6 @@ struct FolioAddSourceSheet: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: ProcessingLayout.buttonHeight)
             }
-
-            Button {
-                viewModel.handle(.resetToAddForm)
-            } label: {
-                Text(String(localized: "Add another source"))
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.folioOliveDark)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color.folioSurfaceStrong)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
-                            .stroke(Color.folioBorderLight, lineWidth: 1.5)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
-            }
-            .buttonStyle(.plain)
         }
     }
 }

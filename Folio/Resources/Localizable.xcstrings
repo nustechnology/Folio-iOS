@@ -1150,22 +1150,6 @@
         }
       }
     },
-    "Cancel processing?" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cancel processing?"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hủy xử lý?"
-          }
-        }
-      }
-    },
     "Capture and review" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4908,22 +4892,6 @@
         }
       }
     },
-    "The source will be deleted and you'll return to the add form." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The source will be deleted and you'll return to the add form."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nguồn sẽ bị xóa và bạn sẽ quay lại biểu mẫu thêm."
-          }
-        }
-      }
-    },
     "The service is temporarily unavailable. Please try again shortly." : {
       "localizations" : {
         "en" : {
@@ -5893,6 +5861,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nội dung vượt quá giới hạn tối đa %lld ký tự."
+          }
+        }
+      }
+    },
+    "Cancel processing?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel processing?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hủy xử lý?"
+          }
+        }
+      }
+    },
+    "The source will be deleted and you'll return to the add form." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The source will be deleted and you'll return to the add form."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nguồn sẽ bị xóa và bạn sẽ quay lại biểu mẫu thêm."
           }
         }
       }
