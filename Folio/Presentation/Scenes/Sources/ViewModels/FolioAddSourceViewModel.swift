@@ -304,12 +304,12 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
                     return try await uploadUseCase.uploadManual(spaceId: spaceId, content: state.manualContent, title: title, author: author)
                 }
             }()
-            stopFileAccess()
+            stopFileAccess(for: session)
         } catch is CancellationError {
-            stopFileAccess()
+            stopFileAccess(for: session)
             return
         } catch {
-            stopFileAccess()
+            stopFileAccess(for: session)
             guard session == activeSessionID, !Task.isCancelled else { return }
             state.submitError = error.localizedDescription
             return
@@ -516,6 +516,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         uploadTask?.cancel(); uploadTask = nil
         statusStreamTask?.cancel(); statusStreamTask = nil
         activeSessionID = nil
+        stopFileAccess()
     }
 
     private func deleteSource(id: String, shouldDismiss: Bool) {
@@ -550,6 +551,11 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     private func setPageCount(_ count: Int?, for url: URL) {
         guard state.selectedFileURL == url else { return }
         state.selectedFilePageCount = count
+    }
+
+    private func stopFileAccess(for session: UUID) {
+        guard session == activeSessionID else { return }
+        stopFileAccess()
     }
 
     private func stopFileAccess() {
