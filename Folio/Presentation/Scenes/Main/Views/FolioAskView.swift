@@ -24,7 +24,6 @@ struct FolioAskView: View {
     @State private var showScopeSheet = false
     @State private var showConversationSheet = false
     @State private var showAddSourceSheet = false
-    @State private var addSourceViewModel: FolioAddSourceViewModel?
 
     init(
         viewModel: FolioAskViewModel,
@@ -126,25 +125,22 @@ struct FolioAskView: View {
     }
 
     private var askAddSourceSheet: some View {
-        if let vm = addSourceViewModel {
-            return AnyView(FolioAddSourceSheet(
-                viewModel: vm,
-                onSourceOpened: { source in onSourceAdded?(source) },
-                onAskSource: { source in onSourceAdded?(source) },
-                onProcessingComplete: { source in onSourceAdded?(source) }
-            ))
-        } else {
+        guard let uploadSourceUseCase, let spaceId else {
             return AnyView(EmptyView())
         }
-    }
-
-    private func ensureAddSourceViewModel() {
-        guard addSourceViewModel == nil, let uploadSourceUseCase, let spaceId else { return }
         let vm = FolioAddSourceViewModel(uploadUseCase: uploadSourceUseCase, spaceId: spaceId)
         vm.onProcessingComplete = { [onSourceAdded] source in
             onSourceAdded?(source)
         }
-        addSourceViewModel = vm
+        vm.onSourceCreated = { [onSourceAdded] source in
+            onSourceAdded?(source)
+        }
+        return AnyView(FolioAddSourceSheet(
+            viewModel: vm,
+            onSourceOpened: { source in onSourceAdded?(source) },
+            onAskSource: { source in onSourceAdded?(source) },
+            onProcessingComplete: { source in onSourceAdded?(source) }
+        ))
     }
 
     @ViewBuilder
@@ -156,7 +152,6 @@ struct FolioAskView: View {
         VStack(spacing: 0) {
             if !hasEvidence {
                 AskNoEvidenceBanner(onAddSource: {
-                    ensureAddSourceViewModel()
                     showAddSourceSheet = true
                 })
                     .padding(.top, 16)

@@ -244,9 +244,14 @@ struct FolioAddSourceSheet: View {
     private var webTab: some View {
         VStack(alignment: .leading, spacing: FolioSpacing.lg) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(String(localized: "Article URL"))
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.folioHomeTypeTextText)
+                HStack(spacing: 4) {
+                    Text(String(localized: "Article URL"))
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.folioHomeTypeTextText)
+                    Text(String(localized: "(required)"))
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(Color.folioHomeTypeTextText)
+                }
 
                 PlaceholderUITextField(
                     placeholder: String(localized: "https://example.org/care-technology-adoption"),
@@ -280,9 +285,14 @@ struct FolioAddSourceSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text(String(localized: "Title"))
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.folioHomeTypeTextText)
+                HStack(spacing: 4) {
+                    Text(String(localized: "Title"))
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.folioHomeTypeTextText)
+                    Text(String(localized: "(optional)"))
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(Color.folioHomeTypeTextText)
+                }
 
                 PlaceholderUITextField(
                     placeholder: String(localized: "Care Technology Adoption Survey 2026"),
@@ -316,9 +326,14 @@ struct FolioAddSourceSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text(String(localized: "Author"))
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.folioHomeTypeTextText)
+                HStack(spacing: 4) {
+                    Text(String(localized: "Author"))
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.folioHomeTypeTextText)
+                    Text(String(localized: "(optional)"))
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(Color.folioHomeTypeTextText)
+                }
 
                 PlaceholderUITextField(
                     placeholder: String(localized: "Care Systems Association"),
@@ -358,9 +373,14 @@ struct FolioAddSourceSheet: View {
     private var manualTab: some View {
         VStack(alignment: .leading, spacing: FolioSpacing.lg) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(String(localized: "Title"))
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.folioHomeTypeTextText)
+                HStack(spacing: 4) {
+                    Text(String(localized: "Title"))
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.folioHomeTypeTextText)
+                    Text(String(localized: "(optional)"))
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(Color.folioHomeTypeTextText)
+                }
 
                 PlaceholderUITextField(
                     placeholder: String(localized: "Provider workshop evidence"),
@@ -394,9 +414,14 @@ struct FolioAddSourceSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text(String(localized: "Author"))
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.folioHomeTypeTextText)
+                HStack(spacing: 4) {
+                    Text(String(localized: "Author"))
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.folioHomeTypeTextText)
+                    Text(String(localized: "(optional)"))
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(Color.folioHomeTypeTextText)
+                }
 
                 PlaceholderUITextField(
                     placeholder: String(localized: "Internal Research"),
@@ -430,9 +455,14 @@ struct FolioAddSourceSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text(String(localized: "Content"))
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.folioHomeTypeTextText)
+                HStack(spacing: 4) {
+                    Text(String(localized: "Content"))
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.folioHomeTypeTextText)
+                    Text(String(localized: "(required)"))
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(Color.folioHomeTypeTextText)
+                }
 
                 ZStack(alignment: .topLeading) {
                     if viewModel.state.manualContent.isEmpty {

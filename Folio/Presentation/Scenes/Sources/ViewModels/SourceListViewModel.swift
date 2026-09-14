@@ -172,6 +172,13 @@ final class SourceListViewModel: ObservableObject {
             state.editSource = nil
         case .sourceUploaded:
             Task { await loadFirstPage() }
+        case .sourceCreated(let source):
+            invalidateInFlightLoads()
+            if !state.allSources.contains(where: { $0.id == source.id }) {
+                state.allSources.insert(source, at: 0)
+                state.totalCount += 1
+                applyFilter()
+            }
         case .sortTapped:
             state.presentedSheet = .sortOptions
         case .sortSelected(let option):
@@ -206,6 +213,7 @@ final class SourceListViewModel: ObservableObject {
         case deleteConfirmed
         case cancelDelete
         case sourceUploaded
+        case sourceCreated(Source)
         case sortTapped
         case sortSelected(SourceSortOption)
         case dismissToast

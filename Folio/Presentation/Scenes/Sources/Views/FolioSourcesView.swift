@@ -53,7 +53,6 @@ struct FolioSourcesView: View {
 
     @State private var query = ""
     @State private var showAddSheet = false
-    @State private var addSourceViewModel: FolioAddSourceViewModel?
 
     private var filteredSources: [FolioSource] {
         guard !query.isEmpty else { return sources }
@@ -124,7 +123,6 @@ struct FolioSourcesView: View {
                                     FolioPrimaryButton(
                                         title: String(localized: "Add Source"),
                                         action: {
-                                            ensureAddSourceViewModel()
                                             showAddSheet = true
                                         }
                                     )
@@ -154,30 +152,26 @@ struct FolioSourcesView: View {
     }
 
     private var addSourceSheet: some View {
-        let onOpened: (Source) -> Void = { source in
-            onSourceAdded?(source)
-        }
-        let onAsk: (Source) -> Void = { source in
-            onSourceAsk?(source)
-        }
-        let onComplete: (Source) -> Void = { source in
-            onSourceAdded?(source)
-        }
-        if let vm = addSourceViewModel {
-            return AnyView(FolioAddSourceSheet(
-                viewModel: vm,
-                onSourceOpened: onOpened,
-                onAskSource: onAsk,
-                onProcessingComplete: onComplete
-            ))
-        } else {
+        guard let useCase = uploadSourceUseCase, let workspaceID else {
             return AnyView(EmptyView())
         }
+        let vm = FolioAddSourceViewModel(uploadUseCase: useCase, spaceId: workspaceID)
+        vm.onProcessingComplete = { [onSourceAdded] source in
+            onSourceAdded?(source)
+        }
+        vm.onSourceCreated = { [onSourceAdded] source in
+            onSourceAdded?(source)
+        }
+        return AnyView(FolioAddSourceSheet(
+            viewModel: vm,
+            onSourceOpened: { source in onSourceAdded?(source) },
+            onAskSource: { source in onSourceAsk?(source) },
+            onProcessingComplete: { source in onSourceAdded?(source) }
+        ))
     }
 
     private var addSourceButton: some View {
         Button {
-            ensureAddSourceViewModel()
             showAddSheet = true
         } label: {
             Image(systemName: "plus")
@@ -203,14 +197,6 @@ struct FolioSourcesView: View {
             .frame(width: 22, height: 22)
     }
 
-    private func ensureAddSourceViewModel() {
-        guard addSourceViewModel == nil, let useCase = uploadSourceUseCase, let workspaceID else { return }
-        let vm = FolioAddSourceViewModel(uploadUseCase: useCase, spaceId: workspaceID)
-        vm.onProcessingComplete = { [onSourceAdded] source in
-            onSourceAdded?(source)
-        }
-        addSourceViewModel = vm
-    }
 }
 
 private struct FolioSourceCard: View {

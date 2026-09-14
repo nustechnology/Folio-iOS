@@ -89,6 +89,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     var onOpenSource: ((Source) -> Void)?
     var onOpenAsk: ((Source) -> Void)?
     var onProcessingComplete: ((Source) -> Void)?
+    var onSourceCreated: ((Source) -> Void)?
 
     private let uploadUseCase: any UploadSourceUseCaseProtocol
     private let spaceId: String
@@ -296,6 +297,8 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         state.processingSourceID = source.id
         state.processingSourceTitle = source.title
         state.processingSource = source
+
+        onSourceCreated?(source)
 
         beginProcessing(for: source)
     }

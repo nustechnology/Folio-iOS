@@ -3,7 +3,6 @@ import SwiftUI
 struct SourceListView: View {
     @StateObject private var viewModel: SourceListViewModel
     @State private var actionSheetSource: Source?
-    @State private var addSourceViewModel: FolioAddSourceViewModel?
     let workspaceTitle: String
     let onBackToSpaces: () -> Void
     let onOpenAccountSettings: () -> Void
@@ -40,16 +39,6 @@ struct SourceListView: View {
         }
         .task {
             viewModel.send(.appeared)
-            if addSourceViewModel == nil {
-                let vm = FolioAddSourceViewModel(
-                    uploadUseCase: viewModel.uploadSourceUseCase,
-                    spaceId: viewModel.spaceId
-                )
-                vm.onProcessingComplete = { [weak viewModel] _ in
-                    viewModel?.send(.sourceUploaded)
-                }
-                addSourceViewModel = vm
-            }
         }
         .sheet(item: Binding(
             get: { viewModel.state.presentedSheet },
@@ -146,22 +135,22 @@ struct SourceListView: View {
     }
 
     private var addSourceSheet: some View {
-        let onOpened: (Source) -> Void = { source in
-            onSourceOpened(source)
+        let vm = FolioAddSourceViewModel(
+            uploadUseCase: viewModel.uploadSourceUseCase,
+            spaceId: viewModel.spaceId
+        )
+        vm.onProcessingComplete = { [weak viewModel] _ in
+            viewModel?.send(.sourceUploaded)
         }
-        let onAsk: (Source) -> Void = { source in
-            onAskSource(source)
+        vm.onSourceCreated = { [weak viewModel] source in
+            viewModel?.send(.sourceCreated(source))
         }
-        if let addSourceViewModel {
-            return AnyView(FolioAddSourceSheet(
-                viewModel: addSourceViewModel,
-                onSourceOpened: onOpened,
-                onAskSource: onAsk,
-                onProcessingComplete: { _ in viewModel.send(.sourceUploaded) }
-            ))
-        } else {
-            return AnyView(EmptyView())
-        }
+        return AnyView(FolioAddSourceSheet(
+            viewModel: vm,
+            onSourceOpened: { source in onSourceOpened(source) },
+            onAskSource: { source in onAskSource(source) },
+            onProcessingComplete: { _ in viewModel.send(.sourceUploaded) }
+        ))
     }
 
     private var header: some View {
