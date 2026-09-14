@@ -90,6 +90,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     var onOpenSource: ((Source) -> Void)?
     var onOpenAsk: ((Source) -> Void)?
     var onProcessingComplete: ((Source) -> Void)?
+    var onProcessingFailed: ((String) -> Void)?
 
     private let uploadUseCase: any UploadSourceUseCaseProtocol
     private let spaceId: String
@@ -310,8 +311,12 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             return
         } catch {
             stopFileAccess(for: session)
-            guard session == activeSessionID, !Task.isCancelled else { return }
-            state.submitError = error.localizedDescription
+            guard !Task.isCancelled else { return }
+            if session == activeSessionID {
+                state.submitError = error.localizedDescription
+            } else {
+                onProcessingFailed?(error.localizedDescription)
+            }
             return
         }
 
@@ -520,7 +525,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     }
 
     private func deleteSource(id: String, shouldDismiss: Bool) {
-        if shouldDismiss { dismissAfterDelete = true }
+        dismissAfterDelete = shouldDismiss
         guard deleteTask == nil else { return }
         deleteTask = Task { [weak self] in
             guard let self else { return }

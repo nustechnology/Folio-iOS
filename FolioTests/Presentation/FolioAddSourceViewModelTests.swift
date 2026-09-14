@@ -147,6 +147,51 @@ final class FolioAddSourceViewModelTests: XCTestCase {
         secondContinuation.finish()
     }
 
+    func testDetachedUploadCompletesAfterUploadPhaseDetach() async {
+        let mock = MockUploadSourceUseCase()
+        mock.uploadResults = [.success(makeSource(id: "s1", state: .ready))]
+        mock.suspendUploads = true
+        let uploadStarted = expectation(description: "upload started")
+        mock.onUploadManual = { uploadStarted.fulfill() }
+        let completed = expectation(description: "detached completion")
+        let viewModel = makeViewModel(mock: mock)
+        viewModel.onProcessingComplete = { _ in completed.fulfill() }
+
+        submitManualSource(viewModel)
+        await fulfillment(of: [uploadStarted], timeout: 1)
+
+        viewModel.handle(.showAddForm)
+        XCTAssertFalse(viewModel.state.isProcessing)
+        XCTAssertTrue(viewModel.state.isAddingNewSource)
+
+        mock.resumeUploads()
+        await fulfillment(of: [completed], timeout: 1)
+    }
+
+    func testDetachedUploadFailureReportsThroughCallback() async {
+        let mock = MockUploadSourceUseCase()
+        mock.uploadResults = [.failure(URLError(.notConnectedToInternet))]
+        mock.suspendUploads = true
+        let uploadStarted = expectation(description: "upload started")
+        mock.onUploadManual = { uploadStarted.fulfill() }
+        let failed = expectation(description: "detached failure")
+        var reportedMessage: String?
+        let viewModel = makeViewModel(mock: mock)
+        viewModel.onProcessingFailed = { message in
+            reportedMessage = message
+            failed.fulfill()
+        }
+
+        submitManualSource(viewModel)
+        await fulfillment(of: [uploadStarted], timeout: 1)
+
+        viewModel.handle(.showAddForm)
+        mock.resumeUploads()
+        await fulfillment(of: [failed], timeout: 1)
+
+        XCTAssertNotNil(reportedMessage)
+    }
+
     func testRetryReusesActiveSessionAndStartsProcessing() async {
         let mock = MockUploadSourceUseCase()
         let (retryStream, retryContinuation) = AsyncThrowingStream<SourceStatusEvent, Error>.makeStream()
@@ -229,11 +274,13 @@ private final class MockUploadSourceUseCase: UploadSourceUseCaseProtocol {
     private(set) var deletedIDs: [String] = []
     private(set) var retryCount = 0
     var suspendDeletes = false
+    var suspendUploads = false
     var onUploadManual: (() -> Void)?
     var onDelete: (() -> Void)?
     var onRetrySource: (() -> Void)?
     var onStatusStream: (() -> Void)?
     private var deleteContinuations: [CheckedContinuation<Void, Never>] = []
+    private var uploadContinuations: [CheckedContinuation<Void, Never>] = []
 
     func uploadFile(spaceId: String, fileURL: URL, title: String?, author: String?) async throws -> Source {
         throw CancellationError()
@@ -246,7 +293,11 @@ private final class MockUploadSourceUseCase: UploadSourceUseCaseProtocol {
     func uploadManual(spaceId: String, content: String, title: String?, author: String?) async throws -> Source {
         onUploadManual?()
         guard !uploadResults.isEmpty else { throw CancellationError() }
-        return try uploadResults.removeFirst().get()
+        let result = uploadResults.removeFirst()
+        if suspendUploads {
+            await withCheckedContinuation { uploadContinuations.append($0) }
+        }
+        return try result.get()
     }
 
     func deleteSource(id: String) async throws {
@@ -273,5 +324,10 @@ private final class MockUploadSourceUseCase: UploadSourceUseCaseProtocol {
     func resumeDeletes() {
         deleteContinuations.forEach { $0.resume() }
         deleteContinuations.removeAll()
+    }
+
+    func resumeUploads() {
+        uploadContinuations.forEach { $0.resume() }
+        uploadContinuations.removeAll()
     }
 }
