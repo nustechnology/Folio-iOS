@@ -221,13 +221,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             let session = beginSession()
             uploadTask = Task { [weak self] in
                 guard let self else { return }
-                defer {
-                    if session == self.activeSessionID {
-                        self.state.isSubmitting = false
-                    } else {
-                        self.detachedUploadTasks[session] = nil
-                    }
-                }
+                defer { self.finishUploadSession(session) }
                 do {
                     let source = try await self.uploadUseCase.retrySource(id: sourceID)
                     guard !Task.isCancelled else { return }
@@ -286,14 +280,8 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     }
 
     private func performUpload(session: UUID) async {
+        defer { finishUploadSession(session) }
         guard session == activeSessionID else { return }
-        defer {
-            if session == activeSessionID {
-                state.isSubmitting = false
-            } else {
-                detachedUploadTasks[session] = nil
-            }
-        }
         state.submitError = nil
         let title = resolvedTitle()
         let author = resolvedAuthor()
@@ -492,6 +480,15 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         let session = UUID()
         activeSessionID = session
         return session
+    }
+
+    private func finishUploadSession(_ session: UUID) {
+        if session == activeSessionID {
+            state.isSubmitting = false
+            uploadTask = nil
+        } else {
+            detachedUploadTasks[session] = nil
+        }
     }
 
     private func detachProcessingSession() {
