@@ -5783,6 +5783,87 @@
           }
         }
       }
+    },
+    "Link: %@" : {
+      "comment" : "A label displaying the URL link of the web source.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link: %@"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liên kết: %@"
+          }
+        }
+      }
+    },
+    "Opens the original link in another app on your device." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens the original link in another app on your device."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mở liên kết gốc trong một ứng dụng khác trên thiết bị của bạn."
+          }
+        }
+      }
+    },
+    "Title cannot exceed %lld characters" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Title cannot exceed %lld characters"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tiêu đề không được vượt quá %lld ký tự"
+          }
+        }
+      }
+    },
+    "Author cannot exceed %lld characters" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Author cannot exceed %lld characters"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tác giả không được vượt quá %lld ký tự"
+          }
+        }
+      }
+    },
+    "Content exceeds maximum limit of %lld characters." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Content exceeds maximum limit of %lld characters."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nội dung vượt quá giới hạn tối đa %lld ký tự."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"
