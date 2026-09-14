@@ -95,6 +95,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     private let spaceId: String
     private var uploadTask: Task<Void, Never>?
     private var statusStreamTask: Task<Void, Never>?
+    private var activeSessionID: UUID?
     private var pageCountTask: Task<Void, Never>?
     private var isFileAccessing = false
 
@@ -185,15 +186,16 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             state.isAddingNewSource = false
             state.isSubmitting = true
             state.submitError = nil
-            uploadTask = Task { await performUpload() }
+            let session = beginSession()
+            uploadTask = Task { await performUpload(session: session) }
 
         case .dismissProcessing: stopProcessing(); resetState()
-        // Note: intentionally does not call stopProcessing() so a previously
-        // in-flight upload can continue while the user adds another source.
-        case .resetToAddForm: resetState()
-        case .showAddForm:
-            state.isAddingNewSource = true
-            resetFormState()
+        // Detaches instead of cancelling, so a previously in-flight upload
+        // keeps running while the user adds another source; its completion
+        // only refreshes the source list via onProcessingComplete.
+        case .resetToAddForm, .showAddForm:
+            detachProcessingSession()
+            resetState()
         case .openSource: break
         case .openAsk: break
 
@@ -201,28 +203,28 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             guard !state.isSubmitting, let sourceID = state.processingSourceID else { return }
             state.isSubmitting = true
             state.submitError = nil
+            statusStreamTask?.cancel()
+            statusStreamTask = nil
+            let session = beginSession()
             uploadTask = Task { [weak self] in
                 guard let self else { return }
+                defer { if session == self.activeSessionID { self.state.isSubmitting = false } }
                 do {
                     let source = try await self.uploadUseCase.retrySource(id: sourceID)
-                    self.state.isProcessingFailed = false
-                    self.state.isProcessingComplete = false
-                    self.state.processingProgress = 0
-                    self.state.processingStageLabel = ""
-                    self.beginProcessing(for: source)
+                    guard !Task.isCancelled else { return }
+                    self.beginProcessing(session: session, source: source)
                 } catch {
+                    guard session == self.activeSessionID, !Task.isCancelled else { return }
                     self.state.submitError = error.localizedDescription
                 }
-                self.state.isSubmitting = false
             }
 
         case .deleteSourceTapped: state.showDeleteConfirmation = true
         case .deleteSourceConfirmed:
             state.showDeleteConfirmation = false
-            statusStreamTask?.cancel()
-            statusStreamTask = nil
-            if let sourceID = state.processingSourceID {
-                uploadTask?.cancel()
+            let sourceID = state.processingSourceID
+            stopProcessing()
+            if let sourceID {
                 uploadTask = Task { [weak self] in
                     guard let self else { return }
                     do {
@@ -234,7 +236,6 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
                     }
                 }
             } else {
-                stopProcessing()
                 resetState()
                 state.shouldDismiss = true
             }
@@ -244,22 +245,19 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             state.showCancelProcessingConfirmation = true
         case .confirmCancelProcessing:
             state.showCancelProcessingConfirmation = false
-            statusStreamTask?.cancel()
-            statusStreamTask = nil
-            if let sourceID = state.processingSourceID {
-                uploadTask?.cancel()
+            let sourceID = state.processingSourceID
+            stopProcessing()
+            if let sourceID {
                 uploadTask = Task { [weak self] in
                     guard let self else { return }
                     do {
                         try await self.uploadUseCase.deleteSource(id: sourceID)
-                        self.stopProcessing()
                         self.resetState()
                     } catch {
                         self.state.deletionError = error.localizedDescription
                     }
                 }
             } else {
-                stopProcessing()
                 resetState()
             }
         case .dismissCancelProcessing:
@@ -284,8 +282,9 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         }
     }
 
-    private func performUpload() async {
-        defer { state.isSubmitting = false }
+    private func performUpload(session: UUID) async {
+        guard session == activeSessionID else { return }
+        defer { if session == activeSessionID { state.isSubmitting = false } }
         state.submitError = nil
         let title = resolvedTitle()
         let author = resolvedAuthor()
@@ -309,21 +308,26 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             return
         } catch {
             stopFileAccess()
-            guard !Task.isCancelled else { return }
+            guard session == activeSessionID, !Task.isCancelled else { return }
             state.submitError = error.localizedDescription
             return
         }
 
         guard !Task.isCancelled else { return }
-
-        state.processingSourceID = source.id
-        state.processingSourceTitle = source.title
-        state.processingSource = source
-
-        beginProcessing(for: source)
+        beginProcessing(session: session, source: source)
     }
 
-    private func beginProcessing(for source: Source) {
+    private func beginProcessing(session: UUID, source: Source) {
+        guard session == activeSessionID else {
+            switch source.processingState {
+            case .ready, .failed:
+                onProcessingComplete?(source)
+            default:
+                startSSEProgress(session: session, source: source)
+            }
+            return
+        }
+
         state.processingSourceID = source.id
         state.processingSourceTitle = source.title
         state.processingSource = source
@@ -341,28 +345,32 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         case .failed:
             finishProcessing(success: false)
         default:
-            startSSEProgress()
+            startSSEProgress(session: session, source: source)
         }
     }
 
-    private func startSSEProgress() {
-        guard let sourceID = state.processingSourceID else { return }
+    private func startSSEProgress(session: UUID, source: Source) {
+        let sourceID = source.id
         Logger.debug("Starting SSE stream for source: \(sourceID)")
 
         let stream = uploadUseCase.sourceStatusStream()
 
-        statusStreamTask = Task { [weak self] in
+        let task = Task { [weak self] in
             guard let self else { return }
             var receivedTerminalEvent = false
             do {
                 for try await event in stream {
                     guard !Task.isCancelled else { return }
+                    guard event.sourceId == sourceID else { continue }
 
-                    if event.sourceId == sourceID {
-                        if event.state == "ready" || event.state == "failed" {
-                            receivedTerminalEvent = true
-                        }
+                    if event.state == "ready" || event.state == "failed" {
+                        receivedTerminalEvent = true
+                    }
+
+                    if session == self.activeSessionID {
                         self.applyStatusEvent(event)
+                    } else if event.state == "ready" || event.state == "failed" {
+                        self.onProcessingComplete?(source.withProcessingState(event.state == "ready" ? .ready : .failed))
                     }
                 }
             } catch {
@@ -370,9 +378,12 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
                     Logger.debug("SSE stream ended: \(error)")
                 }
             }
-            if !receivedTerminalEvent, !Task.isCancelled {
+            if !receivedTerminalEvent, !Task.isCancelled, session == self.activeSessionID {
                 self.finishProcessing(success: false)
             }
+        }
+        if session == activeSessionID {
+            statusStreamTask = task
         }
     }
 
@@ -462,41 +473,25 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         }
     }
 
+    private func beginSession() -> UUID {
+        let session = UUID()
+        activeSessionID = session
+        return session
+    }
+
+    private func detachProcessingSession() {
+        activeSessionID = nil
+        uploadTask = nil
+        statusStreamTask = nil
+    }
+
     private func stopProcessing() {
         uploadTask?.cancel(); uploadTask = nil
         statusStreamTask?.cancel(); statusStreamTask = nil
+        activeSessionID = nil
     }
+
     private func resetState() { stopFileAccess(); state = State() }
-    private func resetFormState() {
-        stopFileAccess()
-        let processing = (
-            isProcessing: state.isProcessing,
-            processingProgress: state.processingProgress,
-            processingStages: state.processingStages,
-            processingSourceID: state.processingSourceID,
-            processingSourceTitle: state.processingSourceTitle,
-            processingSource: state.processingSource,
-            processingStageLabel: state.processingStageLabel,
-            isProcessingComplete: state.isProcessingComplete,
-            isProcessingFailed: state.isProcessingFailed,
-            showDeleteConfirmation: state.showDeleteConfirmation,
-            showCancelProcessingConfirmation: state.showCancelProcessingConfirmation,
-            deletionError: state.deletionError
-        )
-        state = State()
-        state.isProcessing = processing.isProcessing
-        state.processingProgress = processing.processingProgress
-        state.processingStages = processing.processingStages
-        state.processingSourceID = processing.processingSourceID
-        state.processingSourceTitle = processing.processingSourceTitle
-        state.processingSource = processing.processingSource
-        state.processingStageLabel = processing.processingStageLabel
-        state.isProcessingComplete = processing.isProcessingComplete
-        state.isProcessingFailed = processing.isProcessingFailed
-        state.showDeleteConfirmation = processing.showDeleteConfirmation
-        state.showCancelProcessingConfirmation = processing.showCancelProcessingConfirmation
-        state.deletionError = processing.deletionError
-    }
 
     private func loadPageCount(for url: URL) {
         pageCountTask = Task.detached(priority: .userInitiated) { [weak self] in
