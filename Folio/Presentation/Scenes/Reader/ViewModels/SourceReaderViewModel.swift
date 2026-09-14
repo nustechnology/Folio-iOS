@@ -125,9 +125,11 @@ final class SourceReaderViewModel: ObservableObject {
                 return
             }
             let content = state.editContent.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard content.count <= Self.maximumContentLength else {
-                state.editError = String(localized: "Content exceeds maximum limit of 100,000 characters.")
-                return
+            if source?.sourceType == .manual {
+                guard content.count <= Self.maximumContentLength else {
+                    state.editError = String(localized: "Content exceeds maximum limit of 100,000 characters.")
+                    return
+                }
             }
             state.isEditing = true
             state.editError = nil

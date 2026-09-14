@@ -251,6 +251,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     }
 
     private func performUpload() async {
+        defer { state.isSubmitting = false }
         state.submitError = nil
         let title = resolvedTitle()
         let author = resolvedAuthor()
@@ -276,7 +277,6 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             stopFileAccess()
             guard !Task.isCancelled else { return }
             state.submitError = error.localizedDescription
-            state.isSubmitting = false
             return
         }
 
@@ -285,7 +285,6 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         state.processingSourceID = source.id
         state.processingSourceTitle = source.title
         state.processingSource = source
-        state.isSubmitting = false
 
         beginProcessing(for: source)
     }
