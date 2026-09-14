@@ -118,6 +118,34 @@ final class NoteListViewModelTests: XCTestCase {
         XCTAssertEqual(result.contentError, .contentTooLong)
     }
 
+    func testNoteValidationUsesByteMessageForRawHTMLAndCharacterMessageForPlainText() {
+        let rawHTMLResult = NoteLimits.validate(
+            title: "Valid title",
+            serializedContent: String(repeating: "x", count: NoteLimits.maximumRawHTMLLength + 1),
+            plainText: "Valid content"
+        )
+        let plainTextResult = NoteLimits.validate(
+            title: "Valid title",
+            serializedContent: "<p>Valid content</p>",
+            plainText: String(repeating: "x", count: NoteLimits.maximumContentLength + 1)
+        )
+
+        XCTAssertEqual(
+            rawHTMLResult.contentError?.localizedMessage,
+            String.localizedStringWithFormat(
+                String(localized: "Content exceeds maximum size of %@ bytes"),
+                NoteLimits.maximumRawHTMLLengthLabel
+            )
+        )
+        XCTAssertEqual(
+            plainTextResult.contentError?.localizedMessage,
+            String.localizedStringWithFormat(
+                String(localized: "Content exceeds maximum length of %@ characters"),
+                NoteLimits.maximumContentLengthLabel
+            )
+        )
+    }
+
     func testTitleValidationDoesNotRequireContent() {
         XCTAssertEqual(
             NoteLimits.validateTitle(String(repeating: "t", count: NoteLimits.maximumTitleLength + 1)),

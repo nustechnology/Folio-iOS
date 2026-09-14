@@ -20,8 +20,7 @@ struct NoteCreateView: View {
         NoteCreateForm(
             editingModel: editingModel,
             title: titleBinding,
-            titleError: viewModel.state.createTitleError,
-            contentError: viewModel.state.createContentError,
+            validation: validation,
             errorMessage: nil,
             isSaving: viewModel.state.isCreating,
             hasUnsavedChanges: viewModel.hasCreateDraft,
@@ -41,6 +40,14 @@ struct NoteCreateView: View {
         Binding(
             get: { viewModel.state.createTitle },
             set: { viewModel.handle(.createTitleChanged($0)) }
+        )
+    }
+
+    private var validation: NoteValidationResult {
+        NoteLimits.validate(
+            title: viewModel.state.createTitle,
+            serializedContent: editingModel.serializedContent,
+            plainText: editingModel.plainText
         )
     }
 }

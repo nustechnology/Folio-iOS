@@ -450,6 +450,7 @@ final class FolioAskViewModel: ViewModelProtocol {
         let validation = NoteLimits.validate(title: title, content: content)
         guard validation.titleError == nil, validation.contentError == nil
         else {
+            saveError = String(localized: "Failed to save as note. Please try again.")
             return
         }
         let messageID = draft.messageID

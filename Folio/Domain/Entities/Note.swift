@@ -15,7 +15,7 @@ enum NoteValidationError: Equatable {
       )
     case .rawHTMLTooLong:
       String.localizedStringWithFormat(
-        String(localized: "Content exceeds maximum length of %@ characters"),
+        String(localized: "Content exceeds maximum size of %@ bytes"),
         NoteLimits.maximumRawHTMLLengthLabel
       )
     case .contentEmpty:

@@ -80,10 +80,6 @@ struct SaveAskNoteDraft: Identifiable, Equatable {
         self.limitation = limitation
         self.citations = citations
     }
-
-    var hasUnsavedChanges: Bool {
-        title != initialTitle || content != initialContent
-    }
 }
 
 /// First letter of the display name, falling back to the first letter of the email.

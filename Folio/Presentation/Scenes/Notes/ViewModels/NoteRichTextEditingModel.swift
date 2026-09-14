@@ -11,6 +11,7 @@ final class NoteRichTextEditingModel: ObservableObject {
             plainText = NoteLimits.plainText(from: serializedContent)
         }
     }
+    private let initialAttributedText: NSAttributedString
     private(set) var serializedContent: String
     private(set) var plainText: String
     @Published var selectedRange = NSRange(location: 0, length: 0)
@@ -24,10 +25,19 @@ final class NoteRichTextEditingModel: ObservableObject {
 
     init(attributedText: NSAttributedString, publishingHTML: @escaping (String) -> Void) {
         let serializedContent = FolioRichTextEditor.htmlFromAttributedText(attributedText)
+        self.initialAttributedText = attributedText
         self.attributedText = attributedText
         self.serializedContent = serializedContent
         self.plainText = NoteLimits.plainText(from: serializedContent)
         self.publishingHTML = publishingHTML
+    }
+
+    var hasUnsavedChanges: Bool {
+        attributedText != initialAttributedText
+    }
+
+    func contentForSave(fallback: String) -> String {
+        hasUnsavedChanges ? serializedContent : fallback
     }
 
     var toolbarActiveFormats: RichTextToolbar.ActiveFormats {

@@ -39,15 +39,14 @@ struct SaveAskNoteSheet: View {
         NoteCreateForm(
             editingModel: editingModel,
             title: titleBinding,
-            titleError: titleError,
-            contentError: contentError,
+            validation: validation,
             errorMessage: errorMessage,
             isSaving: isSaving,
-            hasUnsavedChanges: draft.hasUnsavedChanges,
+            hasUnsavedChanges: hasUnsavedChanges,
             heading: String(localized: "Save as note"),
             explanation: String(localized: "Review the answer and adjust the title before saving it to this space."),
             onContentEditingEnded: {},
-            onSave: onSubmit,
+            onSave: { _ in onSubmit(contentForSave) },
             onCancel: onCancel,
             onDiscardConfirmed: onCancel
         )
@@ -60,19 +59,20 @@ struct SaveAskNoteSheet: View {
         )
     }
 
-    private var titleError: String? {
-        validation.titleError?.localizedMessage
+    private var hasUnsavedChanges: Bool {
+        draft.title != draft.initialTitle || editingModel.hasUnsavedChanges
     }
 
-    private var contentError: String? {
-        validation.contentError?.localizedMessage
+    private var contentForSave: String {
+        editingModel.contentForSave(fallback: draft.initialContent)
     }
 
     private var validation: NoteValidationResult {
-        NoteLimits.validate(
+        let content = contentForSave
+        return NoteLimits.validate(
             title: draft.title,
-            serializedContent: editingModel.serializedContent,
-            plainText: editingModel.plainText
+            serializedContent: content,
+            plainText: NoteLimits.plainText(from: content)
         )
     }
 }

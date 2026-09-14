@@ -5838,6 +5838,22 @@
           }
         }
       }
+    },
+    "Content exceeds maximum size of %@ bytes" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Content exceeds maximum size of %@ bytes"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nội dung vượt quá kích thước tối đa %@ byte"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

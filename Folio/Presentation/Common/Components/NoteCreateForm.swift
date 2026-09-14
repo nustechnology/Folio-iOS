@@ -4,8 +4,7 @@ struct NoteCreateForm: View {
     @ObservedObject var editingModel: NoteRichTextEditingModel
     @Binding var title: String
 
-    let titleError: String?
-    let contentError: String?
+    let validation: NoteValidationResult
     let errorMessage: String?
     let isSaving: Bool
     let hasUnsavedChanges: Bool
@@ -48,7 +47,7 @@ struct NoteCreateForm: View {
                         placeholder: String(localized: "Untitled Note"),
                         text: $title,
                         style: .singleLine,
-                        error: titleError
+                        error: validation.titleError?.localizedMessage
                     )
                     .disabled(isSaving)
 
@@ -69,7 +68,7 @@ struct NoteCreateForm: View {
                             .foregroundStyle(Color.folioDanger)
                     }
 
-                    if let contentError {
+                    if let contentError = validation.contentError?.localizedMessage {
                         Text(contentError)
                             .font(.system(size: FolioFontSize.caption2))
                             .foregroundStyle(Color.folioDanger)
@@ -209,25 +208,19 @@ struct NoteCreateForm: View {
     private var isSaveDisabled: Bool {
         validation.titleError != nil
             || validation.contentError != nil
-            || titleError != nil
-            || contentError != nil
             || isSaving
     }
 
-    private var validation: NoteValidationResult {
-        NoteLimits.validate(
-            title: title,
-            serializedContent: serializedContent,
-            plainText: plainText
-        )
+    private var serializedContent: String {
+        editingModel.serializedContent
     }
 
     private var plainText: String {
         editingModel.plainText
     }
 
-    private var serializedContent: String {
-        editingModel.serializedContent
+    private var contentError: String? {
+        validation.contentError?.localizedMessage
     }
 
     private func requestDismissal() {

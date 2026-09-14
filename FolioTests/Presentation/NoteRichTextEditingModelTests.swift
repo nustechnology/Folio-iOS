@@ -3,6 +3,22 @@ import XCTest
 
 @MainActor
 final class NoteRichTextEditingModelTests: XCTestCase {
+    func testInitialSerializationDifferenceDoesNotCountAsAnEdit() {
+        let model = NoteRichTextEditingModel(
+            attributedText: FolioRichTextEditor.attributedTextFromHTML("Answer\nLimitation: details"),
+            publishingHTML: { _ in }
+        )
+
+        XCTAssertNotEqual(model.serializedContent, "Answer\nLimitation: details")
+        XCTAssertFalse(model.hasUnsavedChanges)
+        XCTAssertEqual(model.contentForSave(fallback: "Answer\nLimitation: details"), "Answer\nLimitation: details")
+
+        model.textChanged(NSAttributedString(string: "Edited answer"))
+
+        XCTAssertTrue(model.hasUnsavedChanges)
+        XCTAssertEqual(model.contentForSave(fallback: "Answer\nLimitation: details"), model.serializedContent)
+    }
+
     func testTextChangePublishesHTML() {
         var publishedHTML: String?
         let model = NoteRichTextEditingModel(

@@ -294,6 +294,25 @@ final class FolioAskViewModelTests: XCTestCase {
         XCTAssertNotNil(vm.saveDraft)
     }
 
+    func testSaveAsNoteValidationFailureShowsError() async {
+        let vm = makeViewModel(streamAnswer: .answer)
+        vm.updateSources([readySource(id: "s1")], spaceId: "space-1")
+        vm.handle(.submit("Question"))
+        await waitForAssistantAnswer(vm)
+
+        guard let assistant = vm.state.messages.last else {
+            return XCTFail("Expected an assistant answer")
+        }
+        vm.handle(.saveAsNoteRequested(assistant.id))
+        vm.handle(.saveAsNoteConfirmed(String(repeating: "x", count: NoteLimits.maximumRawHTMLLength + 1)))
+
+        XCTAssertEqual(
+            vm.saveError,
+            String(localized: "Failed to save as note. Please try again.")
+        )
+        XCTAssertNil(vm.state.savingMessageID)
+    }
+
     func testSaveAsNoteSubmitsEditedContentAndOrigin() async {
         let createNote = RecordingCreateSavedNote()
         let vm = makeViewModel(streamAnswer: .answer, createNote: createNote)
