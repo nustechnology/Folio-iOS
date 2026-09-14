@@ -98,6 +98,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     private var activeSessionID: UUID?
     private var detachedUploadTasks: [UUID: Task<Void, Never>] = [:]
     private var detachedStatusTasks: [UUID: Task<Void, Never>] = [:]
+    private var deleteTask: Task<Void, Never>?
     private var pageCountTask: Task<Void, Never>?
     private var isFileAccessing = false
 
@@ -109,6 +110,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     deinit {
         uploadTask?.cancel()
         statusStreamTask?.cancel()
+        deleteTask?.cancel()
         for task in detachedUploadTasks.values { task.cancel() }
         for task in detachedStatusTasks.values { task.cancel() }
     }
@@ -196,7 +198,9 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             state.isSubmitting = true
             state.submitError = nil
             let session = beginSession()
-            uploadTask = Task { await performUpload(session: session) }
+            uploadTask = Task { [weak self] in
+                await self?.performUpload(session: session)
+            }
 
         case .dismissProcessing: cancelAllProcessing(); resetState()
         // Detaches instead of cancelling, so a previously in-flight upload
@@ -217,7 +221,13 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             let session = beginSession()
             uploadTask = Task { [weak self] in
                 guard let self else { return }
-                defer { if session == self.activeSessionID { self.state.isSubmitting = false } }
+                defer {
+                    if session == self.activeSessionID {
+                        self.state.isSubmitting = false
+                    } else {
+                        self.detachedUploadTasks[session] = nil
+                    }
+                }
                 do {
                     let source = try await self.uploadUseCase.retrySource(id: sourceID)
                     guard !Task.isCancelled else { return }
@@ -508,8 +518,10 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     }
 
     private func deleteSource(id: String, shouldDismiss: Bool) {
-        uploadTask = Task { [weak self] in
+        guard deleteTask == nil else { return }
+        deleteTask = Task { [weak self] in
             guard let self else { return }
+            defer { self.deleteTask = nil }
             do {
                 try await self.uploadUseCase.deleteSource(id: id)
                 self.resetState()
