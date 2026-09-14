@@ -29,7 +29,7 @@ struct PlaceholderUITextField: UIViewRepresentable {
         field.textContentType = isSecureTextEntry ? .password : nil
         field.isSecureTextEntry = isSecureTextEntry
         field.clipsToBounds = true
-        field.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
+        field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         field.setContentCompressionResistancePriority(.defaultHigh, for: .vertical)
         field.setContentHuggingPriority(.defaultLow, for: .horizontal)
         field.setContentHuggingPriority(.defaultHigh, for: .vertical)

@@ -151,14 +151,6 @@ struct FolioSourcesView: View {
         .sheet(isPresented: $showAddSheet) {
             addSourceSheet
         }
-        .onChange(of: showAddSheet) { _, isPresented in
-            if !isPresented, let vm = addSourceViewModel {
-                let isTerminal = vm.state.isProcessingComplete || vm.state.isProcessingFailed
-                if !vm.state.isProcessing || isTerminal {
-                    vm.handle(.dismissProcessing)
-                }
-            }
-        }
     }
 
     private var addSourceSheet: some View {

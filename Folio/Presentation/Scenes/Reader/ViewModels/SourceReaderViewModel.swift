@@ -21,9 +21,9 @@ final class SourceReaderViewModel: ObservableObject {
         var toastMessage: ToastMessage?
     }
 
-    static let maximumTitleLength = 255
-    static let maximumAuthorLength = 100
-    static let maximumContentLength = 100_000
+    static let maximumTitleLength = Source.maximumTitleLength
+    static let maximumAuthorLength = Source.maximumAuthorLength
+    static let maximumContentLength = Source.maximumContentLength
 
     @Published private(set) var state = State()
 
@@ -125,9 +125,11 @@ final class SourceReaderViewModel: ObservableObject {
                 return
             }
             let content = state.editContent.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard content.count <= Self.maximumContentLength else {
-                state.editError = String(localized: "Content exceeds maximum limit of 100,000 characters.")
-                return
+            if source?.sourceType == .manual {
+                guard content.count <= Self.maximumContentLength else {
+                    state.editError = String(localized: "Content exceeds maximum limit of \(Self.maximumContentLength) characters.")
+                    return
+                }
             }
             state.isEditing = true
             state.editError = nil
