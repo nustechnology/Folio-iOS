@@ -469,12 +469,33 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     private func resetState() { stopFileAccess(); state = State() }
     private func resetFormState() {
         stopFileAccess()
-        state.selectedTab = .files
-        state.isSubmitting = false
-        state.submitError = nil
-        state.selectedFileURL = nil; state.selectedFileName = ""; state.selectedFileSize = 0; state.selectedFilePageCount = nil; state.fileError = nil
-        state.webURL = ""; state.webTitle = ""; state.webAuthor = ""; state.webURLError = nil
-        state.manualTitle = ""; state.manualAuthor = ""; state.manualContent = ""; state.manualContentError = nil
+        let processing = (
+            isProcessing: state.isProcessing,
+            processingProgress: state.processingProgress,
+            processingStages: state.processingStages,
+            processingSourceID: state.processingSourceID,
+            processingSourceTitle: state.processingSourceTitle,
+            processingSource: state.processingSource,
+            processingStageLabel: state.processingStageLabel,
+            isProcessingComplete: state.isProcessingComplete,
+            isProcessingFailed: state.isProcessingFailed,
+            showDeleteConfirmation: state.showDeleteConfirmation,
+            showCancelProcessingConfirmation: state.showCancelProcessingConfirmation,
+            deletionError: state.deletionError
+        )
+        state = State()
+        state.isProcessing = processing.isProcessing
+        state.processingProgress = processing.processingProgress
+        state.processingStages = processing.processingStages
+        state.processingSourceID = processing.processingSourceID
+        state.processingSourceTitle = processing.processingSourceTitle
+        state.processingSource = processing.processingSource
+        state.processingStageLabel = processing.processingStageLabel
+        state.isProcessingComplete = processing.isProcessingComplete
+        state.isProcessingFailed = processing.isProcessingFailed
+        state.showDeleteConfirmation = processing.showDeleteConfirmation
+        state.showCancelProcessingConfirmation = processing.showCancelProcessingConfirmation
+        state.deletionError = processing.deletionError
     }
 
     private func loadPageCount(for url: URL) {

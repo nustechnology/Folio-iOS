@@ -59,6 +59,11 @@ struct SourceListView: View {
         )) { sheet in
             sheetContent(sheet)
         }
+        .onChange(of: viewModel.state.presentedSheet) { _, sheet in
+            if case .addSource = sheet {
+                addSourceViewModel?.handle(.showAddForm)
+            }
+        }
         .sheet(item: $actionSheetSource) { source in
             SourceActionSheet(
                 title: source.title,

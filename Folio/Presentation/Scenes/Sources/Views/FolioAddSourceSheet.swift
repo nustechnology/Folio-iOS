@@ -51,7 +51,6 @@ struct FolioAddSourceSheet: View {
                 processingView
             }
         }
-        .onAppear { viewModel.handle(.showAddForm) }
         .presentationDetents(
             [currentDetent],
             selection: Binding(get: { currentDetent }, set: { _ in })
@@ -535,13 +534,9 @@ struct FolioAddSourceSheet: View {
                         failureActions
                     } else if !viewModel.state.isProcessingComplete {
                         Button {
-                            if viewModel.state.isProcessing {
-                                viewModel.handle(.cancelProcessingTapped)
-                            } else {
-                                viewModel.handle(.resetToAddForm)
-                            }
+                            viewModel.handle(.cancelProcessingTapped)
                         } label: {
-                            Text(viewModel.state.isProcessing ? String(localized: "Cancel") : String(localized: "Add another source"))
+                            Text(String(localized: "Cancel"))
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(Color.folioOliveDark)
                                 .frame(maxWidth: .infinity)
