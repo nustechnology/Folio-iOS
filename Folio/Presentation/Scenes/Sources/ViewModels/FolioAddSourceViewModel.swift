@@ -99,8 +99,11 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     private var detachedUploadTasks: [UUID: Task<Void, Never>] = [:]
     private var detachedStatusTasks: [UUID: Task<Void, Never>] = [:]
     private var deleteTask: Task<Void, Never>?
+    private var dismissAfterDelete = false
     private var pageCountTask: Task<Void, Never>?
     private var isFileAccessing = false
+    private var formScopedURL: URL?
+    private var detachedScopedURLs: [UUID: URL] = [:]
 
     init(uploadUseCase: any UploadSourceUseCaseProtocol, spaceId: String) {
         self.uploadUseCase = uploadUseCase
@@ -113,6 +116,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         deleteTask?.cancel()
         for task in detachedUploadTasks.values { task.cancel() }
         for task in detachedStatusTasks.values { task.cancel() }
+        for url in detachedScopedURLs.values { url.stopAccessingSecurityScopedResource() }
     }
 
     var isSubmitEnabled: Bool {
@@ -170,6 +174,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
                     return
                 }
                 isFileAccessing = true
+                formScopedURL = url
                 state.selectedFileURL = url
                 state.selectedFileName = url.lastPathComponent
                 state.selectedFileSize = size
@@ -202,7 +207,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
                 await self?.performUpload(session: session)
             }
 
-        case .dismissProcessing: cancelAllProcessing(); resetState()
+        case .dismissProcessing: stopProcessing(); resetState()
         // Detaches instead of cancelling, so a previously in-flight upload
         // keeps running while the user adds another source; its completion
         // only refreshes the source list via onProcessingComplete.
@@ -368,6 +373,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
                         self.applyStatusEvent(event)
                     } else if event.state == "ready" || event.state == "failed" {
                         self.onProcessingComplete?(source.withProcessingState(event.state == "ready" ? .ready : .failed))
+                        break
                     }
                 }
             } catch {
@@ -488,6 +494,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             uploadTask = nil
         } else {
             detachedUploadTasks[session] = nil
+            detachedScopedURLs.removeValue(forKey: session)?.stopAccessingSecurityScopedResource()
         }
     }
 
@@ -495,6 +502,11 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         guard let session = activeSessionID else { return }
         if let uploadTask { detachedUploadTasks[session] = uploadTask }
         if let statusStreamTask { detachedStatusTasks[session] = statusStreamTask }
+        if uploadTask != nil, isFileAccessing, let url = formScopedURL {
+            detachedScopedURLs[session] = url
+            isFileAccessing = false
+            formScopedURL = nil
+        }
         activeSessionID = nil
         uploadTask = nil
         statusStreamTask = nil
@@ -506,24 +518,20 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         activeSessionID = nil
     }
 
-    private func cancelAllProcessing() {
-        stopProcessing()
-        for task in detachedUploadTasks.values { task.cancel() }
-        for task in detachedStatusTasks.values { task.cancel() }
-        detachedUploadTasks.removeAll()
-        detachedStatusTasks.removeAll()
-    }
-
     private func deleteSource(id: String, shouldDismiss: Bool) {
+        if shouldDismiss { dismissAfterDelete = true }
         guard deleteTask == nil else { return }
         deleteTask = Task { [weak self] in
             guard let self else { return }
             defer { self.deleteTask = nil }
             do {
                 try await self.uploadUseCase.deleteSource(id: id)
+                let shouldDismiss = self.dismissAfterDelete
+                self.dismissAfterDelete = false
                 self.resetState()
                 if shouldDismiss { self.state.shouldDismiss = true }
             } catch {
+                self.dismissAfterDelete = false
                 self.state.deletionError = error.localizedDescription
             }
         }
@@ -549,7 +557,8 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         pageCountTask = nil
         guard isFileAccessing else { return }
         isFileAccessing = false
-        state.selectedFileURL?.stopAccessingSecurityScopedResource()
+        formScopedURL?.stopAccessingSecurityScopedResource()
+        formScopedURL = nil
     }
 }
 
