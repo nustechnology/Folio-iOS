@@ -99,8 +99,8 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     private var activeSessionID: UUID?
     private var detachedUploadTasks: [UUID: Task<Void, Never>] = [:]
     private var detachedStatusTasks: [UUID: Task<Void, Never>] = [:]
-    private var deleteTask: Task<Void, Never>?
-    private var dismissAfterDelete = false
+    private var deleteTasks: [String: Task<Void, Never>] = [:]
+    private var pendingDismissDeletes: Set<String> = []
     private var pageCountTask: Task<Void, Never>?
     private var isFileAccessing = false
     private var formScopedURL: URL?
@@ -114,7 +114,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     deinit {
         uploadTask?.cancel()
         statusStreamTask?.cancel()
-        deleteTask?.cancel()
+        for task in deleteTasks.values { task.cancel() }
         for task in detachedUploadTasks.values { task.cancel() }
         for task in detachedStatusTasks.values { task.cancel() }
         formScopedURL?.stopAccessingSecurityScopedResource()
@@ -528,22 +528,30 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     }
 
     private func deleteSource(id: String, shouldDismiss: Bool) {
-        dismissAfterDelete = dismissAfterDelete || shouldDismiss
-        guard deleteTask == nil else { return }
-        deleteTask = Task { [weak self] in
+        if shouldDismiss { pendingDismissDeletes.insert(id) }
+        guard deleteTasks[id] == nil else { return }
+        deleteTasks[id] = Task { [weak self] in
             guard let self else { return }
-            defer { self.deleteTask = nil }
+            defer { self.deleteTasks[id] = nil }
             do {
                 try await self.uploadUseCase.deleteSource(id: id)
-                let shouldDismiss = self.dismissAfterDelete
-                self.dismissAfterDelete = false
-                self.resetState()
-                if shouldDismiss { self.state.shouldDismiss = true }
+                let shouldDismiss = self.pendingDismissDeletes.remove(id) != nil
+                self.finishDelete(id: id, shouldDismiss: shouldDismiss)
             } catch {
-                self.dismissAfterDelete = false
-                self.state.deletionError = error.localizedDescription
+                self.pendingDismissDeletes.remove(id)
+                if self.state.processingSourceID == id {
+                    self.state.deletionError = error.localizedDescription
+                } else {
+                    self.onProcessingFailed?(error.localizedDescription)
+                }
             }
         }
+    }
+
+    private func finishDelete(id: String, shouldDismiss: Bool) {
+        guard state.processingSourceID == id else { return }
+        resetState()
+        if shouldDismiss { state.shouldDismiss = true }
     }
 
     private func resetState() { stopFileAccess(); state = State() }

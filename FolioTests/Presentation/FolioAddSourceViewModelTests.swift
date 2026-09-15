@@ -192,6 +192,42 @@ final class FolioAddSourceViewModelTests: XCTestCase {
         XCTAssertNotNil(reportedMessage)
     }
 
+    func testDeleteForNewSourceIsNotDroppedWhileAnotherDeleteInFlight() async {
+        let mock = MockUploadSourceUseCase()
+        mock.uploadResults = [
+            .success(makeSource(id: "s1", state: .added)),
+            .success(makeSource(id: "s2", state: .added))
+        ]
+        mock.suspendDeletes = true
+        let firstStream = expectation(description: "s1 stream")
+        let secondStream = expectation(description: "s2 stream")
+        var streamCount = 0
+        mock.onStatusStream = {
+            streamCount += 1
+            if streamCount == 1 { firstStream.fulfill() }
+            if streamCount == 2 { secondStream.fulfill() }
+        }
+
+        let viewModel = makeViewModel(mock: mock)
+        submitManualSource(viewModel)
+        await fulfillment(of: [firstStream], timeout: 1)
+        viewModel.handle(.cancelProcessingTapped)
+        viewModel.handle(.confirmCancelProcessing)
+        await waitUntil { mock.deletedIDs == ["s1"] }
+
+        viewModel.handle(.showAddForm)
+        submitManualSource(viewModel)
+        await fulfillment(of: [secondStream], timeout: 1)
+        viewModel.handle(.cancelProcessingTapped)
+        viewModel.handle(.confirmCancelProcessing)
+        await waitUntil { mock.deletedIDs.count == 2 }
+
+        XCTAssertEqual(Set(mock.deletedIDs), ["s1", "s2"])
+
+        mock.resumeDeletes()
+        await waitUntil { viewModel.state.isAddingNewSource }
+    }
+
     func testRetryReusesActiveSessionAndStartsProcessing() async {
         let mock = MockUploadSourceUseCase()
         let (retryStream, retryContinuation) = AsyncThrowingStream<SourceStatusEvent, Error>.makeStream()
