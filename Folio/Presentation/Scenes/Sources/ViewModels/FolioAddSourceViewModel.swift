@@ -220,7 +220,11 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         case .showAddForm:
             let hasActiveTasks = uploadTask != nil || statusStreamTask != nil
             detachProcessingSession()
-            if hasActiveTasks { resetState() }
+            if hasActiveTasks {
+                resetState()
+            } else {
+                resetProcessingState()
+            }
         case .openSource: break
         case .openAsk: break
 
@@ -573,6 +577,24 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     }
 
     private func resetState() { stopFileAccess(); state = State() }
+
+    private func resetProcessingState() {
+        state.isAddingNewSource = true
+        state.isProcessing = false
+        state.isProcessingComplete = false
+        state.isProcessingFailed = false
+        state.processingProgress = 0
+        state.processingStages = []
+        state.processingSourceID = nil
+        state.processingSource = nil
+        state.processingStageLabel = ""
+        state.isSubmitting = false
+        state.submitError = nil
+        state.deletionError = nil
+        state.showDeleteConfirmation = false
+        state.showCancelProcessingConfirmation = false
+        state.shouldDismiss = false
+    }
 
     private func loadPageCount(for url: URL) {
         pageCountTask = Task.detached(priority: .userInitiated) { [weak self] in

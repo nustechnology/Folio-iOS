@@ -769,22 +769,7 @@ struct FolioAddSourceSheet: View {
             }
             .buttonStyle(.plain)
 
-            Button {
-                viewModel.handle(.showAddForm)
-            } label: {
-                Text(String(localized: "Add another source"))
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.folioOliveDark)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color.folioSurfaceStrong)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
-                            .stroke(Color.folioBorderLight, lineWidth: 1.5)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
-            }
-            .buttonStyle(.plain)
+            addAnotherSourceButton
         }
     }
 
@@ -817,22 +802,26 @@ struct FolioAddSourceSheet: View {
                 .frame(height: ProcessingLayout.buttonHeight)
             }
 
-            Button {
-                viewModel.handle(.showAddForm)
-            } label: {
-                Text(String(localized: "Add another source"))
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.folioOliveDark)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color.folioSurfaceStrong)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
-                            .stroke(Color.folioBorderLight, lineWidth: 1.5)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
-            }
-            .buttonStyle(.plain)
+            addAnotherSourceButton
         }
+    }
+
+    private var addAnotherSourceButton: some View {
+        Button {
+            viewModel.handle(.showAddForm)
+        } label: {
+            Text(String(localized: "Add another source"))
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.folioOliveDark)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color.folioSurfaceStrong)
+                .overlay(
+                    RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
+                        .stroke(Color.folioBorderLight, lineWidth: 1.5)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 }

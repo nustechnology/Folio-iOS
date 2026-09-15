@@ -342,6 +342,24 @@ final class FolioAddSourceViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.state.isAddingNewSource)
     }
 
+    func testShowAddFormAfterProcessingCompletesReturnsToAddForm() async {
+        let mock = MockUploadSourceUseCase()
+        mock.uploadResults = [.success(makeSource(id: "s1", state: .ready))]
+        let completed = expectation(description: "completed")
+        let viewModel = makeViewModel(mock: mock)
+        viewModel.onProcessingComplete = { _ in completed.fulfill() }
+        submitManualSource(viewModel)
+        await fulfillment(of: [completed], timeout: 1)
+
+        XCTAssertTrue(viewModel.state.isProcessingComplete)
+        XCTAssertFalse(viewModel.state.isAddingNewSource)
+
+        viewModel.handle(.showAddForm)
+
+        XCTAssertTrue(viewModel.state.isAddingNewSource)
+        XCTAssertFalse(viewModel.state.isProcessingComplete)
+    }
+
     private func makeViewModel(mock: MockUploadSourceUseCase) -> FolioAddSourceViewModel {
         FolioAddSourceViewModel(uploadUseCase: mock, spaceId: "space-1")
     }
