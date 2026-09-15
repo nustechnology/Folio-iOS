@@ -46,6 +46,33 @@ final class FolioAddSourceViewModelTests: XCTestCase {
         XCTAssertTrue(mock.deletedIDs.isEmpty)
     }
 
+    func testCancelProcessingDeleteFailureReturnsToAddFormAndReports() async {
+        let mock = MockUploadSourceUseCase()
+        mock.uploadResults = [.success(makeSource(id: "s1", state: .added))]
+        mock.suspendDeletes = true
+        mock.deleteError = URLError(.notConnectedToInternet)
+        let streamStarted = expectation(description: "status stream started")
+        mock.onStatusStream = { streamStarted.fulfill() }
+        let deleteStarted = expectation(description: "delete started")
+        mock.onDelete = { deleteStarted.fulfill() }
+        let failed = expectation(description: "delete failure reported")
+        let viewModel = makeViewModel(mock: mock)
+        viewModel.onSourceOperationFailed = { _ in failed.fulfill() }
+        submitManualSource(viewModel)
+        await fulfillment(of: [streamStarted], timeout: 1)
+
+        viewModel.handle(.cancelProcessingTapped)
+        viewModel.handle(.confirmCancelProcessing)
+        await fulfillment(of: [deleteStarted], timeout: 1)
+        XCTAssertTrue(viewModel.state.isAddingNewSource)
+
+        mock.resumeDeletes()
+        await fulfillment(of: [failed], timeout: 1)
+
+        XCTAssertTrue(viewModel.state.isAddingNewSource)
+        XCTAssertFalse(viewModel.state.isProcessing)
+    }
+
     func testSecondConfirmProcessingDoesNotDuplicateDelete() async {
         let mock = MockUploadSourceUseCase()
         mock.uploadResults = [.success(makeSource(id: "s1", state: .added))]
@@ -333,6 +360,7 @@ private final class MockUploadSourceUseCase: UploadSourceUseCaseProtocol {
     var suspendDeletes = false
     var suspendUploads = false
     var suspendRetries = false
+    var deleteError: Error?
     var onUploadManual: (() -> Void)?
     var onDelete: (() -> Void)?
     var onRetrySource: (() -> Void)?
@@ -365,6 +393,7 @@ private final class MockUploadSourceUseCase: UploadSourceUseCaseProtocol {
         if suspendDeletes {
             await withCheckedContinuation { deleteContinuations.append($0) }
         }
+        if let deleteError { throw deleteError }
     }
 
     func retrySource(id: String) async throws -> Source {

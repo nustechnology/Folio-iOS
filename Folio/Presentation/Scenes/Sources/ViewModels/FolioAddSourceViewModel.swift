@@ -263,11 +263,12 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             let sourceID = state.processingSourceID
             let wasProcessingComplete = state.isProcessingComplete
             stopProcessing()
+            // Return to the add form immediately; the delete runs in the
+            // background and reports any failure through onSourceOperationFailed.
             if let sourceID, !wasProcessingComplete {
                 deleteSource(id: sourceID, shouldDismiss: false)
-            } else {
-                resetState()
             }
+            resetState()
         case .dismissCancelProcessing:
             state.showCancelProcessingConfirmation = false
         }
