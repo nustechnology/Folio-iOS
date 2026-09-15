@@ -255,6 +255,30 @@ final class FolioAddSourceViewModelTests: XCTestCase {
         await waitUntil { viewModel.state.isAddingNewSource }
     }
 
+    func testDetachedStreamEndWithoutTerminalRefreshesList() async {
+        let mock = MockUploadSourceUseCase()
+        mock.uploadResults = [.success(makeSource(id: "s1", state: .added))]
+        let (stream, continuation) = AsyncThrowingStream<SourceStatusEvent, Error>.makeStream()
+        mock.statusStreams = [stream]
+        let streamStarted = expectation(description: "stream started")
+        mock.onStatusStream = { streamStarted.fulfill() }
+        let refreshed = expectation(description: "list refreshed")
+        var refreshedID: String?
+        let viewModel = makeViewModel(mock: mock)
+        viewModel.onProcessingComplete = {
+            refreshedID = $0.id
+            refreshed.fulfill()
+        }
+
+        submitManualSource(viewModel)
+        await fulfillment(of: [streamStarted], timeout: 1)
+        viewModel.handle(.showAddForm)
+        continuation.finish()
+
+        await fulfillment(of: [refreshed], timeout: 1)
+        XCTAssertEqual(refreshedID, "s1")
+    }
+
     func testDetachedRetryFailureReportsThroughCallback() async {
         let mock = MockUploadSourceUseCase()
         mock.uploadResults = [.success(makeSource(id: "s1", state: .failed))]
@@ -323,7 +347,7 @@ final class FolioAddSourceViewModelTests: XCTestCase {
                 XCTFail("Timed out waiting for condition", file: file, line: line)
                 return
             }
-            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(1))
         }
     }
 

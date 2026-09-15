@@ -394,8 +394,14 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
                 }
             }
             guard let self else { return }
-            if !receivedTerminalEvent, !Task.isCancelled, session == self.activeSessionID {
-                self.finishProcessing(success: false)
+            if !receivedTerminalEvent, !Task.isCancelled {
+                if session == self.activeSessionID {
+                    self.finishProcessing(success: false)
+                } else {
+                    // Detached stream dropped before a terminal event; refresh
+                    // the list so it reconciles with the server's actual state.
+                    self.onProcessingComplete?(source)
+                }
             }
             if session != self.activeSessionID {
                 self.detachedStatusTasks[session] = nil
