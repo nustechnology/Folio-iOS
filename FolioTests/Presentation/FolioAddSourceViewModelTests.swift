@@ -177,7 +177,7 @@ final class FolioAddSourceViewModelTests: XCTestCase {
         let failed = expectation(description: "detached failure")
         var reportedMessage: String?
         let viewModel = makeViewModel(mock: mock)
-        viewModel.onProcessingFailed = { message in
+        viewModel.onSourceOperationFailed = { message in
             reportedMessage = message
             failed.fulfill()
         }
@@ -240,7 +240,7 @@ final class FolioAddSourceViewModelTests: XCTestCase {
         let retryStarted = expectation(description: "retry started")
         mock.onRetrySource = { retryStarted.fulfill() }
         let failed = expectation(description: "retry failure")
-        viewModel.onProcessingFailed = { _ in failed.fulfill() }
+        viewModel.onSourceOperationFailed = { _ in failed.fulfill() }
         viewModel.handle(.retryProcessing)
         await fulfillment(of: [retryStarted], timeout: 1)
 

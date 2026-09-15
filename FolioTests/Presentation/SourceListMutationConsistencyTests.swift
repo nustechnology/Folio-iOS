@@ -139,13 +139,13 @@ final class SourceListMutationConsistencyTests: XCTestCase {
         XCTAssertNotNil(viewModel.state.toastMessage)
     }
 
-    func testUploadFailedShowsErrorToast() {
+    func testSourceOperationFailedShowsErrorToast() {
         let viewModel = makeViewModel(fetch: FailingFetchSourcesUseCase())
 
-        viewModel.send(.uploadFailed("Upload failed"))
+        viewModel.send(.sourceOperationFailed("Operation failed"))
 
         XCTAssertEqual(viewModel.state.toastMessage?.style, .error)
-        XCTAssertEqual(viewModel.state.toastMessage?.text, "Upload failed")
+        XCTAssertEqual(viewModel.state.toastMessage?.text, "Operation failed")
     }
 
     func testSourceStatusChangedUpdatesListEntry() async {

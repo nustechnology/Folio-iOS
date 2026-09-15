@@ -90,7 +90,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     var onOpenSource: ((Source) -> Void)?
     var onOpenAsk: ((Source) -> Void)?
     var onProcessingComplete: ((Source) -> Void)?
-    var onProcessingFailed: ((String) -> Void)?
+    var onSourceOperationFailed: ((String) -> Void)?
 
     private let uploadUseCase: any UploadSourceUseCaseProtocol
     private let spaceId: String
@@ -237,7 +237,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
                     if session == self.activeSessionID {
                         self.state.submitError = error.localizedDescription
                     } else {
-                        self.onProcessingFailed?(error.localizedDescription)
+                        self.onSourceOperationFailed?(error.localizedDescription)
                     }
                 }
             }
@@ -320,7 +320,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             if session == activeSessionID {
                 state.submitError = error.localizedDescription
             } else {
-                onProcessingFailed?(error.localizedDescription)
+                onSourceOperationFailed?(error.localizedDescription)
             }
             return
         }
@@ -547,7 +547,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
                 if self.state.processingSourceID == id {
                     self.state.deletionError = error.localizedDescription
                 } else {
-                    self.onProcessingFailed?(error.localizedDescription)
+                    self.onSourceOperationFailed?(error.localizedDescription)
                 }
             }
         }

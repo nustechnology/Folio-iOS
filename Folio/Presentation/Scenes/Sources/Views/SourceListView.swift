@@ -48,8 +48,8 @@ struct SourceListView: View {
                 vm.onProcessingComplete = { [weak viewModel] _ in
                     viewModel?.send(.sourceUploaded)
                 }
-                vm.onProcessingFailed = { [weak viewModel] message in
-                    viewModel?.send(.uploadFailed(message))
+                vm.onSourceOperationFailed = { [weak viewModel] message in
+                    viewModel?.send(.sourceOperationFailed(message))
                 }
                 addSourceViewModel = vm
             }
