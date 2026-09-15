@@ -184,7 +184,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             uploadTask = Task { await performUpload() }
 
         case .dismissProcessing: stopProcessing(); resetState()
-        case .resetToAddForm: resetState()
+        case .resetToAddForm: stopProcessing(); resetState()
         case .openSource: break
         case .openAsk: break
 
@@ -270,11 +270,17 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
                 }
             }()
             stopFileAccess()
+        } catch is CancellationError {
+            stopFileAccess()
+            return
         } catch {
             stopFileAccess()
+            guard !Task.isCancelled else { return }
             state.submitError = error.localizedDescription
             return
         }
+
+        guard !Task.isCancelled else { return }
 
         state.processingSourceID = source.id
         state.processingSourceTitle = source.title

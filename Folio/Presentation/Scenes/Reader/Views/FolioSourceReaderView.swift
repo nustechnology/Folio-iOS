@@ -47,7 +47,9 @@ struct FolioSourceReaderView: View {
                         headerTrailing: { AnyView(menuButton) },
                         infoTrailing: { AnyView(HStack(spacing: 8) {
                             askSourceButton
-                            openOriginalButton
+                            if source.sourceType != .manual {
+                                openOriginalButton
+                            }
                         }) }
                     )
                     contentCard
@@ -65,7 +67,28 @@ struct FolioSourceReaderView: View {
         .sheet(item: sheetBinding) { sheet in
             switch sheet {
             case .edit:
-                SourceReaderEditSheet(viewModel: viewModel)
+                EditSourceSheet(
+                    title: Binding(
+                        get: { viewModel.state.editTitle },
+                        set: { viewModel.send(.editTitleChanged($0)) }
+                    ),
+                    author: Binding(
+                        get: { viewModel.state.editAuthor },
+                        set: { viewModel.send(.editAuthorChanged($0)) }
+                    ),
+                    content: Binding(
+                        get: { viewModel.state.editContent },
+                        set: { viewModel.send(.editContentChanged($0)) }
+                    ),
+                    sourceType: viewModel.source?.sourceType ?? .file,
+                    isEditing: viewModel.state.isEditing,
+                    errorMessage: viewModel.state.editError,
+                    maximumTitleLength: Source.maximumTitleLength,
+                    maximumAuthorLength: Source.maximumAuthorLength,
+                    maximumContentLength: Source.maximumContentLength,
+                    onCancel: { viewModel.send(.cancelEdit) },
+                    onConfirm: { viewModel.send(.editConfirmed) }
+                )
             case .share(let url):
                 FolioShareSheet(items: [url])
             }
@@ -82,7 +105,8 @@ struct FolioSourceReaderView: View {
             set: { if !$0 { viewModel.send(.dismissOpenOriginalSheet) } }
         )) {
             OpenOriginalBottomSheet(
-                fileName: viewModel.source?.fileName ?? "",
+                fileName: viewModel.source?.sourceType == .web ? (viewModel.source?.sourceUrl ?? "") : (viewModel.source?.fileName ?? ""),
+                sourceType: viewModel.source?.sourceType ?? .file,
                 onCancel: { viewModel.send(.dismissOpenOriginalSheet) },
                 onOpen: { viewModel.send(.openOriginalConfirmed) }
             )
@@ -253,208 +277,6 @@ struct FolioSourceReaderView: View {
     
     // MARK: - Sheets
 }
-
-// MARK: - Edit sheet
-
-private struct SourceReaderEditSheet: View {
-    @ObservedObject var viewModel: SourceReaderViewModel
-    @Environment(\.dismiss) private var dismiss
-    @FocusState private var focusedField: Field?
-    
-    private enum Field: Hashable {
-        case title
-        case author
-        case content
-    }
-
-    private let maximumTitleLength = SourceReaderViewModel.maximumTitleLength
-    private let maximumAuthorLength = SourceReaderViewModel.maximumAuthorLength
-    private let maximumContentLength = SourceReaderViewModel.maximumContentLength
-    
-    private var trimmedTitleCount: Int {
-        viewModel.state.editTitle.trimmingCharacters(in: .whitespacesAndNewlines).count
-    }
-
-    private var trimmedAuthorCount: Int {
-        viewModel.state.editAuthor.trimmingCharacters(in: .whitespacesAndNewlines).count
-    }
-
-    private var trimmedContentCount: Int {
-        viewModel.state.editContent.trimmingCharacters(in: .whitespacesAndNewlines).count
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(String(localized: "Edit source"))
-                .font(.system(size: FolioFontSize.heading, weight: .regular, design: .serif))
-                .foregroundStyle(Color.folioTextPrimary)
-                .padding(.horizontal, FolioSpacing.xl3)
-                .padding(.top, FolioSpacing.xl5)
-                .padding(.bottom, FolioSpacing.xs)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: FolioSpacing.xl) {
-                
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(String(localized: "Title"))
-                        .font(.system(size: FolioFontSize.body, weight: .bold))
-                        .foregroundStyle(Color.folioHomeTypeTextText)
-                    TextField(
-                        String(localized: "Title"),
-                        text: Binding(
-                            get: { viewModel.state.editTitle },
-                            set: { viewModel.send(.editTitleChanged($0)) }
-                        )
-                    )
-                    .font(.system(size: FolioFontSize.bodyLarge, weight: .regular))
-                    .foregroundStyle(Color.folioInk)
-                    .autocapitalization(.sentences)
-                    .focused($focusedField, equals: .title)
-                    .padding(.horizontal, FolioSpacing.xl)
-                    .frame(height: FolioSize.fieldHeightXs)
-                    .background(.white)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: FolioRadius.lg)
-                            .stroke(trimmedTitleCount > maximumTitleLength ? Color.folioDanger : Color.folioFieldBorder, lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg))
-                    
-                    HStack {
-                        if trimmedTitleCount > maximumTitleLength {
-                            Text(String(localized: "Title cannot exceed 255 characters"))
-                                .font(.system(size: FolioFontSize.small))
-                                .foregroundStyle(Color.folioDanger)
-                        }
-                        Spacer()
-                        Text(String(localized: "\(trimmedTitleCount)/255"))
-                            .font(.system(size: FolioFontSize.small))
-                            .foregroundStyle(trimmedTitleCount > maximumTitleLength ? Color.folioDanger : Color.folioInkSoft)
-                    }
-                }
-                
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(String(localized: "Author"))
-                        .font(.system(size: FolioFontSize.body, weight: .bold))
-                        .foregroundStyle(Color.folioHomeTypeTextText)
-                    TextField(
-                        String(localized: "Author"),
-                        text: Binding(
-                            get: { viewModel.state.editAuthor },
-                            set: { viewModel.send(.editAuthorChanged($0)) }
-                        )
-                    )
-                    .font(.system(size: FolioFontSize.bodyLarge, weight: .regular))
-                    .foregroundStyle(Color.folioInk)
-                    .autocapitalization(.words)
-                    .focused($focusedField, equals: .author)
-                    .padding(.horizontal, FolioSpacing.xl)
-                    .frame(height: FolioSize.fieldHeightXs)
-                    .background(.white)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: FolioRadius.lg)
-                            .stroke(trimmedAuthorCount > maximumAuthorLength ? Color.folioDanger : Color.folioFieldBorder, lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg))
-                    
-                    HStack {
-                        if trimmedAuthorCount > maximumAuthorLength {
-                            Text(String(localized: "Author cannot exceed 100 characters"))
-                                .font(.system(size: FolioFontSize.small))
-                                .foregroundStyle(Color.folioDanger)
-                        }
-                        Spacer()
-                        Text(String(localized: "\(trimmedAuthorCount)/100"))
-                            .font(.system(size: FolioFontSize.small))
-                            .foregroundStyle(trimmedAuthorCount > maximumAuthorLength ? Color.folioDanger : Color.folioInkSoft)
-                    }
-                }
-
-                if viewModel.source?.sourceType == .manual {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(String(localized: "Content"))
-                            .font(.system(size: FolioFontSize.body, weight: .bold))
-                            .foregroundStyle(Color.folioHomeTypeTextText)
-                        TextEditor(text: Binding(
-                            get: { viewModel.state.editContent },
-                            set: { viewModel.send(.editContentChanged($0)) }
-                        ))
-                        .font(.system(size: FolioFontSize.bodyLarge, design: .default))
-                        .scrollContentBackground(.hidden)
-                        .padding(FolioSpacing.md)
-                        .frame(minHeight: 120, maxHeight: 200)
-                        .background(.white)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: FolioRadius.lg)
-                                .stroke(trimmedContentCount > maximumContentLength ? Color.folioDanger : Color.folioFieldBorder, lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg))
-                        .focused($focusedField, equals: .content)
-                        
-                        HStack {
-                            if trimmedContentCount > maximumContentLength {
-                                Text(String(localized: "Content exceeds maximum limit of 100,000 characters."))
-                                    .font(.system(size: FolioFontSize.small))
-                                    .foregroundStyle(Color.folioDanger)
-                            }
-                            Spacer()
-                            Text(String(localized: "\(trimmedContentCount)/100,000"))
-                                .font(.system(size: FolioFontSize.small))
-                                .foregroundStyle(trimmedContentCount > maximumContentLength ? Color.folioDanger : Color.folioInkSoft)
-                        }
-                    }
-                }
-
-                
-                if let error = viewModel.state.editError {
-                    Text(error)
-                        .font(.system(size: FolioFontSize.small))
-                        .foregroundStyle(Color.folioDanger)
-                }
-                
-                HStack(spacing: FolioSpacing.lg) {
-                    Button {
-                        focusedField = nil
-                        viewModel.send(.cancelEdit)
-                    } label: {
-                        Text(String(localized: "Cancel"))
-                            .font(.system(size: FolioFontSize.bodyLarge, weight: .medium))
-                            .foregroundStyle(Color.folioTextSecondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(.clear)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: FolioRadius.md)
-                                    .stroke(Color.folioBorder, lineWidth: 1)
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md))
-                    }
-                    .buttonStyle(.plain)
-                    
-                    FolioPrimaryButton(
-                        title: String(localized: "Save"),
-                        isLoading: viewModel.state.isEditing,
-                        isEnabled: trimmedTitleCount <= maximumTitleLength && trimmedAuthorCount <= maximumAuthorLength && trimmedContentCount <= maximumContentLength,
-                        verticalPadding: 16,
-                        action: {
-                            focusedField = nil
-                            viewModel.send(.editConfirmed)
-                        }
-                    )
-                }
-            }
-            .padding(.horizontal, FolioSpacing.xl3)
-            .padding(.bottom, FolioSpacing.lg)
-            .padding(.top, FolioSpacing.sm)
-            }
-        }
-        .scrollDismissesKeyboard(.interactively)
-        .presentationBackground(Color.folioHomeSheetBackground)
-        .presentationCornerRadius(FolioRadius.xl2)
-        .presentationDetents(viewModel.source?.sourceType == .manual ? [.height(580)] : [.height(315)])
-        .presentationDragIndicator(.visible)
-    }
-}
-
 
 
 #Preview {
