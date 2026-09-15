@@ -218,8 +218,9 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         // keeps running while the user adds another source; its completion
         // only refreshes the source list via onProcessingComplete.
         case .showAddForm:
+            let hasActiveTasks = uploadTask != nil || statusStreamTask != nil
             detachProcessingSession()
-            resetState()
+            if hasActiveTasks { resetState() }
         case .openSource: break
         case .openAsk: break
 

@@ -325,6 +325,23 @@ final class FolioAddSourceViewModelTests: XCTestCase {
         retryContinuation.finish()
     }
 
+    func testShowAddFormWithoutActiveTasksPreservesFormData() async {
+        let mock = MockUploadSourceUseCase()
+        let viewModel = makeViewModel(mock: mock)
+        viewModel.handle(.selectTab(.text))
+        viewModel.handle(.manualContentChanged("partial content"))
+        viewModel.handle(.manualTitleChanged("My Source"))
+
+        XCTAssertEqual(viewModel.state.manualContent, "partial content")
+        XCTAssertEqual(viewModel.state.manualTitle, "My Source")
+
+        viewModel.handle(.showAddForm)
+
+        XCTAssertEqual(viewModel.state.manualContent, "partial content")
+        XCTAssertEqual(viewModel.state.manualTitle, "My Source")
+        XCTAssertTrue(viewModel.state.isAddingNewSource)
+    }
+
     private func makeViewModel(mock: MockUploadSourceUseCase) -> FolioAddSourceViewModel {
         FolioAddSourceViewModel(uploadUseCase: mock, spaceId: "space-1")
     }
