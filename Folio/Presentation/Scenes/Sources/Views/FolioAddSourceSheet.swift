@@ -239,7 +239,10 @@ struct FolioAddSourceSheet: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(String(localized: "Article URL"))
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.folioHomeTypeTextText)
+                    .foregroundStyle(Color.folioHomeTypeTextText) +
+                Text("*")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(Color.folioDanger)
 
                 PlaceholderUITextField(
                     placeholder: String(localized: "https://example.org/care-technology-adoption"),
@@ -425,7 +428,10 @@ struct FolioAddSourceSheet: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(String(localized: "Content"))
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.folioHomeTypeTextText)
+                    .foregroundStyle(Color.folioHomeTypeTextText) +
+                Text("*")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(Color.folioDanger)
 
                 ZStack(alignment: .topLeading) {
                     if viewModel.state.manualContent.isEmpty {
