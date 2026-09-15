@@ -253,6 +253,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         case .dismissDeleteConfirmation: state.showDeleteConfirmation = false
 
         case .cancelProcessingTapped:
+            guard state.processingSourceID != nil else { return }
             state.showCancelProcessingConfirmation = true
         case .confirmCancelProcessing:
             state.showCancelProcessingConfirmation = false

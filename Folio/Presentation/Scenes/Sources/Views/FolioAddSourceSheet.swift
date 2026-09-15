@@ -30,8 +30,12 @@ struct FolioAddSourceSheet: View {
         return .height(staticHeight + contentHeight)
     }
 
+    private var isShowingAddForm: Bool {
+        viewModel.state.isAddingNewSource || !viewModel.state.isProcessing
+    }
+
     private var currentDetent: PresentationDetent {
-        viewModel.state.isAddingNewSource || !viewModel.state.isProcessing ? heightForTab(viewModel.state.selectedTab) : processingDetent
+        isShowingAddForm ? heightForTab(viewModel.state.selectedTab) : processingDetent
     }
 
     private var processingDetent: PresentationDetent {
@@ -45,7 +49,7 @@ struct FolioAddSourceSheet: View {
 
     var body: some View {
         Group {
-            if viewModel.state.isAddingNewSource || !viewModel.state.isProcessing {
+            if isShowingAddForm {
                 formView
             } else {
                 processingView
