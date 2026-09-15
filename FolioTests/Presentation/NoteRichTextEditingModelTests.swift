@@ -1,3 +1,4 @@
+import Combine
 import XCTest
 @testable import Folio
 
@@ -17,6 +18,24 @@ final class NoteRichTextEditingModelTests: XCTestCase {
 
         XCTAssertTrue(model.hasUnsavedChanges)
         XCTAssertEqual(model.contentForSave(fallback: "Answer\nLimitation: details"), model.serializedContent)
+    }
+
+    func testEquivalentSerializedContentDoesNotCountAsAnEditWhenAttributesDiffer() {
+        let initialText = NSAttributedString(string: "Answer")
+        let initialHTML = FolioRichTextEditor.htmlFromAttributedText(initialText)
+        let normalizedText = FolioRichTextEditor.attributedTextFromHTML(initialHTML)
+        XCTAssertNotEqual(initialText, normalizedText)
+        XCTAssertEqual(FolioRichTextEditor.htmlFromAttributedText(normalizedText), initialHTML)
+
+        let model = NoteRichTextEditingModel(
+            attributedText: initialText,
+            publishingHTML: { _ in }
+        )
+
+        model.textChanged(normalizedText)
+
+        XCTAssertFalse(model.hasUnsavedChanges)
+        XCTAssertEqual(model.contentForSave(fallback: "original content"), "original content")
     }
 
     func testTextChangePublishesHTML() {
@@ -56,6 +75,23 @@ final class NoteRichTextEditingModelTests: XCTestCase {
         model.textChanged(editedText)
 
         XCTAssertEqual(publishedHTML, FolioRichTextEditor.htmlFromAttributedText(editedText))
+    }
+
+    func testTextChangeDoesNotRepublishIdenticalBindingValue() {
+        let model = NoteRichTextEditingModel(
+            attributedText: NSAttributedString(string: ""),
+            publishingHTML: { _ in }
+        )
+        let editedText = NSAttributedString(string: "Content")
+        var bindingUpdates = 0
+        let subscription = model.$attributedText
+            .sink { _ in bindingUpdates += 1 }
+
+        model.attributedText = editedText
+        model.textChanged(editedText)
+
+        XCTAssertEqual(bindingUpdates, 2)
+        withExtendedLifetime(subscription) {}
     }
 
     func testLinkPromptRequiresSelectionAndValidatesURL() {

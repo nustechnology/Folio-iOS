@@ -481,7 +481,6 @@ final class FolioAskViewModel: ViewModelProtocol {
                 Logger.error("Failed to save as note: \(error)")
                 state.savingMessageID = nil
                 saveError = String(localized: "Failed to save as note. Please try again.")
-                toastMessage = .error(saveError ?? String(localized: "Failed to save as note. Please try again."))
             }
         }
     }

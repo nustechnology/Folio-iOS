@@ -48,7 +48,11 @@ struct SaveAskNoteSheet: View {
             onContentEditingEnded: {},
             onSave: { _ in onSubmit(contentForSave) },
             onCancel: onCancel,
-            onDiscardConfirmed: onCancel
+            onDiscardConfirmed: onCancel,
+            contentPresentation: .readOnly,
+            displayContent: draft.initialContent,
+            contentBackgroundColor: .folioHomeReadOnlyFieldBackground,
+            usesDynamicSheetHeight: true
         )
     }
 
@@ -60,11 +64,11 @@ struct SaveAskNoteSheet: View {
     }
 
     private var hasUnsavedChanges: Bool {
-        draft.title != draft.initialTitle || editingModel.hasUnsavedChanges
+        draft.title != draft.initialTitle
     }
 
     private var contentForSave: String {
-        editingModel.contentForSave(fallback: draft.initialContent)
+        draft.initialContent
     }
 
     private var validation: NoteValidationResult {

@@ -380,6 +380,7 @@ final class FolioAskViewModelTests: XCTestCase {
 
         XCTAssertEqual(vm.saveDraft?.content, "<p>Edited answer</p>")
         XCTAssertNotNil(vm.saveError)
+        XCTAssertNil(vm.toastMessage)
         XCTAssertFalse(vm.state.messages.last?.isSavedAsNote == true)
     }
 

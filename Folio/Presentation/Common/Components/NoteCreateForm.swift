@@ -1,5 +1,10 @@
 import SwiftUI
 
+enum NoteContentPresentation {
+    case editable
+    case readOnly
+}
+
 struct NoteCreateForm: View {
     @ObservedObject var editingModel: NoteRichTextEditingModel
     @Binding var title: String
@@ -14,31 +19,20 @@ struct NoteCreateForm: View {
     let onSave: (String) -> Void
     let onCancel: () -> Void
     let onDiscardConfirmed: () -> Void
+    var contentPresentation: NoteContentPresentation = .editable
+    var displayContent: String? = nil
+    var contentBackgroundColor: Color = .folioSurfaceStrong
+    var usesDynamicSheetHeight = false
+    var showsValidationErrors = true
 
     @State private var toast: ToastMessage?
     @State private var isDiscardConfirmationPresented = false
+    @State private var headerHeight: CGFloat = 0
+    @State private var sheetHeight: CGFloat = 0
 
     var body: some View {
         VStack(spacing: 0) {
-            RoundedRectangle(cornerRadius: FolioRadius.handle)
-                .fill(Color.folioHomeSheetHandle)
-                .frame(width: FolioSize.dragHandleW, height: FolioRadius.handle * 2)
-                .padding(.top, FolioSpacing.sm)
-                .padding(.bottom, FolioSpacing.xl2)
-
-            VStack(alignment: .leading, spacing: FolioSpacing.sm) {
-                Text(heading)
-                    .font(.custom("CormorantGaramond-Medium", size: FolioFontSize.heading))
-                    .foregroundStyle(Color.folioInk)
-
-                Text(explanation)
-                    .font(.system(size: FolioFontSize.bodySmall))
-                    .foregroundStyle(Color.folioInkMuted)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, FolioSpacing.xl3)
-            .padding(.bottom, FolioSpacing.xl3)
+            header
 
             ScrollView {
                 VStack(alignment: .leading, spacing: FolioSpacing.lg) {
@@ -47,7 +41,7 @@ struct NoteCreateForm: View {
                         placeholder: String(localized: "Untitled Note"),
                         text: $title,
                         style: .singleLine,
-                        error: validation.titleError?.localizedMessage
+                        error: showsValidationErrors ? validation.titleError?.localizedMessage : nil
                     )
                     .disabled(isSaving)
 
@@ -68,7 +62,7 @@ struct NoteCreateForm: View {
                             .foregroundStyle(Color.folioDanger)
                     }
 
-                    if let contentError = validation.contentError?.localizedMessage {
+                    if showsValidationErrors, let contentError = validation.contentError?.localizedMessage {
                         Text(contentError)
                             .font(.system(size: FolioFontSize.caption2))
                             .foregroundStyle(Color.folioDanger)
@@ -80,55 +74,14 @@ struct NoteCreateForm: View {
                             .foregroundStyle(Color.folioDanger)
                     }
 
-                    ZStack(alignment: .top) {
-                        FolioRichTextEditor(
-                            attributedText: $editingModel.attributedText,
-                            selectedRange: $editingModel.selectedRange,
-                            typingAttributes: $editingModel.typingAttributes,
-                            onTextChange: editingModel.textChanged,
-                            onEditingChanged: { isEditing in
-                                if !isEditing { onContentEditingEnded() }
-                            },
-                            textContainerTopInset: 48
-                        )
-
-                        if editingModel.attributedText.string.isEmpty {
-                            Text(String(localized: "What stood out, and why does it matter for this research?"))
-                                .font(.system(size: 14))
-                                .foregroundStyle(Color.folioInkSoft.opacity(0.6))
-                                .frame(maxWidth: .infinity, alignment: .topLeading)
-                                .padding(.top, 48)
-                                .padding(.horizontal, 16)
-                                .allowsHitTesting(false)
-                        }
-
-                        RichTextToolbar(
-                            onBold: { editingModel.applyTrait(.traitBold) },
-                            onItalic: { editingModel.applyTrait(.traitItalic) },
-                            onHeading1: { editingModel.applyHeading(FolioRichTextFormat.heading1FontSize) },
-                            onHeading2: { editingModel.applyHeading(FolioRichTextFormat.heading2FontSize) },
-                            onHeading3: { editingModel.applyHeading(FolioRichTextFormat.heading3FontSize) },
-                            onUnorderedList: { editingModel.applyList(ordered: false) },
-                            onOrderedList: { editingModel.applyList(ordered: true) },
-                            onBlockquote: editingModel.applyBlockquote,
-                            onHyperlink: presentLinkPrompt,
-                            onUndo: {},
-                            onRedo: {},
-                            canUndo: false,
-                            canRedo: false,
-                            saveStatus: .saved,
-                            configuration: .notes,
-                            activeFormats: editingModel.toolbarActiveFormats,
-                            isEmbedded: true
-                        )
-                    }
+                    contentView
                     .frame(minHeight: Constants.contentMinHeight, maxHeight: Constants.contentMaxHeight)
-                    .background(Color.folioSurfaceStrong)
+                    .background(contentBackgroundColor)
                     .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: FolioRadius.md, style: .continuous)
                             .stroke(
-                                contentError == nil ? Color.folioFieldBorder : Color.folioDanger,
+                                contentBorderColor,
                                 lineWidth: 1
                             )
                     )
@@ -149,13 +102,31 @@ struct NoteCreateForm: View {
                 }
                 .padding(.horizontal, FolioSpacing.xl3)
                 .padding(.bottom, FolioSpacing.xl)
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onChange(of: proxy.size.height, initial: true) { _, newHeight in
+                                guard SheetHeightMeasurement.needsUpdate(
+                                    current: sheetHeight,
+                                    measured: newHeight
+                                ) else { return }
+                                sheetHeight = newHeight
+                            }
+                    }
+                }
             }
         }
         .background(Color.folioHomeSheetBackground)
         .dismissKeyboardOnTapOutside()
         .presentationBackground(Color.folioHomeSheetBackground)
         .presentationCornerRadius(FolioRadius.xl2)
-        .folioDynamicSheet(minHeight: FolioSize.noteCreateSheetMinH, maxHeight: FolioSize.noteCreateSheetMaxH)
+        .noteCreateSheetDetents(
+            isDynamic: usesDynamicSheetHeight,
+            headerHeight: headerHeight,
+            contentHeight: sheetHeight,
+            minHeight: FolioSize.noteCreateSheetMinH,
+            maxHeight: FolioSize.noteCreateSheetMaxH
+        )
         .presentationDragIndicator(.hidden)
         .interceptInteractiveDismiss(
             isBlocked: isSaving || hasUnsavedChanges,
@@ -187,6 +158,42 @@ struct NoteCreateForm: View {
         }
     }
 
+    private var header: some View {
+        VStack(spacing: 0) {
+            RoundedRectangle(cornerRadius: FolioRadius.handle)
+                .fill(Color.folioHomeSheetHandle)
+                .frame(width: FolioSize.dragHandleW, height: FolioRadius.handle * 2)
+                .padding(.top, FolioSpacing.sm)
+                .padding(.bottom, FolioSpacing.xl2)
+
+            VStack(alignment: .leading, spacing: FolioSpacing.sm) {
+                Text(heading)
+                    .font(.custom("CormorantGaramond-Medium", size: FolioFontSize.heading))
+                    .foregroundStyle(Color.folioInk)
+
+                Text(explanation)
+                    .font(.system(size: FolioFontSize.bodySmall))
+                    .foregroundStyle(Color.folioInkMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, FolioSpacing.xl3)
+            .padding(.bottom, FolioSpacing.xl3)
+        }
+        .background {
+            GeometryReader { proxy in
+                Color.clear
+                    .onChange(of: proxy.size.height, initial: true) { _, newHeight in
+                        guard SheetHeightMeasurement.needsUpdate(
+                            current: headerHeight,
+                            measured: newHeight
+                        ) else { return }
+                        headerHeight = newHeight
+                    }
+            }
+        }
+    }
+
     private var actionButtons: some View {
         HStack(spacing: FolioSpacing.lg) {
             FolioSecondaryButton(
@@ -215,12 +222,80 @@ struct NoteCreateForm: View {
         editingModel.serializedContent
     }
 
+    @ViewBuilder
+    private var contentView: some View {
+        switch contentPresentation {
+        case .editable:
+            ZStack(alignment: .top) {
+                FolioRichTextEditor(
+                    attributedText: $editingModel.attributedText,
+                    selectedRange: $editingModel.selectedRange,
+                    typingAttributes: $editingModel.typingAttributes,
+                    onTextChange: editingModel.textChanged,
+                    onEditingChanged: { isEditing in
+                        if !isEditing { onContentEditingEnded() }
+                    },
+                    textContainerTopInset: 48
+                )
+
+                if editingModel.attributedText.string.isEmpty {
+                    Text(String(localized: "What stood out, and why does it matter for this research?"))
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.folioInkSoft.opacity(0.6))
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .padding(.top, 48)
+                        .padding(.horizontal, 16)
+                        .allowsHitTesting(false)
+                }
+
+                RichTextToolbar(
+                    onBold: { editingModel.applyTrait(.traitBold) },
+                    onItalic: { editingModel.applyTrait(.traitItalic) },
+                    onHeading1: { editingModel.applyHeading(FolioRichTextFormat.heading1FontSize) },
+                    onHeading2: { editingModel.applyHeading(FolioRichTextFormat.heading2FontSize) },
+                    onHeading3: { editingModel.applyHeading(FolioRichTextFormat.heading3FontSize) },
+                    onUnorderedList: { editingModel.applyList(ordered: false) },
+                    onOrderedList: { editingModel.applyList(ordered: true) },
+                    onBlockquote: editingModel.applyBlockquote,
+                    onHyperlink: presentLinkPrompt,
+                    onUndo: {},
+                    onRedo: {},
+                    canUndo: false,
+                    canRedo: false,
+                    saveStatus: .saved,
+                    configuration: .notes,
+                    activeFormats: editingModel.toolbarActiveFormats,
+                    isEmbedded: true
+                )
+            }
+        case .readOnly:
+            ScrollView {
+                Text(AttributedString(FolioRichTextEditor.attributedTextFromHTML(displayContent ?? serializedContent)))
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.folioInk)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .padding(16)
+            }
+            .scrollIndicators(.hidden)
+        }
+    }
+
     private var plainText: String {
         editingModel.plainText
     }
 
     private var contentError: String? {
-        validation.contentError?.localizedMessage
+        showsValidationErrors ? validation.contentError?.localizedMessage : nil
+    }
+
+    private var contentBorderColor: Color {
+        guard contentError == nil else { return Color.folioDanger }
+        switch contentPresentation {
+        case .editable:
+            return Color.folioFieldBorder
+        case .readOnly:
+            return Color.folioLine.opacity(0.75)
+        }
     }
 
     private func requestDismissal() {
@@ -240,6 +315,46 @@ struct NoteCreateForm: View {
 
     private enum Constants {
         static let contentMinHeight: CGFloat = 160
-        static let contentMaxHeight: CGFloat = 240
+        static let contentMaxHeight: CGFloat = 440
+    }
+}
+
+private struct NoteCreateSheetDetentsModifier: ViewModifier {
+    let isDynamic: Bool
+    let headerHeight: CGFloat
+    let contentHeight: CGFloat
+    let minHeight: CGFloat
+    let maxHeight: CGFloat
+
+    func body(content: Content) -> some View {
+        if isDynamic {
+            content.presentationDetents(
+                headerHeight > 0 && contentHeight > 0
+                    ? [.height(min(max(headerHeight + contentHeight, minHeight), maxHeight)), .large]
+                    : [.medium, .large]
+            )
+        } else {
+            content.folioDynamicSheet(minHeight: minHeight, maxHeight: maxHeight)
+        }
+    }
+}
+
+private extension View {
+    func noteCreateSheetDetents(
+        isDynamic: Bool,
+        headerHeight: CGFloat,
+        contentHeight: CGFloat,
+        minHeight: CGFloat,
+        maxHeight: CGFloat
+    ) -> some View {
+        modifier(
+            NoteCreateSheetDetentsModifier(
+                isDynamic: isDynamic,
+                headerHeight: headerHeight,
+                contentHeight: contentHeight,
+                minHeight: minHeight,
+                maxHeight: maxHeight
+            )
+        )
     }
 }

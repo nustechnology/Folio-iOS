@@ -29,7 +29,9 @@ struct NoteCreateView: View {
             onContentEditingEnded: { viewModel.handle(.createContentEditingEnded) },
             onSave: { _ in viewModel.handle(.createSaveTapped) },
             onCancel: { viewModel.handle(.createCancelTapped) },
-            onDiscardConfirmed: { viewModel.handle(.createDiscardConfirmed) }
+            onDiscardConfirmed: { viewModel.handle(.createDiscardConfirmed) },
+            showsValidationErrors: viewModel.state.createTitleError != nil
+                || viewModel.state.createContentError != nil
         )
         .onAppear {
             editingModel.attributedText = FolioRichTextEditor.attributedTextFromHTML(viewModel.state.createContent)

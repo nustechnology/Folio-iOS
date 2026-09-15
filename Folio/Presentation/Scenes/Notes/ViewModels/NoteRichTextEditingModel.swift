@@ -11,7 +11,7 @@ final class NoteRichTextEditingModel: ObservableObject {
             plainText = NoteLimits.plainText(from: serializedContent)
         }
     }
-    private let initialAttributedText: NSAttributedString
+    private let initialSerializedContent: String
     private(set) var serializedContent: String
     private(set) var plainText: String
     @Published var selectedRange = NSRange(location: 0, length: 0)
@@ -25,7 +25,7 @@ final class NoteRichTextEditingModel: ObservableObject {
 
     init(attributedText: NSAttributedString, publishingHTML: @escaping (String) -> Void) {
         let serializedContent = FolioRichTextEditor.htmlFromAttributedText(attributedText)
-        self.initialAttributedText = attributedText
+        self.initialSerializedContent = serializedContent
         self.attributedText = attributedText
         self.serializedContent = serializedContent
         self.plainText = NoteLimits.plainText(from: serializedContent)
@@ -33,7 +33,7 @@ final class NoteRichTextEditingModel: ObservableObject {
     }
 
     var hasUnsavedChanges: Bool {
-        attributedText != initialAttributedText
+        serializedContent != initialSerializedContent
     }
 
     func contentForSave(fallback: String) -> String {
@@ -60,7 +60,9 @@ final class NoteRichTextEditingModel: ObservableObject {
     }
 
     func textChanged(_ value: NSAttributedString) {
-        attributedText = value
+        if attributedText != value {
+            attributedText = value
+        }
         publishContent()
     }
 
