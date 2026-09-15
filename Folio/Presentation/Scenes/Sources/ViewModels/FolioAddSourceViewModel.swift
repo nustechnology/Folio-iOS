@@ -117,6 +117,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         deleteTask?.cancel()
         for task in detachedUploadTasks.values { task.cancel() }
         for task in detachedStatusTasks.values { task.cancel() }
+        formScopedURL?.stopAccessingSecurityScopedResource()
         for url in detachedScopedURLs.values { url.stopAccessingSecurityScopedResource() }
     }
 
@@ -363,7 +364,6 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         let stream = uploadUseCase.sourceStatusStream()
 
         let task = Task { [weak self] in
-            guard let self else { return }
             var receivedTerminalEvent = false
             do {
                 for try await event in stream {
@@ -374,11 +374,13 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
                         receivedTerminalEvent = true
                     }
 
+                    guard let self else { return }
                     if session == self.activeSessionID {
                         self.applyStatusEvent(event)
-                    } else if event.state == "ready" || event.state == "failed" {
+                    } else if receivedTerminalEvent {
                         self.onProcessingComplete?(source.withProcessingState(event.state == "ready" ? .ready : .failed))
-                        break
+                        self.detachedStatusTasks[session] = nil
+                        return
                     }
                 }
             } catch {
@@ -386,6 +388,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
                     Logger.debug("SSE stream ended: \(error)")
                 }
             }
+            guard let self else { return }
             if !receivedTerminalEvent, !Task.isCancelled, session == self.activeSessionID {
                 self.finishProcessing(success: false)
             }
@@ -525,7 +528,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     }
 
     private func deleteSource(id: String, shouldDismiss: Bool) {
-        dismissAfterDelete = shouldDismiss
+        dismissAfterDelete = dismissAfterDelete || shouldDismiss
         guard deleteTask == nil else { return }
         deleteTask = Task { [weak self] in
             guard let self else { return }
