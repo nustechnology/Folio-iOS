@@ -558,7 +558,11 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             do {
                 try await self.uploadUseCase.deleteSource(id: id)
                 let shouldDismiss = self.pendingDismissDeletes.remove(id) != nil
-                self.finishDelete(id: id, shouldDismiss: shouldDismiss)
+                if self.state.processingSourceID == id {
+                    self.finishDelete(id: id, shouldDismiss: shouldDismiss)
+                } else if shouldDismiss {
+                    self.state.shouldDismiss = true
+                }
             } catch {
                 self.pendingDismissDeletes.remove(id)
                 if self.state.processingSourceID == id {
@@ -579,6 +583,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     private func resetState() { stopFileAccess(); state = State() }
 
     private func resetProcessingState() {
+        stopFileAccess()
         state.isAddingNewSource = true
         state.isProcessing = false
         state.isProcessingComplete = false
@@ -594,6 +599,11 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         state.showDeleteConfirmation = false
         state.showCancelProcessingConfirmation = false
         state.shouldDismiss = false
+        state.selectedFileURL = nil
+        state.selectedFileName = ""
+        state.selectedFileSize = 0
+        state.selectedFilePageCount = nil
+        state.fileError = nil
     }
 
     private func loadPageCount(for url: URL) {

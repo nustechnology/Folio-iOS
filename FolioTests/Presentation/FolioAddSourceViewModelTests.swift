@@ -360,6 +360,54 @@ final class FolioAddSourceViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.state.isProcessingComplete)
     }
 
+    func testShowAddFormAfterFileUploadClearsFileSelection() async {
+        let mock = MockUploadSourceUseCase()
+        mock.uploadResults = [.success(makeSource(id: "s1", state: .ready))]
+        let completed = expectation(description: "completed")
+        let viewModel = makeViewModel(mock: mock)
+        viewModel.onProcessingComplete = { _ in completed.fulfill() }
+
+        let testURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("test.pdf")
+        try? "test".data(using: .utf8)?.write(to: testURL)
+        viewModel.handle(.selectTab(.files))
+        viewModel.handle(.fileSelected(testURL))
+        viewModel.handle(.addSource)
+        await fulfillment(of: [completed], timeout: 1)
+
+        viewModel.handle(.showAddForm)
+
+        XCTAssertNil(viewModel.state.selectedFileURL)
+        XCTAssertTrue(viewModel.state.selectedFileName.isEmpty)
+        XCTAssertEqual(viewModel.state.selectedFileSize, 0)
+        XCTAssertNil(viewModel.state.selectedFilePageCount)
+    }
+
+    func testDeleteDismissIntentSurvivesShowAddForm() async {
+        let mock = MockUploadSourceUseCase()
+        mock.uploadResults = [.success(makeSource(id: "s1", state: .added))]
+        mock.suspendDeletes = true
+        let streamStarted = expectation(description: "stream started")
+        mock.onStatusStream = { streamStarted.fulfill() }
+
+        let viewModel = makeViewModel(mock: mock)
+        submitManualSource(viewModel)
+        await fulfillment(of: [streamStarted], timeout: 1)
+
+        let deleted = expectation(description: "deleted")
+        mock.onDelete = { deleted.fulfill() }
+        viewModel.handle(.deleteSourceTapped)
+        viewModel.handle(.deleteSourceConfirmed)
+        await fulfillment(of: [deleted], timeout: 1)
+
+        viewModel.handle(.showAddForm)
+        XCTAssertTrue(viewModel.state.isAddingNewSource)
+
+        mock.resumeDeletes()
+        await waitUntil { viewModel.state.shouldDismiss }
+
+        XCTAssertTrue(viewModel.state.shouldDismiss)
+    }
+
     private func makeViewModel(mock: MockUploadSourceUseCase) -> FolioAddSourceViewModel {
         FolioAddSourceViewModel(uploadUseCase: mock, spaceId: "space-1")
     }
@@ -429,7 +477,13 @@ private final class MockUploadSourceUseCase: UploadSourceUseCaseProtocol {
     private var retryContinuations: [CheckedContinuation<Void, Never>] = []
 
     func uploadFile(spaceId: String, fileURL: URL, title: String?, author: String?) async throws -> Source {
-        throw CancellationError()
+        onUploadManual?()
+        guard !uploadResults.isEmpty else { throw CancellationError() }
+        let result = uploadResults.removeFirst()
+        if suspendUploads {
+            await withCheckedContinuation { uploadContinuations.append($0) }
+        }
+        return try result.get()
     }
 
     func uploadWeb(spaceId: String, url: String, title: String?, author: String?) async throws -> Source {
