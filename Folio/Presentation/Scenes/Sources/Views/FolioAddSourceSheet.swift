@@ -536,7 +536,7 @@ struct FolioAddSourceSheet: View {
                     if viewModel.state.isProcessingFailed {
                         failureBanner
                         failureActions
-                    } else if !viewModel.state.isProcessingComplete {
+                    } else if !viewModel.state.isProcessingComplete, viewModel.canCancelProcessing {
                         Button {
                             viewModel.handle(.cancelProcessingTapped)
                         } label: {

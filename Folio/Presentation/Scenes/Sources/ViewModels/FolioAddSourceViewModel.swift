@@ -128,6 +128,10 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         }
     }
 
+    var canCancelProcessing: Bool {
+        state.processingSourceID != nil
+    }
+
     private var validWebURL: Bool {
         guard !state.webURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
         guard let url = URL(string: state.webURL.trimmingCharacters(in: .whitespacesAndNewlines)),
@@ -256,7 +260,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         case .dismissDeleteConfirmation: state.showDeleteConfirmation = false
 
         case .cancelProcessingTapped:
-            guard state.processingSourceID != nil else { return }
+            guard canCancelProcessing else { return }
             state.showCancelProcessingConfirmation = true
         case .confirmCancelProcessing:
             state.showCancelProcessingConfirmation = false
