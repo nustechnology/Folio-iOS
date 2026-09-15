@@ -114,7 +114,6 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     deinit {
         uploadTask?.cancel()
         statusStreamTask?.cancel()
-        for task in deleteTasks.values { task.cancel() }
         for task in detachedUploadTasks.values { task.cancel() }
         for task in detachedStatusTasks.values { task.cancel() }
         formScopedURL?.stopAccessingSecurityScopedResource()
@@ -234,8 +233,12 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
                     guard !Task.isCancelled else { return }
                     self.beginProcessing(session: session, source: source)
                 } catch {
-                    guard session == self.activeSessionID, !Task.isCancelled else { return }
-                    self.state.submitError = error.localizedDescription
+                    guard !Task.isCancelled else { return }
+                    if session == self.activeSessionID {
+                        self.state.submitError = error.localizedDescription
+                    } else {
+                        self.onProcessingFailed?(error.localizedDescription)
+                    }
                 }
             }
 
@@ -525,6 +528,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         uploadTask?.cancel(); uploadTask = nil
         statusStreamTask?.cancel(); statusStreamTask = nil
         activeSessionID = nil
+        state.isSubmitting = false
         stopFileAccess()
     }
 

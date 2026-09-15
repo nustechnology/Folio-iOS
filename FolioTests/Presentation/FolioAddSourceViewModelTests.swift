@@ -228,6 +228,27 @@ final class FolioAddSourceViewModelTests: XCTestCase {
         await waitUntil { viewModel.state.isAddingNewSource }
     }
 
+    func testDetachedRetryFailureReportsThroughCallback() async {
+        let mock = MockUploadSourceUseCase()
+        mock.uploadResults = [.success(makeSource(id: "s1", state: .failed))]
+        mock.retryResults = [.failure(URLError(.timedOut))]
+        mock.suspendRetries = true
+        let viewModel = makeViewModel(mock: mock)
+        submitManualSource(viewModel)
+        await waitUntil { viewModel.state.isProcessingFailed }
+
+        let retryStarted = expectation(description: "retry started")
+        mock.onRetrySource = { retryStarted.fulfill() }
+        let failed = expectation(description: "retry failure")
+        viewModel.onProcessingFailed = { _ in failed.fulfill() }
+        viewModel.handle(.retryProcessing)
+        await fulfillment(of: [retryStarted], timeout: 1)
+
+        viewModel.handle(.showAddForm)
+        mock.resumeRetries()
+        await fulfillment(of: [failed], timeout: 1)
+    }
+
     func testRetryReusesActiveSessionAndStartsProcessing() async {
         let mock = MockUploadSourceUseCase()
         let (retryStream, retryContinuation) = AsyncThrowingStream<SourceStatusEvent, Error>.makeStream()
@@ -311,12 +332,14 @@ private final class MockUploadSourceUseCase: UploadSourceUseCaseProtocol {
     private(set) var retryCount = 0
     var suspendDeletes = false
     var suspendUploads = false
+    var suspendRetries = false
     var onUploadManual: (() -> Void)?
     var onDelete: (() -> Void)?
     var onRetrySource: (() -> Void)?
     var onStatusStream: (() -> Void)?
     private var deleteContinuations: [CheckedContinuation<Void, Never>] = []
     private var uploadContinuations: [CheckedContinuation<Void, Never>] = []
+    private var retryContinuations: [CheckedContinuation<Void, Never>] = []
 
     func uploadFile(spaceId: String, fileURL: URL, title: String?, author: String?) async throws -> Source {
         throw CancellationError()
@@ -348,7 +371,11 @@ private final class MockUploadSourceUseCase: UploadSourceUseCaseProtocol {
         retryCount += 1
         onRetrySource?()
         guard !retryResults.isEmpty else { throw CancellationError() }
-        return try retryResults.removeFirst().get()
+        let result = retryResults.removeFirst()
+        if suspendRetries {
+            await withCheckedContinuation { retryContinuations.append($0) }
+        }
+        return try result.get()
     }
 
     func sourceStatusStream() -> AsyncThrowingStream<SourceStatusEvent, Error> {
@@ -365,5 +392,10 @@ private final class MockUploadSourceUseCase: UploadSourceUseCaseProtocol {
     func resumeUploads() {
         uploadContinuations.forEach { $0.resume() }
         uploadContinuations.removeAll()
+    }
+
+    func resumeRetries() {
+        retryContinuations.forEach { $0.resume() }
+        retryContinuations.removeAll()
     }
 }
