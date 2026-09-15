@@ -80,7 +80,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         case selectTab(AddSourceTab), fileSelected(URL?), removeFile
         case webURLChanged(String), webTitleChanged(String), webAuthorChanged(String)
         case manualTitleChanged(String), manualAuthorChanged(String), manualContentChanged(String)
-        case addSource, dismissProcessing, openSource, openAsk, showAddForm
+        case addSource, openSource, openAsk, showAddForm
         case retryProcessing, deleteSourceTapped, deleteSourceConfirmed, dismissDeleteConfirmation
         case cancelProcessingTapped, confirmCancelProcessing, dismissCancelProcessing
     }
@@ -116,6 +116,8 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         statusStreamTask?.cancel()
         for task in detachedUploadTasks.values { task.cancel() }
         for task in detachedStatusTasks.values { task.cancel() }
+        for task in deleteTasks.values { task.cancel() }
+        pageCountTask?.cancel()
         formScopedURL?.stopAccessingSecurityScopedResource()
         for url in detachedScopedURLs.values { url.stopAccessingSecurityScopedResource() }
     }
@@ -212,7 +214,6 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
                 await self?.performUpload(session: session)
             }
 
-        case .dismissProcessing: stopProcessing(); resetState()
         // Detaches instead of cancelling, so a previously in-flight upload
         // keeps running while the user adds another source; its completion
         // only refreshes the source list via onProcessingComplete.
