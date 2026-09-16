@@ -52,20 +52,14 @@ struct FolioSourceReaderView: View {
                             }
                         }) }
                     )
-                    ScrollView {
-                        contentCard
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    scrollableContentCard
                 }
             } else if viewModel.state.errorMessage == nil {
                 FolioSourceReaderSkeletonView(onBack: onBack)
             } else {
                 VStack(spacing: 0) {
                     FolioSourceReaderSkeletonHeader(onBack: onBack)
-                    ScrollView {
-                        contentCard
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    scrollableContentCard
                 }
             }
         }
@@ -199,7 +193,14 @@ struct FolioSourceReaderView: View {
     }
     
     // MARK: - Content
-    
+
+    private var scrollableContentCard: some View {
+        ScrollView {
+            contentCard
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     private var contentCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let error = viewModel.state.errorMessage {

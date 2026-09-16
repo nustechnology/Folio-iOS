@@ -8,8 +8,8 @@ struct FolioAddSourceSheet: View {
         var body: some View {
             Text(titleKey)
                 .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(Color.folioHomeTypeTextText)
-            + Text(" *")
+                .foregroundColor(Color.folioHomeTypeTextText)
+            + Text(" " + String(localized: "*"))
                 .font(.system(size: 14, weight: .regular))
                 .foregroundColor(Color.folioDanger)
         }
