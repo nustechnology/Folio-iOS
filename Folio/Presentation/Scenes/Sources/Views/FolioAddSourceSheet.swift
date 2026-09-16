@@ -6,12 +6,14 @@ struct FolioAddSourceSheet: View {
     private struct RequiredFieldLabel: View {
         let titleKey: LocalizedStringKey
         var body: some View {
-            Text(titleKey)
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(Color.folioHomeTypeTextText)
-            + Text(" " + String(localized: "*"))
-                .font(.system(size: 14, weight: .regular))
-                .foregroundColor(Color.folioDanger)
+            HStack(spacing: 0) {
+                Text(titleKey)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(Color.folioHomeTypeTextText)
+                Text(" " + String(localized: "*"))
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(Color.folioDanger)
+            }
         }
     }
 
