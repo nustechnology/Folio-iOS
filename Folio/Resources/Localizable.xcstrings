@@ -5896,6 +5896,23 @@
           }
         }
       }
+    },
+    ", required" : {
+      "comment" : "Accessibility suffix appended to required field labels.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ", required"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ", bắt buộc"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

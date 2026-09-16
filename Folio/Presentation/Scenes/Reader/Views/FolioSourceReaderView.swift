@@ -197,8 +197,16 @@ struct FolioSourceReaderView: View {
     private var scrollableContentCard: some View {
         ScrollView {
             contentCard
-                .fixedSize(horizontal: false, vertical: true)
         }
+        .background(Color.folioSurfaceStrong)
+        .clipShape(UnevenRoundedRectangle(
+            topLeadingRadius: 16,
+            bottomLeadingRadius: 0,
+            bottomTrailingRadius: 0,
+            topTrailingRadius: 16
+        ))
+        .padding(.horizontal, 18)
+        .ignoresSafeArea(edges: .bottom)
     }
 
     private var contentCard: some View {
@@ -236,9 +244,6 @@ struct FolioSourceReaderView: View {
         .padding(.horizontal, 16)
         .padding(.top, 16)
         .padding(.bottom, 32)
-        .background(Color.folioSurfaceStrong)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .padding(.horizontal, 18)
     }
     
     // MARK: - Sheets
