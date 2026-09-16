@@ -16,7 +16,7 @@ struct FolioAddSourceSheet: View {
                     .accessibilityHidden(true)
             }
             .accessibilityAddTraits(.isStaticText)
-            .accessibilityLabel(Text(titleKey) + Text(", required"))
+            .accessibilityLabel(Text("\(titleKey), required"))
         }
     }
 
