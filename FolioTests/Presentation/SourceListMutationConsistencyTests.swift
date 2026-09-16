@@ -139,6 +139,15 @@ final class SourceListMutationConsistencyTests: XCTestCase {
         XCTAssertNotNil(viewModel.state.toastMessage)
     }
 
+    func testSourceOperationFailedShowsErrorToast() {
+        let viewModel = makeViewModel(fetch: FailingFetchSourcesUseCase())
+
+        viewModel.send(.sourceOperationFailed("Operation failed"))
+
+        XCTAssertEqual(viewModel.state.toastMessage?.style, .error)
+        XCTAssertEqual(viewModel.state.toastMessage?.text, "Operation failed")
+    }
+
     func testSourceStatusChangedUpdatesListEntry() async {
         let processing = source(id: "proc", title: "Processing", state: .added)
         let fetch = GatedFetchSourcesUseCase(results: [SourceListResult(sources: [processing], pagination: nil)])
