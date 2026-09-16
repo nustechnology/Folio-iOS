@@ -48,6 +48,9 @@ struct SourceListView: View {
                 vm.onProcessingComplete = { [weak viewModel] _ in
                     viewModel?.send(.sourceUploaded)
                 }
+                vm.onSourceOperationFailed = { [weak viewModel] message in
+                    viewModel?.send(.sourceOperationFailed(message))
+                }
                 addSourceViewModel = vm
             }
         }
@@ -58,6 +61,11 @@ struct SourceListView: View {
             }
         )) { sheet in
             sheetContent(sheet)
+        }
+        .onChange(of: viewModel.state.presentedSheet) { _, sheet in
+            if case .addSource = sheet {
+                addSourceViewModel?.handle(.showAddForm)
+            }
         }
         .sheet(item: $actionSheetSource) { source in
             SourceActionSheet(
