@@ -5897,19 +5897,19 @@
         }
       }
     },
-    "%@, required" : {
-      "comment" : "Accessibility label for required fields. The %@ is replaced with the field name.",
+    ", required" : {
+      "comment" : "Accessibility suffix appended to required field labels.",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@, required"
+            "value" : ", required"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@, bắt buộc"
+            "value" : ", bắt buộc"
           }
         }
       }
