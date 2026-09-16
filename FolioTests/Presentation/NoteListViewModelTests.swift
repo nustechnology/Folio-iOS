@@ -146,6 +146,45 @@ final class NoteListViewModelTests: XCTestCase {
         )
     }
 
+    func testNoteValidationCatalogEntriesHaveEnglishAndVietnameseTranslations() throws {
+        let catalogURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Folio/Resources/Localizable.xcstrings")
+        let catalog = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try Data(contentsOf: catalogURL)) as? [String: Any]
+        )
+        let strings = try XCTUnwrap(catalog["strings"] as? [String: Any])
+
+        let expectedTranslations = [
+            "Title cannot exceed %lld characters": [
+                "en": "Title cannot exceed %lld characters",
+                "vi": "Tiêu đề không được vượt quá %lld ký tự"
+            ],
+            "Content exceeds maximum size of %@ bytes": [
+                "en": "Content exceeds maximum size of %@ bytes",
+                "vi": "Nội dung vượt quá kích thước tối đa %@ byte"
+            ],
+            "Content exceeds maximum length of %@ characters": [
+                "en": "Content exceeds maximum length of %@ characters",
+                "vi": "Nội dung vượt quá độ dài tối đa %@ ký tự"
+            ]
+        ]
+
+        for (key, translations) in expectedTranslations {
+            let entry = try XCTUnwrap(strings[key] as? [String: Any])
+            let localizations = try XCTUnwrap(entry["localizations"] as? [String: Any])
+            for (language, value) in translations {
+                let localization = try XCTUnwrap(localizations[language] as? [String: Any])
+                let stringUnit = try XCTUnwrap(localization["stringUnit"] as? [String: Any])
+                XCTAssertEqual(stringUnit["value"] as? String, value)
+            }
+        }
+
+        XCTAssertNil(strings["Title cannot exceed %@ characters"])
+    }
+
     func testTitleValidationDoesNotRequireContent() {
         XCTAssertEqual(
             NoteLimits.validateTitle(String(repeating: "t", count: NoteLimits.maximumTitleLength + 1)),

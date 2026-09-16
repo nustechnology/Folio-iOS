@@ -4,33 +4,36 @@ struct SaveAskNoteSheet: View {
     let draft: SaveAskNoteDraft
     let isSaving: Bool
     let errorMessage: String?
-    let onTitleChanged: (String) -> Void
-    let onContentChanged: (String) -> Void
     let onCancel: () -> Void
-    let onSubmit: (String) -> Void
+    let onSubmit: (String, String) -> Void
 
+    @State private var title: String
     @StateObject private var editingModel: NoteRichTextEditingModel
+
+    static func contentToSave(
+        draftContent: String,
+        editingModel: NoteRichTextEditingModel
+    ) -> String {
+        editingModel.contentForSave(fallback: draftContent)
+    }
 
     init(
         draft: SaveAskNoteDraft,
         isSaving: Bool,
         errorMessage: String?,
-        onTitleChanged: @escaping (String) -> Void,
-        onContentChanged: @escaping (String) -> Void,
         onCancel: @escaping () -> Void,
-        onSubmit: @escaping (String) -> Void
+        onSubmit: @escaping (String, String) -> Void
     ) {
         self.draft = draft
         self.isSaving = isSaving
         self.errorMessage = errorMessage
-        self.onTitleChanged = onTitleChanged
-        self.onContentChanged = onContentChanged
         self.onCancel = onCancel
         self.onSubmit = onSubmit
+        _title = State(initialValue: draft.title)
         _editingModel = StateObject(
             wrappedValue: NoteRichTextEditingModel(
                 attributedText: FolioRichTextEditor.attributedTextFromHTML(draft.content),
-                publishingHTML: onContentChanged
+                publishingHTML: { _ in }
             )
         )
     }
@@ -46,7 +49,7 @@ struct SaveAskNoteSheet: View {
             heading: String(localized: "Save as note"),
             explanation: String(localized: "Review the answer and adjust the title before saving it to this space."),
             onContentEditingEnded: {},
-            onSave: { _ in onSubmit(contentForSave) },
+            onSave: { _ in onSubmit(title, contentForSave) },
             onCancel: onCancel,
             onDiscardConfirmed: onCancel,
             contentPresentation: .readOnly,
@@ -57,24 +60,21 @@ struct SaveAskNoteSheet: View {
     }
 
     private var titleBinding: Binding<String> {
-        Binding(
-            get: { draft.title },
-            set: onTitleChanged
-        )
+        $title
     }
 
     private var hasUnsavedChanges: Bool {
-        draft.title != draft.initialTitle
+        title != draft.initialTitle || editingModel.hasUnsavedChanges
     }
 
     private var contentForSave: String {
-        draft.initialContent
+        Self.contentToSave(draftContent: draft.initialContent, editingModel: editingModel)
     }
 
     private var validation: NoteValidationResult {
         let content = contentForSave
         return NoteLimits.validate(
-            title: draft.title,
+            title: title,
             serializedContent: content,
             plainText: NoteLimits.plainText(from: content)
         )

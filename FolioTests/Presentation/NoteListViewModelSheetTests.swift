@@ -406,8 +406,8 @@ final class NoteListViewModelSheetTests: XCTestCase {
         XCTAssertEqual(
             viewModel.state.createTitleError,
             String.localizedStringWithFormat(
-                String(localized: "Title cannot exceed %@ characters"),
-                NoteLimits.maximumTitleLengthLabel
+                String(localized: "Title cannot exceed %lld characters"),
+                Int64(NoteLimits.maximumTitleLength)
             )
         )
         XCTAssertEqual(

@@ -102,18 +102,7 @@ struct NoteCreateForm: View {
                 }
                 .padding(.horizontal, FolioSpacing.xl3)
                 .padding(.bottom, FolioSpacing.xl)
-                .background {
-                    GeometryReader { proxy in
-                        Color.clear
-                            .onChange(of: proxy.size.height, initial: true) { _, newHeight in
-                                guard SheetHeightMeasurement.needsUpdate(
-                                    current: sheetHeight,
-                                    measured: newHeight
-                                ) else { return }
-                                sheetHeight = newHeight
-                            }
-                    }
-                }
+                .measureHeight($sheetHeight)
             }
         }
         .background(Color.folioHomeSheetBackground)
@@ -180,18 +169,7 @@ struct NoteCreateForm: View {
             .padding(.horizontal, FolioSpacing.xl3)
             .padding(.bottom, FolioSpacing.xl3)
         }
-        .background {
-            GeometryReader { proxy in
-                Color.clear
-                    .onChange(of: proxy.size.height, initial: true) { _, newHeight in
-                        guard SheetHeightMeasurement.needsUpdate(
-                            current: headerHeight,
-                            measured: newHeight
-                        ) else { return }
-                        headerHeight = newHeight
-                    }
-            }
-        }
+        .measureHeight($headerHeight)
     }
 
     private var actionButtons: some View {
@@ -226,28 +204,7 @@ struct NoteCreateForm: View {
     private var contentView: some View {
         switch contentPresentation {
         case .editable:
-            ZStack(alignment: .top) {
-                FolioRichTextEditor(
-                    attributedText: $editingModel.attributedText,
-                    selectedRange: $editingModel.selectedRange,
-                    typingAttributes: $editingModel.typingAttributes,
-                    onTextChange: editingModel.textChanged,
-                    onEditingChanged: { isEditing in
-                        if !isEditing { onContentEditingEnded() }
-                    },
-                    textContainerTopInset: 48
-                )
-
-                if editingModel.attributedText.string.isEmpty {
-                    Text(String(localized: "What stood out, and why does it matter for this research?"))
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.folioInkSoft.opacity(0.6))
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                        .padding(.top, 48)
-                        .padding(.horizontal, 16)
-                        .allowsHitTesting(false)
-                }
-
+            VStack(spacing: 0) {
                 RichTextToolbar(
                     onBold: { editingModel.applyTrait(.traitBold) },
                     onItalic: { editingModel.applyTrait(.traitItalic) },
@@ -267,6 +224,29 @@ struct NoteCreateForm: View {
                     activeFormats: editingModel.toolbarActiveFormats,
                     isEmbedded: true
                 )
+
+                ZStack(alignment: .top) {
+                    FolioRichTextEditor(
+                        attributedText: $editingModel.attributedText,
+                        selectedRange: $editingModel.selectedRange,
+                        typingAttributes: $editingModel.typingAttributes,
+                        onTextChange: editingModel.textChanged,
+                        onEditingChanged: { isEditing in
+                            if !isEditing { onContentEditingEnded() }
+                        },
+                        textContainerTopInset: 16
+                    )
+
+                    if editingModel.attributedText.string.isEmpty {
+                        Text(String(localized: "What stood out, and why does it matter for this research?"))
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.folioInkSoft.opacity(0.6))
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                            .padding(.top, 16)
+                            .padding(.horizontal, 16)
+                            .allowsHitTesting(false)
+                    }
+                }
             }
         case .readOnly:
             ScrollView {

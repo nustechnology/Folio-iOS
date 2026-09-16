@@ -64,28 +64,7 @@ struct NoteEditView: View {
                             .foregroundStyle(Color.folioDanger)
                     }
                     
-                    ZStack(alignment: .top) {
-                        FolioRichTextEditor(
-                            attributedText: $editingModel.attributedText,
-                            selectedRange: $editingModel.selectedRange,
-                            typingAttributes: $editingModel.typingAttributes,
-                            onTextChange: editingModel.textChanged,
-                            onEditingChanged: { isEditing in
-                                if !isEditing { viewModel.handle(.editContentEditingEnded) }
-                            },
-                            textContainerTopInset: 48
-                        )
-
-                        if editingModel.attributedText.string.isEmpty {
-                            Text(String(localized: "What stood out, and why does it matter for this research?"))
-                                .font(.system(size: 14))
-                                .foregroundStyle(Color.folioInkSoft.opacity(0.6))
-                                .frame(maxWidth: .infinity, alignment: .topLeading)
-                                .padding(.top, 48)
-                                .padding(.horizontal, 16)
-                                .allowsHitTesting(false)
-                        }
-
+                    VStack(spacing: 0) {
                         RichTextToolbar(
                             onBold: { editingModel.applyTrait(.traitBold) },
                             onItalic: { editingModel.applyTrait(.traitItalic) },
@@ -105,6 +84,29 @@ struct NoteEditView: View {
                             activeFormats: editingModel.toolbarActiveFormats,
                             isEmbedded: true
                         )
+
+                        ZStack(alignment: .top) {
+                            FolioRichTextEditor(
+                                attributedText: $editingModel.attributedText,
+                                selectedRange: $editingModel.selectedRange,
+                                typingAttributes: $editingModel.typingAttributes,
+                                onTextChange: editingModel.textChanged,
+                                onEditingChanged: { isEditing in
+                                    if !isEditing { viewModel.handle(.editContentEditingEnded) }
+                                },
+                                textContainerTopInset: 16
+                            )
+
+                            if editingModel.attributedText.string.isEmpty {
+                                Text(String(localized: "What stood out, and why does it matter for this research?"))
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(Color.folioInkSoft.opacity(0.6))
+                                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                                    .padding(.top, 16)
+                                    .padding(.horizontal, 16)
+                                    .allowsHitTesting(false)
+                            }
+                        }
                     }
                     .frame(minHeight: 160, maxHeight: 280)
                     .background(Color.folioSurfaceStrong)

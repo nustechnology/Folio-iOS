@@ -26,9 +26,7 @@ final class FolioAskViewModel: ViewModelProtocol {
         case stop
         case saveAsNoteRequested(String)
         case saveAsNoteDismissed
-        case saveAsNoteTitleChanged(String)
-        case saveAsNoteContentChanged(String)
-        case saveAsNoteConfirmed(String)
+        case saveAsNoteConfirmed(title: String, content: String)
         case feedback(String, useful: Bool)
         case scopeOptionSelected(sourceID: String?)
         case citationTap(AskCitation)
@@ -147,14 +145,8 @@ final class FolioAskViewModel: ViewModelProtocol {
         case .saveAsNoteDismissed:
             saveDraft = nil
             saveError = nil
-        case .saveAsNoteTitleChanged(let title):
-            saveDraft?.title = title
-            saveError = nil
-        case .saveAsNoteContentChanged(let content):
-            saveDraft?.content = content
-            saveError = nil
-        case .saveAsNoteConfirmed(let content):
-            confirmSaveAsNote(content: content)
+        case .saveAsNoteConfirmed(let title, let content):
+            confirmSaveAsNote(title: title, content: content)
         case .feedback(let messageID, let useful):
             setFeedback(messageID: messageID, useful: useful)
         case .scopeOptionSelected(let sourceID):
@@ -440,13 +432,12 @@ final class FolioAskViewModel: ViewModelProtocol {
     }
 
     /// Saves the answer as a note via the Notes API. Mirrors `HomeAskDelegate.onAskSaveAsNoteConfirm`.
-    private func confirmSaveAsNote(content: String) {
+    private func confirmSaveAsNote(title: String, content: String) {
         guard let draft = saveDraft, state.savingMessageID == nil else { return }
         guard let spaceId, let conversationId, let serverMessageID = draft.serverMessageID else {
             saveError = String(localized: "Failed to save as note. Please try again.")
             return
         }
-        let title = draft.title
         let validation = NoteLimits.validate(title: title, content: content)
         guard validation.titleError == nil, validation.contentError == nil
         else {

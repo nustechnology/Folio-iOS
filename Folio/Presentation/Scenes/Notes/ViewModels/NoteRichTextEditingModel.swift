@@ -5,12 +5,7 @@ import UIKit
 
 @MainActor
 final class NoteRichTextEditingModel: ObservableObject {
-    @Published var attributedText: NSAttributedString {
-        willSet {
-            serializedContent = FolioRichTextEditor.htmlFromAttributedText(newValue)
-            plainText = NoteLimits.plainText(from: serializedContent)
-        }
-    }
+    @Published var attributedText: NSAttributedString
     private let initialSerializedContent: String
     private(set) var serializedContent: String
     private(set) var plainText: String
@@ -63,6 +58,7 @@ final class NoteRichTextEditingModel: ObservableObject {
         if attributedText != value {
             attributedText = value
         }
+        updateSerializedContent(from: value)
         publishContent()
     }
 
@@ -127,7 +123,13 @@ final class NoteRichTextEditingModel: ObservableObject {
     private func commitFormatting(_ value: NSAttributedString) {
         guard FolioRichTextEditor.shouldPublishContentChange(from: attributedText, to: value) else { return }
         attributedText = value
+        updateSerializedContent(from: value)
         publishContent()
+    }
+
+    private func updateSerializedContent(from value: NSAttributedString) {
+        serializedContent = FolioRichTextEditor.htmlFromAttributedText(value)
+        plainText = NoteLimits.plainText(from: serializedContent)
     }
 
     private func publishContent() {

@@ -121,10 +121,10 @@ struct FolioAskView: View {
                 draft: draft,
                 isSaving: viewModel.state.savingMessageID == draft.messageID,
                 errorMessage: viewModel.saveError,
-                onTitleChanged: { viewModel.handle(.saveAsNoteTitleChanged($0)) },
-                onContentChanged: { viewModel.handle(.saveAsNoteContentChanged($0)) },
                 onCancel: { viewModel.handle(.saveAsNoteDismissed) },
-                onSubmit: { viewModel.handle(.saveAsNoteConfirmed($0)) }
+                onSubmit: { title, content in
+                    viewModel.handle(.saveAsNoteConfirmed(title: title, content: content))
+                }
             )
         }
     }

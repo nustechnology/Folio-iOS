@@ -79,7 +79,7 @@ struct CitationPreviewSheet: View {
                 }
                 .padding(.horizontal, FolioSpacing.xl3)
                 .padding(.bottom, FolioSpacing.xl3)
-                .modifier(HeightMeasurementModifier(height: $sheetHeight))
+                .measureHeight($sheetHeight)
             }
         }
         .background(Color.folioHomeSheetBackground)
@@ -105,25 +105,6 @@ struct CitationPreviewSheet: View {
         .padding(.horizontal, FolioSpacing.xl3)
         .padding(.top, FolioSpacing.xl3)
         .padding(.bottom, FolioSpacing.xl3)
-        .modifier(HeightMeasurementModifier(height: $headerHeight))
-    }
-}
-
-private struct HeightMeasurementModifier: ViewModifier {
-    @Binding var height: CGFloat
-
-    func body(content: Content) -> some View {
-        content.background {
-            GeometryReader { proxy in
-                Color.clear
-                    .onChange(of: proxy.size.height, initial: true) { _, newHeight in
-                        guard SheetHeightMeasurement.needsUpdate(
-                            current: height,
-                            measured: newHeight
-                        ) else { return }
-                        height = newHeight
-                    }
-            }
-        }
+        .measureHeight($headerHeight)
     }
 }

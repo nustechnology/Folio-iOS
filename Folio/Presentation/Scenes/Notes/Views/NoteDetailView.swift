@@ -51,18 +51,7 @@ struct NoteDetailView: View {
                     }
                 }
                 .padding(.horizontal, FolioSpacing.xl3)
-                .background {
-                    GeometryReader { proxy in
-                        Color.clear
-                            .onChange(of: proxy.size.height, initial: true) { _, newHeight in
-                                guard SheetHeightMeasurement.needsUpdate(
-                                    current: sheetHeight,
-                                    measured: newHeight
-                                ) else { return }
-                                sheetHeight = newHeight
-                            }
-                    }
-                }
+                .measureHeight($sheetHeight)
             }
         }
         .background(Color.folioHomeSheetBackground)
@@ -124,18 +113,7 @@ struct NoteDetailView: View {
             .padding(.horizontal, FolioSpacing.xl3)
             .padding(.bottom, FolioSpacing.xl3)
         }
-        .background {
-            GeometryReader { proxy in
-                Color.clear
-                    .onChange(of: proxy.size.height, initial: true) { _, newHeight in
-                        guard SheetHeightMeasurement.needsUpdate(
-                            current: headerHeight,
-                            measured: newHeight
-                        ) else { return }
-                        headerHeight = newHeight
-                    }
-            }
-        }
+        .measureHeight($headerHeight)
     }
     
     private var metadata: some View {

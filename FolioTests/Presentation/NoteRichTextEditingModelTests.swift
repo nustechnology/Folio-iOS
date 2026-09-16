@@ -77,6 +77,24 @@ final class NoteRichTextEditingModelTests: XCTestCase {
         XCTAssertEqual(publishedHTML, FolioRichTextEditor.htmlFromAttributedText(editedText))
     }
 
+    func testBindingUpdateDoesNotRefreshDerivedContentUntilTextChangeCallback() {
+        let model = NoteRichTextEditingModel(
+            attributedText: NSAttributedString(string: "Before"),
+            publishingHTML: { _ in }
+        )
+        let initialHTML = model.serializedContent
+        let editedText = NSAttributedString(string: "After")
+
+        model.attributedText = editedText
+
+        XCTAssertEqual(model.serializedContent, initialHTML)
+
+        model.textChanged(editedText)
+
+        XCTAssertEqual(model.serializedContent, FolioRichTextEditor.htmlFromAttributedText(editedText))
+        XCTAssertEqual(model.plainText, "After")
+    }
+
     func testTextChangeDoesNotRepublishIdenticalBindingValue() {
         let model = NoteRichTextEditingModel(
             attributedText: NSAttributedString(string: ""),

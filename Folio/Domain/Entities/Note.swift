@@ -10,8 +10,8 @@ enum NoteValidationError: Equatable {
     switch self {
     case .titleTooLong:
       String.localizedStringWithFormat(
-        String(localized: "Title cannot exceed %@ characters"),
-        NoteLimits.maximumTitleLengthLabel
+        String(localized: "Title cannot exceed %lld characters"),
+        Int64(NoteLimits.maximumTitleLength)
       )
     case .rawHTMLTooLong:
       String.localizedStringWithFormat(

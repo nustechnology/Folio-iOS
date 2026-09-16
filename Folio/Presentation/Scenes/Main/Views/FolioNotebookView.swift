@@ -278,6 +278,7 @@ struct FolioNotebookView: View {
                 selectedRange: $viewModel.selectedRange,
                 typingAttributes: $viewModel.typingAttributes,
                 onTextChange: { viewModel.handle(.textChanged($0)) },
+                textContainerBottomInset: 96,
                 canUndo: viewModel.canUndo,
                 canRedo: viewModel.canRedo,
                 onBlockquoteShortcut: { viewModel.handle(.blockquote) },

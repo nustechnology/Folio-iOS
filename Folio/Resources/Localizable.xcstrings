@@ -1346,38 +1346,17 @@
       }
     },
     "Content exceeds maximum length of %@ characters" : {
-
-    },
-    "Content exceeds maximum length of 20,000 characters" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Content exceeds maximum length of 20,000 characters"
+            "value" : "Content exceeds maximum length of %@ characters"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nội dung vượt quá 20.000 ký tự"
-          }
-        }
-      }
-    },
-    "Content exceeds maximum length of 200,000 characters" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Content exceeds maximum length of 200,000 characters"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nội dung vướp quá độ dài tối đa 200.000 ký tự"
+            "value" : "Nội dung vượt quá độ dài tối đa %@ ký tự"
           }
         }
       }
@@ -1415,7 +1394,20 @@
       }
     },
     "Content exceeds maximum size of %@ bytes" : {
-
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Content exceeds maximum size of %@ bytes"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nội dung vượt quá kích thước tối đa %@ byte"
+          }
+        }
+      }
     },
     "Content must be at least 10 characters long." : {
       "localizations" : {
@@ -5198,9 +5190,6 @@
         }
       }
     },
-    "Title cannot exceed %@ characters" : {
-
-    },
     "Title cannot exceed %lld characters" : {
       "localizations" : {
         "en" : {
@@ -5213,23 +5202,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tiêu đề không được vượt quá %lld ký tự"
-          }
-        }
-      }
-    },
-    "Title cannot exceed 150 characters" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Title cannot exceed 150 characters"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tiêu đề không được vượt quá 150 ký tự"
           }
         }
       }

@@ -259,24 +259,6 @@ final class FolioAskViewModelTests: XCTestCase {
         XCTAssertNil(vm.saveDraft)
     }
 
-    func testSaveAsNoteDraftTracksEditedTitleAndContent() {
-        let vm = makeViewModel()
-        vm.saveDraft = SaveAskNoteDraft(
-            messageID: "local-message",
-            serverMessageID: "server-message",
-            initialTitle: "Question",
-            content: "Answer",
-            limitation: nil,
-            citations: []
-        )
-
-        vm.handle(.saveAsNoteTitleChanged("Edited title"))
-        vm.handle(.saveAsNoteContentChanged("<strong>Edited answer</strong>"))
-
-        XCTAssertEqual(vm.saveDraft?.title, "Edited title")
-        XCTAssertEqual(vm.saveDraft?.content, "<strong>Edited answer</strong>")
-    }
-
     func testSaveAsNoteWithoutOriginDoesNotStartSaving() {
         let vm = makeViewModel()
         vm.saveDraft = SaveAskNoteDraft(
@@ -288,7 +270,7 @@ final class FolioAskViewModelTests: XCTestCase {
             citations: []
         )
 
-        vm.handle(.saveAsNoteConfirmed("Answer"))
+        vm.handle(.saveAsNoteConfirmed(title: "Question", content: "Answer"))
 
         XCTAssertNil(vm.state.savingMessageID)
         XCTAssertNotNil(vm.saveDraft)
@@ -304,7 +286,10 @@ final class FolioAskViewModelTests: XCTestCase {
             return XCTFail("Expected an assistant answer")
         }
         vm.handle(.saveAsNoteRequested(assistant.id))
-        vm.handle(.saveAsNoteConfirmed(String(repeating: "x", count: NoteLimits.maximumRawHTMLLength + 1)))
+        vm.handle(.saveAsNoteConfirmed(
+            title: vm.saveDraft?.title ?? "",
+            content: String(repeating: "x", count: NoteLimits.maximumRawHTMLLength + 1)
+        ))
 
         XCTAssertEqual(
             vm.saveError,
@@ -324,9 +309,7 @@ final class FolioAskViewModelTests: XCTestCase {
             return XCTFail("Expected an assistant answer")
         }
         vm.handle(.saveAsNoteRequested(assistant.id))
-        vm.handle(.saveAsNoteTitleChanged("Edited title"))
-        vm.handle(.saveAsNoteContentChanged("<p>Edited answer</p>"))
-        vm.handle(.saveAsNoteConfirmed("<p>Edited answer</p>"))
+        vm.handle(.saveAsNoteConfirmed(title: "Edited title", content: "<p>Edited answer</p>"))
 
         await createNote.waitUntilCalled()
         XCTAssertEqual(createNote.receivedSpaceId, "space-1")
@@ -353,7 +336,7 @@ final class FolioAskViewModelTests: XCTestCase {
             return XCTFail("Expected an assistant answer")
         }
         vm.handle(.saveAsNoteRequested(assistant.id))
-        vm.handle(.saveAsNoteConfirmed("<p>Answer</p>"))
+        vm.handle(.saveAsNoteConfirmed(title: "Question", content: "<p>Answer</p>"))
 
         await createNote.waitUntilCalled()
         await waitUntil("note-created callback") { callbackCount == 1 }
@@ -361,7 +344,7 @@ final class FolioAskViewModelTests: XCTestCase {
         XCTAssertEqual(callbackCount, 1)
     }
 
-    func testSaveAsNoteFailureKeepsEditedDraftOpen() async {
+    func testSaveAsNoteFailureKeepsOriginalDraftMetadataOpen() async {
         let createNote = RecordingCreateSavedNote(shouldFail: true)
         let vm = makeViewModel(streamAnswer: .answer, createNote: createNote)
         vm.updateSources([readySource(id: "s1")], spaceId: "space-1")
@@ -372,13 +355,12 @@ final class FolioAskViewModelTests: XCTestCase {
             return XCTFail("Expected an assistant answer")
         }
         vm.handle(.saveAsNoteRequested(assistant.id))
-        vm.handle(.saveAsNoteContentChanged("<p>Edited answer</p>"))
-        vm.handle(.saveAsNoteConfirmed("<p>Edited answer</p>"))
+        vm.handle(.saveAsNoteConfirmed(title: "Question", content: "<p>Edited answer</p>"))
 
         await createNote.waitUntilCalled()
         await waitUntil("save error") { vm.saveError != nil }
 
-        XCTAssertEqual(vm.saveDraft?.content, "<p>Edited answer</p>")
+        XCTAssertEqual(vm.saveDraft?.content, "Answer")
         XCTAssertNotNil(vm.saveError)
         XCTAssertNil(vm.toastMessage)
         XCTAssertFalse(vm.state.messages.last?.isSavedAsNote == true)
