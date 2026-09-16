@@ -2,6 +2,19 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct FolioAddSourceSheet: View {
+
+    private struct RequiredFieldLabel: View {
+        let titleKey: LocalizedStringKey
+        var body: some View {
+            Text(titleKey)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(Color.folioHomeTypeTextText)
+            + Text(" *")
+                .font(.system(size: 14, weight: .regular))
+                .foregroundColor(Color.folioDanger)
+        }
+    }
+
     @ObservedObject var viewModel: FolioAddSourceViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var isFileImporterPresented = false
@@ -237,12 +250,7 @@ struct FolioAddSourceSheet: View {
     private var webTab: some View {
         VStack(alignment: .leading, spacing: FolioSpacing.lg) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(String(localized: "Article URL"))
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.folioHomeTypeTextText) +
-                Text("*")
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundStyle(Color.folioDanger)
+                RequiredFieldLabel(titleKey: "Article URL")
 
                 PlaceholderUITextField(
                     placeholder: String(localized: "https://example.org/care-technology-adoption"),
@@ -426,12 +434,7 @@ struct FolioAddSourceSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text(String(localized: "Content"))
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.folioHomeTypeTextText) +
-                Text("*")
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundStyle(Color.folioDanger)
+                RequiredFieldLabel(titleKey: "Content")
 
                 ZStack(alignment: .topLeading) {
                     if viewModel.state.manualContent.isEmpty {
