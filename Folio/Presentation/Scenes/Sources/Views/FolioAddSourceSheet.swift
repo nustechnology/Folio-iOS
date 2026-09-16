@@ -10,9 +10,10 @@ struct FolioAddSourceSheet: View {
                 Text(titleKey)
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(Color.folioHomeTypeTextText)
-                Text(" " + String(localized: "*"))
+                Text(verbatim: " *")
                     .font(.system(size: 14, weight: .regular))
                     .foregroundStyle(Color.folioDanger)
+                    .accessibilityHidden(true)
             }
         }
     }
