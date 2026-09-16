@@ -2,6 +2,25 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct FolioAddSourceSheet: View {
+
+    private struct RequiredFieldLabel: View {
+        let titleKey: LocalizedStringKey
+        var body: some View {
+            HStack(spacing: 0) {
+                Text(titleKey)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.folioHomeTypeTextText)
+                Text(verbatim: " *")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(Color.folioDanger)
+                    .accessibilityHidden(true)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isStaticText)
+            .accessibilityLabel(Text(titleKey) + Text(", required"))
+        }
+    }
+
     @ObservedObject var viewModel: FolioAddSourceViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var isFileImporterPresented = false
@@ -248,9 +267,7 @@ struct FolioAddSourceSheet: View {
     private var webTab: some View {
         VStack(alignment: .leading, spacing: FolioSpacing.lg) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(String(localized: "Article URL"))
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.folioHomeTypeTextText)
+                RequiredFieldLabel(titleKey: "Article URL")
 
                 PlaceholderUITextField(
                     placeholder: String(localized: "https://example.org/care-technology-adoption"),
@@ -434,9 +451,7 @@ struct FolioAddSourceSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text(String(localized: "Content"))
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.folioHomeTypeTextText)
+                RequiredFieldLabel(titleKey: "Content")
 
                 ZStack(alignment: .topLeading) {
                     if viewModel.state.manualContent.isEmpty {
@@ -452,6 +467,7 @@ struct FolioAddSourceSheet: View {
                         set: { viewModel.handle(.manualContentChanged($0)) }
                     ))
                     .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(Color.folioInk)
                     .scrollContentBackground(.hidden)
                     .frame(minHeight: 180)
                     .padding(12)

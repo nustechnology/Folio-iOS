@@ -52,14 +52,14 @@ struct FolioSourceReaderView: View {
                             }
                         }) }
                     )
-                    contentCard
+                    scrollableContentCard
                 }
             } else if viewModel.state.errorMessage == nil {
                 FolioSourceReaderSkeletonView(onBack: onBack)
             } else {
                 VStack(spacing: 0) {
                     FolioSourceReaderSkeletonHeader(onBack: onBack)
-                    contentCard
+                    scrollableContentCard
                 }
             }
         }
@@ -193,53 +193,52 @@ struct FolioSourceReaderView: View {
     }
     
     // MARK: - Content
-    
-    private var contentCard: some View {
+
+    private var scrollableContentCard: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                if let error = viewModel.state.errorMessage {
-                    HStack(spacing: 8) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(Color.folioDanger)
-                        Text(error)
-                            .font(.system(size: 12, weight: .regular))
-                            .foregroundStyle(Color.folioInkMuted)
-                            .lineLimit(2)
-                        Spacer()
-                        Button(String(localized: "Retry")) {
-                            viewModel.send(.retry)
-                        }
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Color.folioOlive)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(Color.folioDanger.opacity(0.08))
-                }
-                
-                if let source = viewModel.source {
-                    ReaderWebContentView(
-                        html: SourceHTMLBuilder.fullHTML(for: source),
-                        passageID: passageID,
-                        onHeightChange: { height in webContentHeight = height }
-                    )
-                    .frame(maxWidth: .infinity)
-                    .frame(height: max(webContentHeight, 1))
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 32)
+            contentCard
+                .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    private var contentCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let error = viewModel.state.errorMessage {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(Color.folioDanger)
+                    Text(error)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(Color.folioInkMuted)
+                        .lineLimit(2)
+                    Spacer()
+                    Button(String(localized: "Retry")) {
+                        viewModel.send(.retry)
+                    }
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.folioOlive)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color.folioDanger.opacity(0.08))
+            }
+            
+            if let source = viewModel.source {
+                ReaderWebContentView(
+                    html: SourceHTMLBuilder.fullHTML(for: source),
+                    passageID: passageID,
+                    onHeightChange: { height in webContentHeight = height }
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: max(webContentHeight, 1))
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+        .padding(.bottom, 32)
         .background(Color.folioSurfaceStrong)
-        .clipShape(UnevenRoundedRectangle(
-            topLeadingRadius: 16,
-            bottomLeadingRadius: 0,
-            bottomTrailingRadius: 0,
-            topTrailingRadius: 16
-        ))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .padding(.horizontal, 18)
-        .ignoresSafeArea(edges: .bottom)
     }
     
     // MARK: - Sheets
