@@ -9,10 +9,10 @@ struct FolioAddSourceSheet: View {
             HStack(spacing: 0) {
                 Text(titleKey)
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(Color.folioHomeTypeTextText)
+                    .foregroundStyle(Color.folioHomeTypeTextText)
                 Text(" " + String(localized: "*"))
                     .font(.system(size: 14, weight: .regular))
-                    .foregroundColor(Color.folioDanger)
+                    .foregroundStyle(Color.folioDanger)
             }
         }
     }
