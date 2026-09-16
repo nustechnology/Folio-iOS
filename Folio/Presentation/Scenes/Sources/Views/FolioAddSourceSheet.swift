@@ -15,8 +15,9 @@ struct FolioAddSourceSheet: View {
                     .foregroundStyle(Color.folioDanger)
                     .accessibilityHidden(true)
             }
+            .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isStaticText)
-            .accessibilityLabel(Text(titleKey) + Text(localized: ", required"))
+            .accessibilityLabel(Text(titleKey) + Text(", required"))
         }
     }
 
