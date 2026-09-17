@@ -478,12 +478,16 @@ final class FolioAskViewModel: ViewModelProtocol {
 
     private func setFeedback(messageID: String, useful: Bool) {
         updateMessage(id: messageID) { $0.feedback = useful ? .useful : .notUseful }
-        guard let spaceId, let conversationId else { return }
+        guard
+            let serverMessageID = state.messages.first(where: { $0.id == messageID })?.serverMessageID,
+            let spaceId,
+            let conversationId
+        else { return }
         let rating = useful ? "useful" : "not_useful"
         Task {
             do {
                 try await sendFeedbackUseCase.execute(
-                    spaceId: spaceId, conversationId: conversationId, messageId: messageID, rating: rating)
+                    spaceId: spaceId, conversationId: conversationId, messageId: serverMessageID, rating: rating)
                 toastMessage = .success(String(localized: "Feedback recorded"))
             } catch {
                 Logger.error("Failed to send feedback: \(error)")
