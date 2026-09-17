@@ -403,10 +403,19 @@ final class NoteListViewModelSheetTests: XCTestCase {
         viewModel.handle(.createContentChanged(String(repeating: "c", count: NoteLimits.maximumContentLength + 1)))
         viewModel.handle(.createContentEditingEnded)
 
-        XCTAssertEqual(viewModel.state.createTitleError, "Title cannot exceed 150 characters")
+        XCTAssertEqual(
+            viewModel.state.createTitleError,
+            String.localizedStringWithFormat(
+                String(localized: "Title cannot exceed %lld characters"),
+                Int64(NoteLimits.maximumTitleLength)
+            )
+        )
         XCTAssertEqual(
             viewModel.state.createContentError,
-            "Content exceeds maximum length of 20,000 characters"
+            String.localizedStringWithFormat(
+                String(localized: "Content exceeds maximum length of %@ characters"),
+                NoteLimits.maximumContentLengthLabel
+            )
         )
     }
 

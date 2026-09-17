@@ -259,11 +259,119 @@ final class FolioAskViewModelTests: XCTestCase {
         XCTAssertNil(vm.saveDraft)
     }
 
+    func testSaveAsNoteWithoutOriginDoesNotStartSaving() {
+        let vm = makeViewModel()
+        vm.saveDraft = SaveAskNoteDraft(
+            messageID: "local-message",
+            serverMessageID: nil,
+            initialTitle: "Question",
+            content: "Answer",
+            limitation: nil,
+            citations: []
+        )
+
+        vm.handle(.saveAsNoteConfirmed(title: "Question", content: "Answer"))
+
+        XCTAssertNil(vm.state.savingMessageID)
+        XCTAssertNotNil(vm.saveDraft)
+    }
+
+    func testSaveAsNoteValidationFailureShowsError() async {
+        let vm = makeViewModel(streamAnswer: .answer)
+        vm.updateSources([readySource(id: "s1")], spaceId: "space-1")
+        vm.handle(.submit("Question"))
+        await waitForAssistantAnswer(vm)
+
+        guard let assistant = vm.state.messages.last else {
+            return XCTFail("Expected an assistant answer")
+        }
+        vm.handle(.saveAsNoteRequested(assistant.id))
+        vm.handle(.saveAsNoteConfirmed(
+            title: vm.saveDraft?.title ?? "",
+            content: String(repeating: "x", count: NoteLimits.maximumRawHTMLLength + 1)
+        ))
+
+        XCTAssertEqual(
+            vm.saveError,
+            String(localized: "Failed to save as note. Please try again.")
+        )
+        XCTAssertNil(vm.state.savingMessageID)
+    }
+
+    func testSaveAsNoteSubmitsEditedContentAndOrigin() async {
+        let createNote = RecordingCreateSavedNote()
+        let vm = makeViewModel(streamAnswer: .answer, createNote: createNote)
+        vm.updateSources([readySource(id: "s1")], spaceId: "space-1")
+        vm.handle(.submit("What is the evidence?"))
+        await waitForAssistantAnswer(vm)
+
+        guard let assistant = vm.state.messages.last else {
+            return XCTFail("Expected an assistant answer")
+        }
+        vm.handle(.saveAsNoteRequested(assistant.id))
+        vm.handle(.saveAsNoteConfirmed(title: "Edited title", content: "<p>Edited answer</p>"))
+
+        await createNote.waitUntilCalled()
+        XCTAssertEqual(createNote.receivedSpaceId, "space-1")
+        XCTAssertEqual(createNote.receivedTitle, "Edited title")
+        XCTAssertEqual(createNote.receivedContent, "<p>Edited answer</p>")
+        XCTAssertEqual(createNote.receivedConversationId, "conversation-1")
+        XCTAssertEqual(createNote.receivedMessageId, "server-message-1")
+
+        await waitUntil("save draft to clear") { vm.saveDraft == nil }
+        XCTAssertNil(vm.saveDraft)
+        XCTAssertTrue(vm.state.messages.last?.isSavedAsNote == true)
+    }
+
+    func testSaveAsNoteSuccessNotifiesNotesListToRefresh() async {
+        let createNote = RecordingCreateSavedNote()
+        let vm = makeViewModel(streamAnswer: .answer, createNote: createNote)
+        var callbackCount = 0
+        vm.onNoteCreated = { callbackCount += 1 }
+        vm.updateSources([readySource(id: "s1")], spaceId: "space-1")
+        vm.handle(.submit("Question"))
+        await waitForAssistantAnswer(vm)
+
+        guard let assistant = vm.state.messages.last else {
+            return XCTFail("Expected an assistant answer")
+        }
+        vm.handle(.saveAsNoteRequested(assistant.id))
+        vm.handle(.saveAsNoteConfirmed(title: "Question", content: "<p>Answer</p>"))
+
+        await createNote.waitUntilCalled()
+        await waitUntil("note-created callback") { callbackCount == 1 }
+
+        XCTAssertEqual(callbackCount, 1)
+    }
+
+    func testSaveAsNoteFailureKeepsOriginalDraftMetadataOpen() async {
+        let createNote = RecordingCreateSavedNote(shouldFail: true)
+        let vm = makeViewModel(streamAnswer: .answer, createNote: createNote)
+        vm.updateSources([readySource(id: "s1")], spaceId: "space-1")
+        vm.handle(.submit("Question"))
+        await waitForAssistantAnswer(vm)
+
+        guard let assistant = vm.state.messages.last else {
+            return XCTFail("Expected an assistant answer")
+        }
+        vm.handle(.saveAsNoteRequested(assistant.id))
+        vm.handle(.saveAsNoteConfirmed(title: "Question", content: "<p>Edited answer</p>"))
+
+        await createNote.waitUntilCalled()
+        await waitUntil("save error") { vm.saveError != nil }
+
+        XCTAssertEqual(vm.saveDraft?.content, "Answer")
+        XCTAssertNotNil(vm.saveError)
+        XCTAssertNil(vm.toastMessage)
+        XCTAssertFalse(vm.state.messages.last?.isSavedAsNote == true)
+    }
+
     // MARK: - Helpers
 
     private func makeViewModel(
         sources: [FolioSource] = [],
-        streamAnswer: MockStreamAnswerUseCase.Kind = .empty
+        streamAnswer: MockStreamAnswerUseCase.Kind = .empty,
+        createNote: any CreateSavedAnswerNoteUseCaseProtocol = MockCreateSavedNote()
     ) -> FolioAskViewModel {
         let streamUseCase = MockStreamAnswerUseCase(kind: streamAnswer)
         return FolioAskViewModel(
@@ -272,8 +380,12 @@ final class FolioAskViewModelTests: XCTestCase {
             streamAskAnswerUseCase: streamUseCase,
             fetchAskConversationDetailUseCase: MockFetchConversationDetail(),
             sendFeedbackUseCase: MockSendFeedback(),
-            createSavedAnswerNoteUseCase: MockCreateSavedNote()
+            createSavedAnswerNoteUseCase: createNote
         )
+    }
+
+    private func waitForAssistantAnswer(_ vm: FolioAskViewModel) async {
+        await waitUntil("assistant answer") { vm.state.messages.last?.isStreaming != true }
     }
 
     private func readySource(id: String) -> FolioSource {
@@ -294,6 +406,21 @@ final class FolioAskViewModelTests: XCTestCase {
             chapterTitle: "", chapterText: "", calloutText: "",
             citationTitle: "", citationDetail: "", citationText: "",
             pageLabel: "1 of 1")
+    }
+}
+
+private func waitUntil(
+    _ description: String,
+    timeout: Duration = .seconds(1),
+    predicate: @escaping () -> Bool
+) async {
+    let deadline = ContinuousClock.now + timeout
+    while !predicate() {
+        guard ContinuousClock.now < deadline else {
+            XCTFail("Timed out waiting for \(description)")
+            return
+        }
+        await Task.yield()
     }
 }
 
@@ -323,6 +450,43 @@ private struct MockCreateSavedNote: CreateSavedAnswerNoteUseCaseProtocol {
     }
 }
 
+@MainActor
+private final class RecordingCreateSavedNote: CreateSavedAnswerNoteUseCaseProtocol {
+    let shouldFail: Bool
+    private(set) var wasCalled = false
+    private(set) var receivedSpaceId: String?
+    private(set) var receivedTitle: String?
+    private(set) var receivedContent: String?
+    private(set) var receivedConversationId: String?
+    private(set) var receivedMessageId: String?
+
+    init(shouldFail: Bool = false) {
+        self.shouldFail = shouldFail
+    }
+
+    func execute(
+        spaceId: String, title: String, content: String,
+        project: String?, originConversationId: String?, originMessageId: String?,
+        citationCount: Int?, citations: [SavedAnswerCitationDTO]?
+    ) async throws -> Note {
+        wasCalled = true
+        receivedSpaceId = spaceId
+        receivedTitle = title
+        receivedContent = content
+        receivedConversationId = originConversationId
+        receivedMessageId = originMessageId
+        if shouldFail { throw NSError(domain: "test", code: 1) }
+        return Note(
+            id: "note-id", researchSpaceId: spaceId, title: title,
+            originType: .savedAssistantAnswer, content: content,
+            createdAt: .now, updatedAt: .now, citationCount: citationCount)
+    }
+
+    func waitUntilCalled() async {
+        await waitUntil("saved note use case to be called") { self.wasCalled }
+    }
+}
+
 private struct MockFetchConversationDetail: FetchAskConversationDetailUseCaseProtocol {
     func execute(spaceId: String, conversationId: String) async throws -> AskConversationDetail {
         AskConversationDetail(
@@ -333,7 +497,7 @@ private struct MockFetchConversationDetail: FetchAskConversationDetailUseCasePro
 }
 
 private struct MockStreamAnswerUseCase: StreamAskAnswerUseCaseProtocol {
-    enum Kind { case empty, neverEnding }
+    enum Kind { case empty, answer, neverEnding }
 
     let kind: Kind
 
@@ -344,6 +508,16 @@ private struct MockStreamAnswerUseCase: StreamAskAnswerUseCaseProtocol {
         AsyncThrowingStream { continuation in
             switch kind {
             case .empty:
+                continuation.finish()
+            case .answer:
+                continuation.yield(.start(conversationId: "conversation-1", messageId: "server-message-1"))
+                continuation.yield(.done(
+                    messageId: "server-message-1",
+                    content: "Answer",
+                    citations: [],
+                    limitation: nil,
+                    stopped: false
+                ))
                 continuation.finish()
             case .neverEnding:
                 // Never-yielding stream — stays open until cancelled

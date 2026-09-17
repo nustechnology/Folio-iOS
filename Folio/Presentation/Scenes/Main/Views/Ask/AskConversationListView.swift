@@ -419,21 +419,21 @@ private struct AskConversationRow: View {
     private var cardContent: some View {
         HStack(alignment: .top, spacing: FolioSpacing.lg) {
             Image(systemName: "sparkles")
-                .font(.system(size: FolioFontSize.body, weight: .semibold))
-                .foregroundStyle(Color.folioOliveDark)
-                .frame(width: FolioSize.chipHeight, height: FolioSize.chipHeight)
-                .background(Color.folioOlive.opacity(0.12))
+                .font(.system(size: FolioFontSize.title3, weight: .semibold))
+                .foregroundStyle(Color.folioHomeTypeWebText)
+                .frame(width: FolioSize.cardImage, height: FolioSize.cardImage)
+                .background(Color.folioHomeTypeWebBackground)
                 .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(conversation.title)
-                    .font(.system(size: FolioFontSize.subheadline, design: .serif))
+                    .font(.custom("CormorantGaramond-SemiBold", size: FolioFontSize.title3))
                     .foregroundStyle(Color.folioInk)
                     .lineLimit(1)
                     .truncationMode(.tail)
 
                 Text(conversation.updatedAt.noteListDisplayLabel)
-                    .font(.system(size: FolioFontSize.caption2, weight: .regular))
+                    .font(.system(size: FolioFontSize.small, weight: .regular))
                     .foregroundStyle(Color.folioInkSoft)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

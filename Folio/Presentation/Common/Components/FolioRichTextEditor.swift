@@ -8,6 +8,7 @@ struct FolioRichTextEditor: UIViewRepresentable {
     var onTextChange: (NSAttributedString) -> Void
     var onEditingChanged: ((Bool) -> Void)?
     var textContainerTopInset: CGFloat = 16
+    var textContainerBottomInset: CGFloat = 16
     var canUndo: Bool = false
     var canRedo: Bool = false
     var onBlockquoteShortcut: (() -> Void)?
@@ -46,7 +47,12 @@ struct FolioRichTextEditor: UIViewRepresentable {
         textView.backgroundColor = .clear
         textView.font = UIFont.systemFont(ofSize: 16)
         textView.textColor = UIColor(Color.folioInk)
-        textView.textContainerInset = UIEdgeInsets(top: textContainerTopInset, left: 16, bottom: 96, right: 16)
+        textView.textContainerInset = UIEdgeInsets(
+            top: textContainerTopInset,
+            left: 16,
+            bottom: textContainerBottomInset,
+            right: 16
+        )
         textView.textContainer.lineFragmentPadding = 0
         textView.allowsEditingTextAttributes = false
         textView.dataDetectorTypes = []
