@@ -10,6 +10,7 @@ struct PlaceholderUITextField: UIViewRepresentable {
     let isSecureTextEntry: Bool
     var autocorrectionType: UITextAutocorrectionType = .default
     var autocapitalizationType: UITextAutocapitalizationType = .sentences
+    var maxLength: Int?
     @Binding var text: String
     var isFirstResponder: Bool?
     var onFocusChanged: ((Bool) -> Void)?
@@ -39,7 +40,12 @@ struct PlaceholderUITextField: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: UITextField, context: Context) {
-        uiView.text = text
+        if uiView.text != text {
+            uiView.text = text
+            DispatchQueue.main.async {
+                uiView.selectedTextRange = uiView.textRange(from: uiView.endOfDocument, to: uiView.endOfDocument)
+            }
+        }
         uiView.keyboardType = keyboardType
         uiView.isSecureTextEntry = isSecureTextEntry
         updatePlaceholder(uiView)
@@ -71,12 +77,49 @@ struct PlaceholderUITextField: UIViewRepresentable {
             self.parent = parent
         }
         
-        @objc func textDidChange(_ textField: UITextField) {
-            parent.text = textField.text ?? ""
+        func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+            guard let maxLength = parent.maxLength else { return true }
+            let currentText = textField.text ?? ""
+            guard let stringRange = Range(range, in: currentText) else { return true }
+            let updatedText = currentText.replacingCharacters(in: stringRange, with: string)
+            
+            if updatedText.count > maxLength {
+                let currentLength = currentText.count - range.length
+                let allowedLength = max(0, maxLength - currentLength)
+                let allowedReplacement = String(string.prefix(allowedLength))
+                let newText = currentText.replacingCharacters(in: stringRange, with: allowedReplacement)
+                
+                textField.text = newText
+                parent.text = newText
+                
+                let targetLocation = range.location + allowedReplacement.count
+                if let targetPosition = textField.position(from: textField.beginningOfDocument, offset: targetLocation) {
+                    textField.selectedTextRange = textField.textRange(from: targetPosition, to: targetPosition)
+                }
+                
+                DispatchQueue.main.async {
+                    if let targetPosition = textField.position(from: textField.beginningOfDocument, offset: targetLocation) {
+                        textField.selectedTextRange = textField.textRange(from: targetPosition, to: targetPosition)
+                    }
+                }
+                return false
+            }
+            return true
         }
         
-        func textFieldDidChangeSelection(_ notification: Notification) {
-            guard let textField = notification.object as? UITextField else { return }
+        @objc func textDidChange(_ textField: UITextField) {
+            var value = textField.text ?? ""
+            if let maxLength = parent.maxLength, value.count > maxLength {
+                value = String(value.prefix(maxLength))
+                textField.text = value
+                DispatchQueue.main.async {
+                    textField.selectedTextRange = textField.textRange(from: textField.endOfDocument, to: textField.endOfDocument)
+                }
+            }
+            parent.text = value
+        }
+        
+        func textFieldDidChangeSelection(_ textField: UITextField) {
             parent.text = textField.text ?? ""
         }
 

@@ -1,4 +1,5 @@
 import XCTest
+import SwiftUI
 @testable import Folio
 
 final class FolioTextFieldTests: XCTestCase {

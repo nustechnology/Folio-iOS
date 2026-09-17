@@ -38,6 +38,12 @@ struct EditSourceSheet: View {
             || (sourceType == .manual && trimmedContentCount > maximumContentLength)
     }
 
+    private func enforceLimit(_ text: inout String, max: Int) {
+        if text.count > max {
+            text = String(text.prefix(max))
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(String(localized: "Edit source"))
@@ -72,6 +78,17 @@ struct EditSourceSheet: View {
         .presentationCornerRadius(FolioRadius.xl2)
         .presentationDetents(sourceType == .manual ? [.height(580)] : [.height(315)])
         .presentationDragIndicator(.visible)
+        .onChange(of: title) { _, newValue in
+            enforceLimit(&title, max: maximumTitleLength)
+        }
+        .onChange(of: author) { _, newValue in
+            enforceLimit(&author, max: maximumAuthorLength)
+        }
+        .onChange(of: content) { _, newValue in
+            if sourceType == .manual {
+                enforceLimit(&content, max: maximumContentLength)
+            }
+        }
     }
 
     private var titleField: some View {
@@ -80,17 +97,18 @@ struct EditSourceSheet: View {
                 .font(.system(size: FolioFontSize.body, weight: .bold))
                 .foregroundStyle(Color.folioHomeTypeTextText)
 
-            TextField(
-                String(localized: "Title"),
-                text: Binding(
-                    get: { title },
-                    set: { title = $0 }
-                )
+            PlaceholderUITextField(
+                placeholder: String(localized: "Title"),
+                placeholderColor: UIColor(Color.folioInkSoft),
+                font: .systemFont(ofSize: FolioFontSize.bodyLarge, weight: .regular),
+                textColor: UIColor(Color.folioInk),
+                keyboardType: .default,
+                isSecureTextEntry: false,
+                autocorrectionType: .default,
+                autocapitalizationType: .sentences,
+                maxLength: maximumTitleLength,
+                text: $title
             )
-            .font(.system(size: FolioFontSize.bodyLarge, weight: .regular))
-            .foregroundStyle(Color.folioInk)
-            .autocapitalization(.sentences)
-            .focused($focusedField, equals: .title)
             .padding(.horizontal, FolioSpacing.xl)
             .frame(height: FolioSize.fieldHeightXs)
             .background(.white)
@@ -120,17 +138,18 @@ struct EditSourceSheet: View {
                 .font(.system(size: FolioFontSize.body, weight: .bold))
                 .foregroundStyle(Color.folioHomeTypeTextText)
 
-            TextField(
-                String(localized: "Author"),
-                text: Binding(
-                    get: { author },
-                    set: { author = $0 }
-                )
+            PlaceholderUITextField(
+                placeholder: String(localized: "Author"),
+                placeholderColor: UIColor(Color.folioInkSoft),
+                font: .systemFont(ofSize: FolioFontSize.bodyLarge, weight: .regular),
+                textColor: UIColor(Color.folioInk),
+                keyboardType: .default,
+                isSecureTextEntry: false,
+                autocorrectionType: .default,
+                autocapitalizationType: .words,
+                maxLength: maximumAuthorLength,
+                text: $author
             )
-            .font(.system(size: FolioFontSize.bodyLarge, weight: .regular))
-            .foregroundStyle(Color.folioInk)
-            .autocapitalization(.words)
-            .focused($focusedField, equals: .author)
             .padding(.horizontal, FolioSpacing.xl)
             .frame(height: FolioSize.fieldHeightXs)
             .background(.white)
@@ -160,10 +179,7 @@ struct EditSourceSheet: View {
                 .font(.system(size: FolioFontSize.body, weight: .bold))
                 .foregroundStyle(Color.folioHomeTypeTextText)
 
-            TextEditor(text: Binding(
-                get: { content },
-                set: { content = $0 }
-            ))
+            TextEditor(text: $content)
             .font(.system(size: FolioFontSize.bodyLarge, design: .default))
             .scrollContentBackground(.hidden)
             .padding(FolioSpacing.md)

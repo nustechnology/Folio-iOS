@@ -328,6 +328,7 @@ private struct RenameConversationSheet: View {
                 textColor: UIColor(Color.folioInk),
                 keyboardType: .default,
                 isSecureTextEntry: false,
+                maxLength: Self.maxLength,
                 text: $title
             )
                 .padding(.horizontal, 14)
@@ -394,6 +395,11 @@ private struct RenameConversationSheet: View {
         .presentationDetents([.fraction(0.3)])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(FolioRadius.xl2)
+        .onChange(of: title) { _, newValue in
+            if newValue.count > Self.maxLength {
+                title = String(newValue.prefix(Self.maxLength))
+            }
+        }
         .onAppear {
             title = conversation.title
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {

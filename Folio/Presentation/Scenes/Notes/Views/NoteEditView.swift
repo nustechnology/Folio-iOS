@@ -37,6 +37,7 @@ struct NoteEditView: View {
                         label: String(localized: "Title"),
                         text: titleBinding,
                         style: .singleLine,
+                        maxLength: NoteLimits.maximumTitleLength,
                         error: titleError
                     )
 

@@ -45,7 +45,7 @@ struct NoteCreateView: View {
                         label: String(localized: "Title"),
                         placeholder: String(localized: "Untitled Note"),
                         text: titleBinding,
-                        style: .singleLine,
+                        maxLength: NoteLimits.maximumTitleLength,
                         error: viewModel.state.createTitleError
                     )
                     .disabled(viewModel.state.isCreating)

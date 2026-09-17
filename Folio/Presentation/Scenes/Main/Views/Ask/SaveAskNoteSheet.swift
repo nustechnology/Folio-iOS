@@ -55,6 +55,7 @@ struct SaveAskNoteSheet: View {
                     textColor: UIColor(Color.folioInk),
                     keyboardType: .default,
                     isSecureTextEntry: false,
+                    maxLength: Self.maxTitleLength,
                     text: $title
                 )
                     .padding(.horizontal, 14)
@@ -159,6 +160,11 @@ struct SaveAskNoteSheet: View {
         .presentationDragIndicator(.visible)
         .presentationBackground(Color.folioSurface)
         .onAppear { title = draft.initialTitle }
+        .onChange(of: title) { _, newValue in
+            if newValue.count > Self.maxTitleLength {
+                title = String(newValue.prefix(Self.maxTitleLength))
+            }
+        }
         .alert("Discard unsaved note?", isPresented: $showDiscardConfirm) {
             Button("Yes", role: .destructive) {
                 onCancel()

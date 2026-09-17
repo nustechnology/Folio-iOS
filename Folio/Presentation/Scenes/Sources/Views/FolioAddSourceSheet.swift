@@ -314,6 +314,7 @@ struct FolioAddSourceSheet: View {
                     isSecureTextEntry: false,
                     autocorrectionType: .default,
                     autocapitalizationType: .sentences,
+                    maxLength: Source.maximumTitleLength,
                     text: Binding(
                         get: { viewModel.state.webTitle },
                         set: { viewModel.handle(.webTitleChanged($0)) }
@@ -350,6 +351,7 @@ struct FolioAddSourceSheet: View {
                     isSecureTextEntry: false,
                     autocorrectionType: .default,
                     autocapitalizationType: .words,
+                    maxLength: Source.maximumAuthorLength,
                     text: Binding(
                         get: { viewModel.state.webAuthor },
                         set: { viewModel.handle(.webAuthorChanged($0)) }
@@ -374,6 +376,16 @@ struct FolioAddSourceSheet: View {
         }
         .padding(.horizontal, FolioSpacing.xl3)
         .padding(.vertical, FolioSpacing.md)
+        .onChange(of: viewModel.state.webTitle) { _, newValue in
+            if newValue.count > Source.maximumTitleLength {
+                viewModel.handle(.webTitleChanged(String(newValue.prefix(Source.maximumTitleLength))))
+            }
+        }
+        .onChange(of: viewModel.state.webAuthor) { _, newValue in
+            if newValue.count > Source.maximumAuthorLength {
+                viewModel.handle(.webAuthorChanged(String(newValue.prefix(Source.maximumAuthorLength))))
+            }
+        }
     }
 
     private var manualTab: some View {
@@ -392,6 +404,7 @@ struct FolioAddSourceSheet: View {
                     isSecureTextEntry: false,
                     autocorrectionType: .default,
                     autocapitalizationType: .sentences,
+                    maxLength: Source.maximumTitleLength,
                     text: Binding(
                         get: { viewModel.state.manualTitle },
                         set: { viewModel.handle(.manualTitleChanged($0)) }
@@ -428,6 +441,7 @@ struct FolioAddSourceSheet: View {
                     isSecureTextEntry: false,
                     autocorrectionType: .default,
                     autocapitalizationType: .words,
+                    maxLength: Source.maximumAuthorLength,
                     text: Binding(
                         get: { viewModel.state.manualAuthor },
                         set: { viewModel.handle(.manualAuthorChanged($0)) }
@@ -496,6 +510,21 @@ struct FolioAddSourceSheet: View {
         }
         .padding(.horizontal, FolioSpacing.xl3)
         .padding(.vertical, FolioSpacing.md)
+        .onChange(of: viewModel.state.manualTitle) { _, newValue in
+            if newValue.count > Source.maximumTitleLength {
+                viewModel.handle(.manualTitleChanged(String(newValue.prefix(Source.maximumTitleLength))))
+            }
+        }
+        .onChange(of: viewModel.state.manualAuthor) { _, newValue in
+            if newValue.count > Source.maximumAuthorLength {
+                viewModel.handle(.manualAuthorChanged(String(newValue.prefix(Source.maximumAuthorLength))))
+            }
+        }
+        .onChange(of: viewModel.state.manualContent) { _, newValue in
+            if newValue.count > Source.maximumContentLength {
+                viewModel.handle(.manualContentChanged(String(newValue.prefix(Source.maximumContentLength))))
+            }
+        }
     }
 
     private var addSourceButton: some View {
