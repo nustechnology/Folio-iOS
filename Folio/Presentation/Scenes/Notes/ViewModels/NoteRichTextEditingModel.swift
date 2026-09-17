@@ -54,6 +54,11 @@ final class NoteRichTextEditingModel: ObservableObject {
         )
     }
 
+    func loadContent(_ value: NSAttributedString) {
+        attributedText = value
+        updateSerializedContent(from: value)
+    }
+
     func textChanged(_ value: NSAttributedString) {
         if attributedText != value {
             attributedText = value

@@ -176,15 +176,13 @@ struct NoteDetailView: View {
 struct CitationRichTextView: View {
     let content: String
     let citationCount: Int
-    var highlightCitations = true
     var onCitationTapped: (Int) -> Void = { _ in }
     
     var body: some View {
         CitationTextView(
             attributedText: Self.inlineAttributedString(
                 content: content,
-                citationCount: citationCount,
-                highlightCitations: highlightCitations
+                citationCount: citationCount
             ),
             onCitationTapped: onCitationTapped
         )
@@ -193,8 +191,7 @@ struct CitationRichTextView: View {
     
     static func inlineAttributedString(
         content: String,
-        citationCount: Int,
-        highlightCitations: Bool = true
+        citationCount: Int
     ) -> NSAttributedString {
         let attributed = NoteDisplayAttributedString.make(from: content)
         let string = attributed.string as NSString
@@ -222,14 +219,12 @@ struct CitationRichTextView: View {
                 cursor = NSMaxRange(match.range)
                 continue
             }
-            var attributes: [NSAttributedString.Key: Any] = [
+            let attributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: FolioFontSize.caption2, weight: .semibold),
                 .foregroundColor: UIColor(Color.folioInk),
-                .link: url
+                .link: url,
+                .backgroundColor: UIColor(FolioTheme.accentBg)
             ]
-            if highlightCitations {
-                attributes[.backgroundColor] = UIColor(FolioTheme.accentBg)
-            }
             result.append(NSAttributedString(string: "[\(number)]", attributes: attributes))
             cursor = NSMaxRange(match.range)
         }

@@ -34,7 +34,7 @@ struct NoteCreateView: View {
                 || viewModel.state.createContentError != nil
         )
         .onAppear {
-            editingModel.attributedText = FolioRichTextEditor.attributedTextFromHTML(viewModel.state.createContent)
+            editingModel.loadContent(FolioRichTextEditor.attributedTextFromHTML(viewModel.state.createContent))
         }
     }
 

@@ -44,16 +44,14 @@ struct CitationPreviewSheet: View {
                                 .lineSpacing(4)
                         }
 
-                        ScrollView {
-                            Text(citation.evidenceText.isEmpty ? String(localized: "No evidence text available.") : citation.evidenceText)
-                                .font(.system(size: FolioFontSize.bodyLarge, weight: .regular))
-                                .foregroundStyle(Color.folioInk)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(FolioSpacing.lg)
-                        }
-                        .frame(minHeight: 40, maxHeight: 480)
-                        .background(Color.folioGoldSoft.opacity(0.45))
-                        .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous))
+                        Text(citation.evidenceText.isEmpty ? String(localized: "No evidence text available.") : citation.evidenceText)
+                            .font(.system(size: FolioFontSize.bodyLarge, weight: .regular))
+                            .foregroundStyle(Color.folioInk)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(FolioSpacing.lg)
+                            .background(Color.folioGoldSoft.opacity(0.45))
+                            .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg, style: .continuous))
                     }
                     .padding(FolioSpacing.xl)
                     .background(Color.folioSurfaceStrong)
@@ -87,7 +85,7 @@ struct CitationPreviewSheet: View {
         .presentationCornerRadius(FolioRadius.xl2)
         .presentationDetents(
             sheetHeight > 0 && headerHeight > 0
-            ? [.height(sheetHeight + headerHeight)]
+            ? [.height(min(sheetHeight + headerHeight, FolioSize.citationSheetMaxH))]
             : [.medium]
         )
         .presentationDragIndicator(.visible)

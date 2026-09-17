@@ -63,6 +63,20 @@ final class NoteRichTextEditingModelTests: XCTestCase {
         XCTAssertEqual(model.plainText, "After")
     }
 
+    func testLoadContentRefreshesCachedContentRepresentations() {
+        let model = NoteRichTextEditingModel(
+            attributedText: NSAttributedString(string: "Before"),
+            publishingHTML: { _ in }
+        )
+
+        let restoredText = NSAttributedString(string: "Restored draft")
+        model.loadContent(restoredText)
+
+        XCTAssertEqual(model.attributedText.string, "Restored draft")
+        XCTAssertEqual(model.serializedContent, FolioRichTextEditor.htmlFromAttributedText(restoredText))
+        XCTAssertEqual(model.plainText, "Restored draft")
+    }
+
     func testTextChangePublishesHTMLWhenBindingUpdatedBeforeCallback() {
         var publishedHTML: String?
         let model = NoteRichTextEditingModel(

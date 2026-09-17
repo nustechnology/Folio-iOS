@@ -47,7 +47,7 @@ struct NoteCreateForm: View {
 
                     HStack {
                         Spacer()
-                        Text("\(title.count) / \(NoteLimits.maximumTitleLength)")
+                        Text("\(title.count) / \(NoteLimits.maximumTitleLengthLabel)")
                             .font(.system(size: FolioFontSize.caption2))
                             .foregroundStyle(Color.folioInkSoft)
                     }
@@ -89,10 +89,10 @@ struct NoteCreateForm: View {
 
                     HStack {
                         Spacer()
-                        Text("\(plainText.count) / \(NoteLimits.maximumContentLengthLabel)")
+                        Text("\(effectivePlainText.count) / \(NoteLimits.maximumContentLengthLabel)")
                             .font(.system(size: FolioFontSize.caption2))
                             .foregroundStyle(
-                                plainText.count > NoteLimits.maximumContentLength
+                                effectivePlainText.count > NoteLimits.maximumContentLength
                                     ? Color.folioDanger
                                     : Color.folioInkSoft
                             )
@@ -184,7 +184,7 @@ struct NoteCreateForm: View {
                 title: String(localized: "Save note"),
                 isLoading: isSaving,
                 isEnabled: !isSaveDisabled,
-                action: { onSave(serializedContent) }
+                action: { onSave(effectiveSerializedContent) }
             )
         }
         .padding(.top, FolioSpacing.sm)
@@ -196,61 +196,38 @@ struct NoteCreateForm: View {
             || isSaving
     }
 
-    private var serializedContent: String {
-        editingModel.serializedContent
+    private var effectiveSerializedContent: String {
+        switch contentPresentation {
+        case .editable:
+            return editingModel.serializedContent
+        case .readOnly:
+            return displayContent ?? editingModel.serializedContent
+        }
+    }
+
+    private var effectivePlainText: String {
+        switch contentPresentation {
+        case .editable:
+            return editingModel.plainText
+        case .readOnly:
+            return NoteLimits.plainText(from: effectiveSerializedContent)
+        }
     }
 
     @ViewBuilder
     private var contentView: some View {
         switch contentPresentation {
         case .editable:
-            VStack(spacing: 0) {
-                RichTextToolbar(
-                    onBold: { editingModel.applyTrait(.traitBold) },
-                    onItalic: { editingModel.applyTrait(.traitItalic) },
-                    onHeading1: { editingModel.applyHeading(FolioRichTextFormat.heading1FontSize) },
-                    onHeading2: { editingModel.applyHeading(FolioRichTextFormat.heading2FontSize) },
-                    onHeading3: { editingModel.applyHeading(FolioRichTextFormat.heading3FontSize) },
-                    onUnorderedList: { editingModel.applyList(ordered: false) },
-                    onOrderedList: { editingModel.applyList(ordered: true) },
-                    onBlockquote: editingModel.applyBlockquote,
-                    onHyperlink: presentLinkPrompt,
-                    onUndo: {},
-                    onRedo: {},
-                    canUndo: false,
-                    canRedo: false,
-                    saveStatus: .saved,
-                    configuration: .notes,
-                    activeFormats: editingModel.toolbarActiveFormats,
-                    isEmbedded: true
-                )
-
-                ZStack(alignment: .top) {
-                    FolioRichTextEditor(
-                        attributedText: $editingModel.attributedText,
-                        selectedRange: $editingModel.selectedRange,
-                        typingAttributes: $editingModel.typingAttributes,
-                        onTextChange: editingModel.textChanged,
-                        onEditingChanged: { isEditing in
-                            if !isEditing { onContentEditingEnded() }
-                        },
-                        textContainerTopInset: 16
-                    )
-
-                    if editingModel.attributedText.string.isEmpty {
-                        Text(String(localized: "What stood out, and why does it matter for this research?"))
-                            .font(.system(size: 14))
-                            .foregroundStyle(Color.folioInkSoft.opacity(0.6))
-                            .frame(maxWidth: .infinity, alignment: .topLeading)
-                            .padding(.top, 16)
-                            .padding(.horizontal, 16)
-                            .allowsHitTesting(false)
-                    }
+            NoteRichTextEditorField(
+                editingModel: editingModel,
+                onContentEditingEnded: onContentEditingEnded,
+                onLinkSelectionFailed: {
+                    toast = .error(String(localized: "Select text to add a link"))
                 }
-            }
+            )
         case .readOnly:
             ScrollView {
-                Text(AttributedString(FolioRichTextEditor.attributedTextFromHTML(displayContent ?? serializedContent)))
+                Text(AttributedString(FolioRichTextEditor.attributedTextFromHTML(effectiveSerializedContent)))
                     .font(.system(size: 15))
                     .foregroundStyle(Color.folioInk)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -258,10 +235,6 @@ struct NoteCreateForm: View {
             }
             .scrollIndicators(.hidden)
         }
-    }
-
-    private var plainText: String {
-        editingModel.plainText
     }
 
     private var contentError: String? {
@@ -284,12 +257,6 @@ struct NoteCreateForm: View {
             isDiscardConfirmationPresented = true
         } else {
             onCancel()
-        }
-    }
-
-    private func presentLinkPrompt() {
-        if !editingModel.presentLinkPrompt() {
-            toast = .error(String(localized: "Select text to add a link"))
         }
     }
 

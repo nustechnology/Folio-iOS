@@ -33,8 +33,7 @@ struct ConvertToSourceView: View {
                         FolioCard(
                             content: CitationRichTextView(
                                 content: note.content,
-                                citationCount: note.citations.count,
-                                highlightCitations: true
+                                citationCount: note.citations.count
                             ),
                             height: .minimum(160),
                             backgroundColor: .folioHomeReadOnlyFieldBackground
