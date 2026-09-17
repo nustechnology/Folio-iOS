@@ -85,8 +85,8 @@ struct CitationPreviewSheet: View {
         .presentationCornerRadius(FolioRadius.xl2)
         .presentationDetents(
             sheetHeight > 0 && headerHeight > 0
-            ? [.height(min(sheetHeight + headerHeight, FolioSize.citationSheetMaxH))]
-            : [.medium]
+            ? [.height(min(sheetHeight + headerHeight, FolioSize.citationSheetMaxH)), .large]
+            : [.medium, .large]
         )
         .presentationDragIndicator(.visible)
     }
