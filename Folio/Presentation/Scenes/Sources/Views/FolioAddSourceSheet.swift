@@ -41,10 +41,22 @@ struct FolioAddSourceSheet: View {
 
     private func heightForTab(_ tab: FolioAddSourceViewModel.AddSourceTab) -> PresentationDetent {
         let staticHeight: CGFloat = 230
-        let contentHeight: CGFloat = switch tab {
+        var contentHeight: CGFloat = switch tab {
         case .files: 190
         case .web:   305
         case .text:  463
+        }
+        if tab == .files, viewModel.state.fileError != nil {
+            contentHeight += 24
+        }
+        if tab == .web, viewModel.state.webURLError != nil {
+            contentHeight += 24
+        }
+        if tab == .text, viewModel.state.manualContentError != nil {
+            contentHeight += 24
+        }
+        if viewModel.state.submitError != nil {
+            contentHeight += 28
         }
         return .height(staticHeight + contentHeight)
     }

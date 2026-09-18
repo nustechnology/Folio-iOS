@@ -124,7 +124,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
 
     var isSubmitEnabled: Bool {
         switch state.selectedTab {
-        case .files: return state.selectedFileURL != nil
+        case .files: return state.selectedFileURL != nil && state.fileError == nil
         case .web: return validWebURL
         case .text: return validManualContent
         }
@@ -197,12 +197,33 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             stopFileAccess()
             state.selectedFileURL = nil; state.selectedFileName = ""; state.selectedFileSize = 0; state.selectedFilePageCount = nil; state.fileError = nil
 
-        case .webURLChanged(let v): state.webURL = v; state.webURLError = nil
+        case .webURLChanged(let v):
+            state.webURL = v
+            let trimmed = v.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                state.webURLError = nil
+            } else if !validWebURL {
+                state.webURLError = String(localized: "Please enter a valid URL")
+            } else {
+                state.webURLError = nil
+            }
+
         case .webTitleChanged(let v): if v.count <= Self.titleMax { state.webTitle = v }
         case .webAuthorChanged(let v): if v.count <= Self.authorMax { state.webAuthor = v }
         case .manualTitleChanged(let v): if v.count <= Self.titleMax { state.manualTitle = v }
         case .manualAuthorChanged(let v): if v.count <= Self.authorMax { state.manualAuthor = v }
-        case .manualContentChanged(let v): if v.count <= Self.manualContentMax { state.manualContent = v }; state.manualContentError = nil
+
+        case .manualContentChanged(let v):
+            if v.count <= Self.manualContentMax {
+                state.manualContent = v
+            }
+            if state.manualContent.isEmpty {
+                state.manualContentError = nil
+            } else if state.manualContent.count < Self.manualContentMin {
+                state.manualContentError = String(localized: "Content must be at least 10 characters long.")
+            } else {
+                state.manualContentError = nil
+            }
 
         case .addSource:
             guard !state.isSubmitting, validateForSubmit() else { return }

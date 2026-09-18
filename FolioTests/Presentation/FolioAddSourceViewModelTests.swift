@@ -408,6 +408,69 @@ final class FolioAddSourceViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.state.shouldDismiss)
     }
 
+    func testSwitchingTabsPreservesFormDataAndOnlyEnablesSubmitForActiveTab() async {
+        let mock = MockUploadSourceUseCase()
+        let viewModel = makeViewModel(mock: mock)
+
+        // 1. On Text tab, type invalid text (< 10 chars)
+        viewModel.handle(.selectTab(.text))
+        viewModel.handle(.manualTitleChanged("Sample Title"))
+        viewModel.handle(.manualContentChanged("wwwd"))
+        XCTAssertFalse(viewModel.isSubmitEnabled)
+
+        // 2. Switch to File tab (where no file is selected yet)
+        viewModel.handle(.selectTab(.files))
+        XCTAssertEqual(viewModel.state.selectedTab, .files)
+        // File tab has no selected file, submit is disabled
+        XCTAssertFalse(viewModel.isSubmitEnabled)
+        // Entered text data is preserved!
+        XCTAssertEqual(viewModel.state.manualTitle, "Sample Title")
+        XCTAssertEqual(viewModel.state.manualContent, "wwwd")
+
+        // 3. Switch back to Text tab; submit is still disabled because Text content is invalid (< 10 chars)
+        viewModel.handle(.selectTab(.text))
+        XCTAssertEqual(viewModel.state.selectedTab, .text)
+        XCTAssertFalse(viewModel.isSubmitEnabled)
+        XCTAssertEqual(viewModel.state.manualContent, "wwwd")
+
+        // 4. Update Text content to valid length (>= 10 chars)
+        viewModel.handle(.manualContentChanged("This is valid content with more than 10 characters"))
+        XCTAssertTrue(viewModel.isSubmitEnabled)
+
+        // 5. Switch to File tab again; submit becomes disabled because File tab has no selected file, even though Text tab has valid content
+        viewModel.handle(.selectTab(.files))
+        XCTAssertFalse(viewModel.isSubmitEnabled)
+        // Text data remains preserved
+        XCTAssertEqual(viewModel.state.manualContent, "This is valid content with more than 10 characters")
+    }
+
+    func testInlineValidationErrorMessagesForWebURLAndManualContent() async {
+        let mock = MockUploadSourceUseCase()
+        let viewModel = makeViewModel(mock: mock)
+
+        // Web URL inline validation
+        viewModel.handle(.selectTab(.web))
+        viewModel.handle(.webURLChanged("invalid-url"))
+        XCTAssertEqual(viewModel.state.webURLError, String(localized: "Please enter a valid URL"))
+
+        viewModel.handle(.webURLChanged("https://example.com/valid"))
+        XCTAssertNil(viewModel.state.webURLError)
+
+        viewModel.handle(.webURLChanged(""))
+        XCTAssertNil(viewModel.state.webURLError)
+
+        // Manual Content inline validation
+        viewModel.handle(.selectTab(.text))
+        viewModel.handle(.manualContentChanged("short"))
+        XCTAssertEqual(viewModel.state.manualContentError, String(localized: "Content must be at least 10 characters long."))
+
+        viewModel.handle(.manualContentChanged("This is at least 10 characters"))
+        XCTAssertNil(viewModel.state.manualContentError)
+
+        viewModel.handle(.manualContentChanged(""))
+        XCTAssertNil(viewModel.state.manualContentError)
+    }
+
     private func makeViewModel(mock: MockUploadSourceUseCase) -> FolioAddSourceViewModel {
         FolioAddSourceViewModel(uploadUseCase: mock, spaceId: "space-1")
     }
