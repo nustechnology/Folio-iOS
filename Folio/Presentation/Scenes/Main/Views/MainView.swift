@@ -329,7 +329,7 @@ struct MainView: View {
         )
         sourceVM.send(.appeared)
         sourceListViewModel = sourceVM
-        noteListViewModel = NoteListViewModel(
+        let notesViewModel = NoteListViewModel(
             spaceId: workspace.id,
             fetchNotesUseCase: fetchNotesUseCase,
             fetchNoteUseCase: fetchNoteUseCase,
@@ -339,8 +339,12 @@ struct MainView: View {
             convertNoteToSourceUseCase: convertNoteToSourceUseCase,
             uploadSourceUseCase: uploadSourceUseCase
         )
-        noteListViewModel?.onSourcesChanged = {
+        notesViewModel.onSourcesChanged = {
             self.sourceListViewModel?.send(.refresh)
+        }
+        noteListViewModel = notesViewModel
+        askViewModel.onNoteCreated = { [weak notesViewModel] in
+            Task { await notesViewModel?.refreshNotes() }
         }
         notebookViewModel = NotebookViewModel(
             fetchNotebookUseCase: viewModel.fetchNotebookUseCase,

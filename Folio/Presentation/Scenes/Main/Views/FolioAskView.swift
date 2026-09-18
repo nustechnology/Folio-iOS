@@ -119,8 +119,12 @@ struct FolioAskView: View {
         )) { draft in
             SaveAskNoteSheet(
                 draft: draft,
+                isSaving: viewModel.state.savingMessageID == draft.messageID,
+                errorMessage: viewModel.saveError,
                 onCancel: { viewModel.handle(.saveAsNoteDismissed) },
-                onSubmit: { title in viewModel.handle(.saveAsNoteConfirmed(title)) }
+                onSubmit: { title, content in
+                    viewModel.handle(.saveAsNoteConfirmed(title: title, content: content))
+                }
             )
         }
     }
@@ -238,7 +242,7 @@ struct FolioAskView: View {
             )
             .padding(.horizontal, 20)
             .padding(.top, 8)
-            .padding(.bottom, 35)
+            .padding(.bottom, 8)
         }
         .id(viewModel.state.conversationEpoch)
     }

@@ -26,7 +26,7 @@ final class FolioAskViewModel: ViewModelProtocol {
         case stop
         case saveAsNoteRequested(String)
         case saveAsNoteDismissed
-        case saveAsNoteConfirmed(String)
+        case saveAsNoteConfirmed(title: String, content: String)
         case feedback(String, useful: Bool)
         case scopeOptionSelected(sourceID: String?)
         case citationTap(AskCitation)
@@ -37,6 +37,7 @@ final class FolioAskViewModel: ViewModelProtocol {
     @Published private(set) var state: State = .init()
     @Published var previewCitation: AskCitation? = nil
     @Published var saveDraft: SaveAskNoteDraft? = nil
+    @Published private(set) var saveError: String?
     @Published var toastMessage: ToastMessage? = nil
 
     private static let noteTitleMaxLength = 150
@@ -60,6 +61,7 @@ final class FolioAskViewModel: ViewModelProtocol {
     private let sendFeedbackUseCase: any SendFeedbackUseCaseProtocol
     private let createSavedAnswerNoteUseCase: any CreateSavedAnswerNoteUseCaseProtocol
     var onConversationCreated: (() -> Void)?
+    var onNoteCreated: (() -> Void)?
 
     var isStreaming: Bool {
         state.messages.last(where: { $0.role == .assistant })?.isStreaming ?? false
@@ -142,8 +144,9 @@ final class FolioAskViewModel: ViewModelProtocol {
             requestSaveAsNote(messageID)
         case .saveAsNoteDismissed:
             saveDraft = nil
-        case .saveAsNoteConfirmed(let title):
-            confirmSaveAsNote(title: title)
+            saveError = nil
+        case .saveAsNoteConfirmed(let title, let content):
+            confirmSaveAsNote(title: title, content: content)
         case .feedback(let messageID, let useful):
             setFeedback(messageID: messageID, useful: useful)
         case .scopeOptionSelected(let sourceID):
@@ -170,6 +173,7 @@ final class FolioAskViewModel: ViewModelProtocol {
         state.isLoadingConversation = false
         conversationId = nil
         saveDraft = nil
+        saveError = nil
         previewCitation = nil
         lastFailedConversation = nil
         lastFailedSpaceId = nil
@@ -198,6 +202,7 @@ final class FolioAskViewModel: ViewModelProtocol {
         state.conversationEpoch += 1
         conversationId = conversation.id
         saveDraft = nil
+        saveError = nil
         previewCitation = nil
 
         state.isLoadingConversation = true
@@ -409,10 +414,15 @@ final class FolioAskViewModel: ViewModelProtocol {
             messageID: messageID,
             serverMessageID: message.serverMessageID,
             initialTitle: titleFromQuestion(question),
-            content: message.content.trimmingCharacters(in: .whitespacesAndNewlines),
+            content: AskSavedNoteFormatter.formatContent(
+                answer: message.content,
+                limitation: message.limitation,
+                citations: message.citations
+            ),
             limitation: message.limitation,
             citations: message.citations
         )
+        saveError = nil
     }
 
     private func titleFromQuestion(_ question: String) -> String {
@@ -422,37 +432,46 @@ final class FolioAskViewModel: ViewModelProtocol {
     }
 
     /// Saves the answer as a note via the Notes API. Mirrors `HomeAskDelegate.onAskSaveAsNoteConfirm`.
-    private func confirmSaveAsNote(title: String) {
+    private func confirmSaveAsNote(title: String, content: String) {
         guard let draft = saveDraft, state.savingMessageID == nil else { return }
-        guard title.count <= Self.noteTitleMaxLength else { return }
+        guard let spaceId, let conversationId, let serverMessageID = draft.serverMessageID else {
+            saveError = String(localized: "Failed to save as note. Please try again.")
+            return
+        }
+        let validation = NoteLimits.validate(title: title, content: content)
+        guard validation.titleError == nil, validation.contentError == nil
+        else {
+            saveError = String(localized: "Failed to save as note. Please try again.")
+            return
+        }
         let messageID = draft.messageID
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let finalTitle = trimmedTitle.isEmpty ? Self.defaultSavedAnswerTitle : trimmedTitle
 
-        saveDraft = nil
         state.savingMessageID = messageID
-
-        let content = AskSavedNoteFormatter.formatContent(
-            answer: draft.content, limitation: draft.limitation, citations: draft.citations)
+        saveError = nil
 
         Task {
             do {
                 _ = try await createSavedAnswerNoteUseCase.execute(
-                    spaceId: spaceId ?? "",
+                    spaceId: spaceId,
                     title: finalTitle,
                     content: content,
                     project: nil,
                     originConversationId: conversationId,
-                    originMessageId: draft.serverMessageID,
+                    originMessageId: serverMessageID,
                     citationCount: draft.citations.count,
                     citations: nil)
                 updateMessage(id: messageID) { $0.isSavedAsNote = true }
                 state.savingMessageID = nil
+                saveDraft = nil
+                saveError = nil
+                onNoteCreated?()
                 toastMessage = .success(String(localized: "Saved as note"))
             } catch {
                 Logger.error("Failed to save as note: \(error)")
                 state.savingMessageID = nil
-                toastMessage = .error(String(localized: "Failed to save as note. Please try again."))
+                saveError = String(localized: "Failed to save as note. Please try again.")
             }
         }
     }
@@ -482,6 +501,7 @@ final class FolioAskViewModel: ViewModelProtocol {
         state.messages = []
         state.conversationEpoch += 1
         conversationId = nil
+        saveError = nil
         refreshSuggestions()
     }
 

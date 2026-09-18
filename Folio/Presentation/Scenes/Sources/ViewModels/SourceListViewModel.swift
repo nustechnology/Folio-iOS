@@ -172,6 +172,8 @@ final class SourceListViewModel: ObservableObject {
             state.editSource = nil
         case .sourceUploaded:
             Task { await loadFirstPage() }
+        case .sourceOperationFailed(let message):
+            state.toastMessage = .error(message)
         case .sortTapped:
             state.presentedSheet = .sortOptions
         case .sortSelected(let option):
@@ -206,6 +208,7 @@ final class SourceListViewModel: ObservableObject {
         case deleteConfirmed
         case cancelDelete
         case sourceUploaded
+        case sourceOperationFailed(String)
         case sortTapped
         case sortSelected(SourceSortOption)
         case dismissToast

@@ -42,7 +42,7 @@ struct NoteEditView: View {
 
                     HStack {
                         Spacer()
-                        Text("\(viewModel.state.editTitle.count) / 150")
+                        Text("\(viewModel.state.editTitle.count) / \(NoteLimits.maximumTitleLengthLabel)")
                             .font(.system(size: FolioFontSize.caption2))
                             .foregroundStyle(Color.folioInkSoft)
                     }
@@ -64,48 +64,13 @@ struct NoteEditView: View {
                             .foregroundStyle(Color.folioDanger)
                     }
                     
-                    ZStack(alignment: .top) {
-                        FolioRichTextEditor(
-                            attributedText: $editingModel.attributedText,
-                            selectedRange: $editingModel.selectedRange,
-                            typingAttributes: $editingModel.typingAttributes,
-                            onTextChange: editingModel.textChanged,
-                            onEditingChanged: { isEditing in
-                                if !isEditing { viewModel.handle(.editContentEditingEnded) }
-                            },
-                            textContainerTopInset: 48
-                        )
-
-                        if editingModel.attributedText.string.isEmpty {
-                            Text(String(localized: "What stood out, and why does it matter for this research?"))
-                                .font(.system(size: 14))
-                                .foregroundStyle(Color.folioInkSoft.opacity(0.6))
-                                .frame(maxWidth: .infinity, alignment: .topLeading)
-                                .padding(.top, 48)
-                                .padding(.horizontal, 16)
-                                .allowsHitTesting(false)
+                    NoteRichTextEditorField(
+                        editingModel: editingModel,
+                        onContentEditingEnded: { viewModel.handle(.editContentEditingEnded) },
+                        onLinkSelectionFailed: {
+                            toast = .error(String(localized: "Select text to add a link"))
                         }
-
-                        RichTextToolbar(
-                            onBold: { editingModel.applyTrait(.traitBold) },
-                            onItalic: { editingModel.applyTrait(.traitItalic) },
-                            onHeading1: { editingModel.applyHeading(FolioRichTextFormat.heading1FontSize) },
-                            onHeading2: { editingModel.applyHeading(FolioRichTextFormat.heading2FontSize) },
-                            onHeading3: { editingModel.applyHeading(FolioRichTextFormat.heading3FontSize) },
-                            onUnorderedList: { editingModel.applyList(ordered: false) },
-                            onOrderedList: { editingModel.applyList(ordered: true) },
-                            onBlockquote: editingModel.applyBlockquote,
-                            onHyperlink: presentLinkPrompt,
-                            onUndo: {},
-                            onRedo: {},
-                            canUndo: false,
-                            canRedo: false,
-                            saveStatus: .saved,
-                            configuration: .notes,
-                            activeFormats: editingModel.toolbarActiveFormats,
-                            isEmbedded: true
-                        )
-                    }
+                    )
                     .frame(minHeight: 160, maxHeight: 280)
                     .background(Color.folioSurfaceStrong)
                     .clipShape(RoundedRectangle(cornerRadius: FolioRadius.md, style: .continuous))
@@ -210,12 +175,6 @@ struct NoteEditView: View {
             get: { viewModel.state.editTitle },
             set: { viewModel.handle(.editTitleChanged($0)) }
         )
-    }
-
-    private func presentLinkPrompt() {
-        if !editingModel.presentLinkPrompt() {
-            toast = .error(String(localized: "Select text to add a link"))
-        }
     }
 
     private var titleError: String? {

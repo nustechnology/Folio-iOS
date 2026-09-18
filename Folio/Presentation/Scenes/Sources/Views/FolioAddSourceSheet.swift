@@ -2,6 +2,25 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct FolioAddSourceSheet: View {
+
+    private struct RequiredFieldLabel: View {
+        let titleKey: LocalizedStringKey
+        var body: some View {
+            HStack(spacing: 0) {
+                Text(titleKey)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(Color.folioHomeTypeTextText)
+                Text(verbatim: " *")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(Color.folioDanger)
+                    .accessibilityHidden(true)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isStaticText)
+            .accessibilityLabel(Text(titleKey) + Text(", required"))
+        }
+    }
+
     @ObservedObject var viewModel: FolioAddSourceViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var isFileImporterPresented = false
@@ -30,8 +49,12 @@ struct FolioAddSourceSheet: View {
         return .height(staticHeight + contentHeight)
     }
 
+    private var isShowingAddForm: Bool {
+        viewModel.state.isAddingNewSource || !viewModel.state.isProcessing
+    }
+
     private var currentDetent: PresentationDetent {
-        viewModel.state.isProcessing ? processingDetent : heightForTab(viewModel.state.selectedTab)
+        isShowingAddForm ? heightForTab(viewModel.state.selectedTab) : processingDetent
     }
 
     private var processingDetent: PresentationDetent {
@@ -45,10 +68,10 @@ struct FolioAddSourceSheet: View {
 
     var body: some View {
         Group {
-            if viewModel.state.isProcessing {
-                processingView
-            } else {
+            if isShowingAddForm {
                 formView
+            } else {
+                processingView
             }
         }
         .presentationDetents(
@@ -67,6 +90,13 @@ struct FolioAddSourceSheet: View {
             message: String(localized: "This permanently removes the source and its retrieval data."),
             onCancel: { viewModel.handle(.dismissDeleteConfirmation) },
             onDelete: { viewModel.handle(.deleteSourceConfirmed) }
+        )
+        .deleteConfirmationOverlay(
+            isPresented: viewModel.state.showCancelProcessingConfirmation,
+            title: String(localized: "Cancel processing?"),
+            message: String(localized: "The source will be deleted and you'll return to the add form."),
+            onCancel: { viewModel.handle(.dismissCancelProcessing) },
+            onDelete: { viewModel.handle(.confirmCancelProcessing) }
         )
     }
 
@@ -237,9 +267,7 @@ struct FolioAddSourceSheet: View {
     private var webTab: some View {
         VStack(alignment: .leading, spacing: FolioSpacing.lg) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(String(localized: "Article URL"))
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.folioHomeTypeTextText)
+                RequiredFieldLabel(titleKey: "Article URL")
 
                 PlaceholderUITextField(
                     placeholder: String(localized: "https://example.org/care-technology-adoption"),
@@ -423,9 +451,7 @@ struct FolioAddSourceSheet: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text(String(localized: "Content"))
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.folioHomeTypeTextText)
+                RequiredFieldLabel(titleKey: "Content")
 
                 ZStack(alignment: .topLeading) {
                     if viewModel.state.manualContent.isEmpty {
@@ -526,11 +552,11 @@ struct FolioAddSourceSheet: View {
                     if viewModel.state.isProcessingFailed {
                         failureBanner
                         failureActions
-                    } else if !viewModel.state.isProcessing && !viewModel.state.isProcessingComplete {
+                    } else if !viewModel.state.isProcessingComplete, viewModel.canCancelProcessing {
                         Button {
-                            viewModel.handle(.resetToAddForm)
+                            viewModel.handle(.cancelProcessingTapped)
                         } label: {
-                            Text(String(localized: "Add another source"))
+                            Text(String(localized: "Cancel"))
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(Color.folioOliveDark)
                                 .frame(maxWidth: .infinity)
@@ -758,6 +784,8 @@ struct FolioAddSourceSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
             .buttonStyle(.plain)
+
+            addAnotherSourceButton
         }
     }
 
@@ -790,22 +818,26 @@ struct FolioAddSourceSheet: View {
                 .frame(height: ProcessingLayout.buttonHeight)
             }
 
-            Button {
-                viewModel.handle(.resetToAddForm)
-            } label: {
-                Text(String(localized: "Add another source"))
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.folioOliveDark)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color.folioSurfaceStrong)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
-                            .stroke(Color.folioBorderLight, lineWidth: 1.5)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
-            }
-            .buttonStyle(.plain)
+            addAnotherSourceButton
         }
+    }
+
+    private var addAnotherSourceButton: some View {
+        Button {
+            viewModel.handle(.showAddForm)
+        } label: {
+            Text(String(localized: "Add another source"))
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.folioOliveDark)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color.folioSurfaceStrong)
+                .overlay(
+                    RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous)
+                        .stroke(Color.folioBorderLight, lineWidth: 1.5)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 }

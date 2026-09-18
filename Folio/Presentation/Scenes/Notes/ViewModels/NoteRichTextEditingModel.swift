@@ -6,6 +6,9 @@ import UIKit
 @MainActor
 final class NoteRichTextEditingModel: ObservableObject {
     @Published var attributedText: NSAttributedString
+    private let initialSerializedContent: String
+    private(set) var serializedContent: String
+    private(set) var plainText: String
     @Published var selectedRange = NSRange(location: 0, length: 0)
     @Published var typingAttributes: [NSAttributedString.Key: Any] = [:]
     @Published var isLinkPromptPresented = false
@@ -16,8 +19,20 @@ final class NoteRichTextEditingModel: ObservableObject {
     private let formattingController = RichTextFormattingController()
 
     init(attributedText: NSAttributedString, publishingHTML: @escaping (String) -> Void) {
+        let serializedContent = FolioRichTextEditor.htmlFromAttributedText(attributedText)
+        self.initialSerializedContent = serializedContent
         self.attributedText = attributedText
+        self.serializedContent = serializedContent
+        self.plainText = NoteLimits.plainText(from: serializedContent)
         self.publishingHTML = publishingHTML
+    }
+
+    var hasUnsavedChanges: Bool {
+        serializedContent != initialSerializedContent
+    }
+
+    func contentForSave(fallback: String) -> String {
+        hasUnsavedChanges ? serializedContent : fallback
     }
 
     var toolbarActiveFormats: RichTextToolbar.ActiveFormats {
@@ -39,9 +54,17 @@ final class NoteRichTextEditingModel: ObservableObject {
         )
     }
 
-    func textChanged(_ value: NSAttributedString) {
+    func loadContent(_ value: NSAttributedString) {
         attributedText = value
-        publishContent(value)
+        updateSerializedContent(from: value)
+    }
+
+    func textChanged(_ value: NSAttributedString) {
+        if attributedText != value {
+            attributedText = value
+        }
+        updateSerializedContent(from: value)
+        publishContent()
     }
 
     func applyTrait(_ trait: UIFontDescriptor.SymbolicTraits) {
@@ -105,10 +128,16 @@ final class NoteRichTextEditingModel: ObservableObject {
     private func commitFormatting(_ value: NSAttributedString) {
         guard FolioRichTextEditor.shouldPublishContentChange(from: attributedText, to: value) else { return }
         attributedText = value
-        publishContent(value)
+        updateSerializedContent(from: value)
+        publishContent()
     }
 
-    private func publishContent(_ value: NSAttributedString) {
-        publishingHTML(FolioRichTextEditor.htmlFromAttributedText(value))
+    private func updateSerializedContent(from value: NSAttributedString) {
+        serializedContent = FolioRichTextEditor.htmlFromAttributedText(value)
+        plainText = NoteLimits.plainText(from: serializedContent)
+    }
+
+    private func publishContent() {
+        publishingHTML(serializedContent)
     }
 }

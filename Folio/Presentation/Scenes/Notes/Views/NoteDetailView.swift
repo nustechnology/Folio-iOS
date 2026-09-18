@@ -51,18 +51,7 @@ struct NoteDetailView: View {
                     }
                 }
                 .padding(.horizontal, FolioSpacing.xl3)
-                .background {
-                    GeometryReader { proxy in
-                        Color.clear
-                            .onChange(of: proxy.size.height, initial: true) { _, newHeight in
-                                guard SheetHeightMeasurement.needsUpdate(
-                                    current: sheetHeight,
-                                    measured: newHeight
-                                ) else { return }
-                                sheetHeight = newHeight
-                            }
-                    }
-                }
+                .measureHeight($sheetHeight)
             }
         }
         .background(Color.folioHomeSheetBackground)
@@ -124,18 +113,7 @@ struct NoteDetailView: View {
             .padding(.horizontal, FolioSpacing.xl3)
             .padding(.bottom, FolioSpacing.xl3)
         }
-        .background {
-            GeometryReader { proxy in
-                Color.clear
-                    .onChange(of: proxy.size.height, initial: true) { _, newHeight in
-                        guard SheetHeightMeasurement.needsUpdate(
-                            current: headerHeight,
-                            measured: newHeight
-                        ) else { return }
-                        headerHeight = newHeight
-                    }
-            }
-        }
+        .measureHeight($headerHeight)
     }
     
     private var metadata: some View {
@@ -202,13 +180,19 @@ struct CitationRichTextView: View {
     
     var body: some View {
         CitationTextView(
-            attributedText: Self.inlineAttributedString(content: content, citationCount: citationCount),
+            attributedText: Self.inlineAttributedString(
+                content: content,
+                citationCount: citationCount
+            ),
             onCitationTapped: onCitationTapped
         )
         .frame(maxWidth: .infinity, alignment: .leading)
     }
     
-    static func inlineAttributedString(content: String, citationCount: Int) -> NSAttributedString {
+    static func inlineAttributedString(
+        content: String,
+        citationCount: Int
+    ) -> NSAttributedString {
         let attributed = NoteDisplayAttributedString.make(from: content)
         let string = attributed.string as NSString
         let fullRange = NSRange(location: 0, length: string.length)
@@ -235,15 +219,13 @@ struct CitationRichTextView: View {
                 cursor = NSMaxRange(match.range)
                 continue
             }
-            result.append(NSAttributedString(
-                string: "[\(number)]",
-                attributes: [
-                    .font: UIFont.systemFont(ofSize: FolioFontSize.caption2, weight: .semibold),
-                    .foregroundColor: UIColor(Color.folioInk),
-                    .backgroundColor: UIColor(Color.folioGold.opacity(0.3)),
-                    .link: url
-                ]
-            ))
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: FolioFontSize.caption2, weight: .semibold),
+                .foregroundColor: UIColor(Color.folioInk),
+                .link: url,
+                .backgroundColor: UIColor(FolioTheme.accentBg)
+            ]
+            result.append(NSAttributedString(string: "[\(number)]", attributes: attributes))
             cursor = NSMaxRange(match.range)
         }
         
