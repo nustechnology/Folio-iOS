@@ -82,6 +82,7 @@ struct WorkspaceEditorSheet: View {
         .onChange(of: errorMessage) { _, message in
             if let message { nameError = message }
         }
+        .presentationBackground(Color.folioSurfaceStrong)
         .presentationDetents([.height(460)])
     }
     
@@ -163,30 +164,13 @@ struct WorkspaceEditorSheet: View {
             }
             .buttonStyle(.plain)
             
-            Button(action: submitForm) {
-                HStack(spacing: 8) {
-                    if isMutating {
-                        ProgressView()
-                            .progressViewStyle(.circular)
-                            .tint(.white)
-                            .scaleEffect(0.8)
-                    }
-                    Text(submitTitle)
-                        .font(.system(size: 15, weight: .semibold))
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 15)
-                .foregroundStyle(.white)
-                .background(isSubmitDisabled ? Color.folioOlive.opacity(0.4) : Color.folioOliveDark)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.folioGold.opacity(0.35), lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .shadow(color: Color.black.opacity(0.08), radius: 12, y: 4)
-            }
-            .buttonStyle(.plain)
-            .disabled(isSubmitDisabled)
+            FolioPrimaryButton(
+                title: submitTitle,
+                isLoading: isMutating,
+                isEnabled: !isSubmitDisabled,
+                verticalPadding: 15,
+                action: submitForm
+            )
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)

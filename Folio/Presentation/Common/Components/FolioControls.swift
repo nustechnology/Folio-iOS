@@ -194,7 +194,7 @@ struct FolioPrimaryButton: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, verticalPadding)
             .foregroundStyle(isDisabled ? Color.white.opacity(0.55) : .white)
-            .background(isDisabled ? Color.folioInkSoft.opacity(0.45) : Color.folioOliveDark)
+            .background(isDisabled ? Color.folioOliveDark.opacity(0.45) : Color.folioOliveDark)
             .overlay(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(isDisabled ? Color.folioBorder : Color.folioGold.opacity(0.35), lineWidth: 1)
@@ -392,7 +392,7 @@ struct FolioTextField: View {
                 Button {
                     isPasswordVisible.toggle()
                 } label: {
-                    Image(systemName: isPasswordVisible ? "eye" : "eye.slash")
+                    Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
                         .font(.system(size: 14, weight: .regular))
                         .foregroundStyle(Color.folioInkSoft)
                 }
