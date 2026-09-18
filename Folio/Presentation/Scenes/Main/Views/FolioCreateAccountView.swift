@@ -184,7 +184,7 @@ struct FolioCreateAccountView: View {
             FolioCreateAccountView(viewModel: MainViewModel(
                 fetchUsersUseCase: PreviewAuthFetchUsersUseCase(),
                 fetchMeUseCase: PreviewAuthFetchMeUseCase(),
-                localStorage: UserDefaultsStorage(),
+                getStoredAuthSessionUseCase: PreviewGetStoredAuthSessionUseCase(),
                 signUpUseCase: PreviewAuthSignUpUseCase(),
                 signInUseCase: PreviewAuthSignInUseCase(),
                 signOutUseCase: PreviewAuthSignOutUseCase(),

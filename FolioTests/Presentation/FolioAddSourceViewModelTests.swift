@@ -462,7 +462,7 @@ final class FolioAddSourceViewModelTests: XCTestCase {
         // Manual Content inline validation
         viewModel.handle(.selectTab(.text))
         viewModel.handle(.manualContentChanged("short"))
-        XCTAssertEqual(viewModel.state.manualContentError, String(localized: "Content must be at least 10 characters long."))
+        XCTAssertEqual(viewModel.state.manualContentError, FolioAddSourceViewModel.manualContentMinError)
 
         viewModel.handle(.manualContentChanged("This is at least 10 characters"))
         XCTAssertNil(viewModel.state.manualContentError)

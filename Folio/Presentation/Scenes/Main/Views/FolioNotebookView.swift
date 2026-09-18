@@ -254,7 +254,7 @@ struct FolioNotebookView: View {
             trailing: [
                 AnyView(
                     Button(action: { viewModel.handle(.toggleExportSheet) }) {
-                        Image(systemName: "plus")
+                        Image(systemName: "ellipsis")
                             .font(.system(size: FolioFontSize.body, weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(width: FolioSize.buttonMd, height: FolioSize.buttonMd)

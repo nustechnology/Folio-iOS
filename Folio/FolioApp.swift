@@ -15,7 +15,7 @@ struct FolioApp: App {
             MainView(viewModel: MainViewModel(
                 fetchUsersUseCase: diContainer.fetchUsersUseCase,
                 fetchMeUseCase: diContainer.fetchMeUseCase,
-                localStorage: diContainer.sessionStorage,
+                getStoredAuthSessionUseCase: diContainer.getStoredAuthSessionUseCase,
                 signUpUseCase: diContainer.signUpUseCase,
                 signInUseCase: diContainer.signInUseCase,
                 signOutUseCase: diContainer.signOutUseCase,

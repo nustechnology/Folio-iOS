@@ -46,19 +46,20 @@ struct FolioAddSourceSheet: View {
         case .web:   305
         case .text:  463
         }
-        if tab == .files, viewModel.state.fileError != nil {
-            contentHeight += 24
-        }
-        if tab == .web, viewModel.state.webURLError != nil {
-            contentHeight += 24
-        }
-        if tab == .text, viewModel.state.manualContentError != nil {
-            contentHeight += 24
-        }
+        contentHeight += inlineErrorExtraHeight(for: tab)
         if viewModel.state.submitError != nil {
             contentHeight += 28
         }
         return .height(staticHeight + contentHeight)
+    }
+
+    private func inlineErrorExtraHeight(for tab: FolioAddSourceViewModel.AddSourceTab) -> CGFloat {
+        let hasInlineError: Bool = switch tab {
+        case .files: viewModel.state.fileError != nil
+        case .web: viewModel.state.webURLError != nil
+        case .text: viewModel.state.manualContentError != nil
+        }
+        return hasInlineError ? 24 : 0
     }
 
     private var isShowingAddForm: Bool {

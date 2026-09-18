@@ -41,7 +41,7 @@ final class MainViewModel: ViewModelProtocol {
 
     private let fetchUsersUseCase: any FetchUsersUseCaseProtocol
     private let fetchMeUseCase: any FetchMeUseCaseProtocol
-    private let localStorage: LocalStorageProtocol
+    private let getStoredAuthSessionUseCase: any GetStoredAuthSessionUseCaseProtocol
     private let signUpUseCase: any SignUpUseCaseProtocol
     private let signInUseCase: any SignInUseCaseProtocol
     private let signOutUseCase: any SignOutUseCaseProtocol
@@ -67,7 +67,7 @@ final class MainViewModel: ViewModelProtocol {
     init(
         fetchUsersUseCase: any FetchUsersUseCaseProtocol,
         fetchMeUseCase: any FetchMeUseCaseProtocol,
-        localStorage: LocalStorageProtocol,
+        getStoredAuthSessionUseCase: any GetStoredAuthSessionUseCaseProtocol,
         signUpUseCase: any SignUpUseCaseProtocol,
         signInUseCase: any SignInUseCaseProtocol,
         signOutUseCase: any SignOutUseCaseProtocol,
@@ -88,7 +88,7 @@ final class MainViewModel: ViewModelProtocol {
     ) {
         self.fetchUsersUseCase = fetchUsersUseCase
         self.fetchMeUseCase = fetchMeUseCase
-        self.localStorage = localStorage
+        self.getStoredAuthSessionUseCase = getStoredAuthSessionUseCase
         self.signUpUseCase = signUpUseCase
         self.signInUseCase = signInUseCase
         self.signOutUseCase = signOutUseCase
@@ -106,8 +106,7 @@ final class MainViewModel: ViewModelProtocol {
         self.fetchNotebookUseCase = fetchNotebookUseCase
         self.saveNotebookUseCase = saveNotebookUseCase
         state.sources = initialSources
-        if let dto: AuthTokenDTO = try? localStorage.load(forKey: StorageKey.authSession) {
-            let token = dto.toDomain()
+        if let token = getStoredAuthSessionUseCase.execute() {
             state.isAuthenticated = token.isValid || !token.refreshToken.isEmpty
         }
 #if DEBUG
@@ -348,8 +347,7 @@ final class MainViewModel: ViewModelProtocol {
 
     private func checkSession() {
         guard refreshTask == nil, signOutTask == nil, !state.authLoading else { return }
-        guard let dto: AuthTokenDTO = try? localStorage.load(forKey: StorageKey.authSession) else { return }
-        let token = dto.toDomain()
+        guard let token = getStoredAuthSessionUseCase.execute() else { return }
         if token.isValid {
             state.isAuthenticated = true
             startProfileFetch()

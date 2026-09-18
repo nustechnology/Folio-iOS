@@ -81,6 +81,10 @@ final class AuthRepository: AuthRepositoryProtocol {
         return session
     }
 
+    func getStoredSession() -> AuthToken? {
+        loadSession()
+    }
+
     private func saveSession(_ token: AuthToken) throws {
         do {
             try localStorage.save(token.toDTO(), forKey: StorageKey.authSession)
@@ -95,10 +99,15 @@ final class AuthRepository: AuthRepositoryProtocol {
     }
 
     private func loadSession() -> AuthToken? {
-        guard let dto: AuthTokenDTO = try? localStorage.load(forKey: StorageKey.authSession) else {
+        do {
+            guard let dto: AuthTokenDTO = try localStorage.load(forKey: StorageKey.authSession) else {
+                return nil
+            }
+            return dto.toDomain()
+        } catch {
+            Logger.error("Failed to load stored auth session: \(error)")
             return nil
         }
-        return dto.toDomain()
     }
 
     private func mapAuthError(_ error: NetworkError) -> AuthError {

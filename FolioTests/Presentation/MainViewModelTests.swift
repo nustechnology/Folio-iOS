@@ -7,7 +7,7 @@ final class MainViewModelTests: XCTestCase {
         let fetchMe = DeferredFetchMeUseCase()
         let viewModel = makeViewModel(
             fetchMeUseCase: fetchMe,
-            localStorage: SessionLocalStorage(session: validSession())
+            getStoredAuthSessionUseCase: PreviewGetStoredAuthSessionUseCase(session: validSession())
         )
 
         viewModel.handle(.onAppear)
@@ -29,7 +29,7 @@ final class MainViewModelTests: XCTestCase {
     func testAuthenticationLoadingStartsBeforeWaitingForRefreshCancellation() async {
         let refreshToken = BlockingRefreshTokenUseCase()
         let viewModel = makeViewModel(
-            localStorage: SessionLocalStorage(session: expiredSession()),
+            getStoredAuthSessionUseCase: PreviewGetStoredAuthSessionUseCase(session: expiredSession()),
             refreshTokenUseCase: refreshToken
         )
 
@@ -60,7 +60,7 @@ final class MainViewModelTests: XCTestCase {
     func testSignOutWhileRefreshIsBlockedDoesNotRestoreAuthenticatedState() async {
         let refreshToken = BlockingRefreshTokenUseCase()
         let viewModel = makeViewModel(
-            localStorage: SessionLocalStorage(session: expiredSession()),
+            getStoredAuthSessionUseCase: PreviewGetStoredAuthSessionUseCase(session: expiredSession()),
             refreshTokenUseCase: refreshToken
         )
 
@@ -84,7 +84,7 @@ final class MainViewModelTests: XCTestCase {
 
     func testSignOutFailureKeepsAuthenticatedState() async {
         let viewModel = makeViewModel(
-            localStorage: SessionLocalStorage(session: validSession()),
+            getStoredAuthSessionUseCase: PreviewGetStoredAuthSessionUseCase(session: validSession()),
             signOutUseCase: FailingSignOutUseCase()
         )
 
@@ -101,7 +101,7 @@ final class MainViewModelTests: XCTestCase {
     func testRepeatedSessionChecksStartOnlyOneRefresh() async {
         let refreshToken = BlockingRefreshTokenUseCase()
         let viewModel = makeViewModel(
-            localStorage: SessionLocalStorage(session: expiredSession()),
+            getStoredAuthSessionUseCase: PreviewGetStoredAuthSessionUseCase(session: expiredSession()),
             refreshTokenUseCase: refreshToken
         )
 
@@ -158,7 +158,7 @@ final class MainViewModelTests: XCTestCase {
 
     private func makeViewModel(
         fetchMeUseCase: any FetchMeUseCaseProtocol = EmptyFetchMeUseCase(),
-        localStorage: LocalStorageProtocol = EmptyLocalStorage(),
+        getStoredAuthSessionUseCase: any GetStoredAuthSessionUseCaseProtocol = PreviewGetStoredAuthSessionUseCase(),
         refreshTokenUseCase: any RefreshTokenUseCaseProtocol = EmptyRefreshTokenUseCase(),
         signOutUseCase: any SignOutUseCaseProtocol = EmptySignOutUseCase(),
         fetchSourceDetailUseCase: any FetchSourceDetailUseCaseProtocol = EmptyFetchSourceDetailUseCase()
@@ -166,7 +166,7 @@ final class MainViewModelTests: XCTestCase {
         MainViewModel(
             fetchUsersUseCase: EmptyFetchUsersUseCase(),
             fetchMeUseCase: fetchMeUseCase,
-            localStorage: localStorage,
+            getStoredAuthSessionUseCase: getStoredAuthSessionUseCase,
             signUpUseCase: EmptySignUpUseCase(),
             signInUseCase: EmptySignInUseCase(),
             signOutUseCase: signOutUseCase,
@@ -191,16 +191,16 @@ final class MainViewModelTests: XCTestCase {
         )
     }
 
-    private func validSession() -> AuthTokenDTO {
-        AuthTokenDTO(
+    private func validSession() -> AuthToken {
+        AuthToken(
             accessToken: "access-token",
             refreshToken: "refresh-token",
             expiresAt: .distantFuture
         )
     }
 
-    private func expiredSession() -> AuthTokenDTO {
-        AuthTokenDTO(
+    private func expiredSession() -> AuthToken {
+        AuthToken(
             accessToken: "expired-access-token",
             refreshToken: "refresh-token",
             expiresAt: .distantPast
@@ -290,29 +290,6 @@ private actor DeferredFetchMeUseCase: FetchMeUseCaseProtocol {
         continuation?.resume(returning: identity)
         continuation = nil
     }
-}
-
-private final class SessionLocalStorage: LocalStorageProtocol {
-    private let session: AuthTokenDTO
-
-    init(session: AuthTokenDTO) {
-        self.session = session
-    }
-
-    func save<T>(_ value: T, forKey key: String) throws where T: Codable {}
-
-    func load<T>(forKey key: String) throws -> T? where T: Codable {
-        session as? T
-    }
-
-    func remove(forKey key: String) throws {}
-
-}
-
-private final class EmptyLocalStorage: LocalStorageProtocol {
-    func save<T>(_ value: T, forKey key: String) throws where T: Codable {}
-    func load<T>(forKey key: String) throws -> T? where T: Codable { nil }
-    func remove(forKey key: String) throws {}
 }
 
 private struct EmptySignUpUseCase: SignUpUseCaseProtocol {
