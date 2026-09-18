@@ -135,6 +135,10 @@ enum FolioDuration {
     static let askMockDelay: UInt64 = 1_200_000_000
 }
 
+enum FolioAnimation {
+    static let tabTransition: Animation = .spring(response: 0.35, dampingFraction: 0.8)
+}
+
 enum FolioSize {
     static let iconSm: CGFloat = 14
     static let iconMd: CGFloat = 20

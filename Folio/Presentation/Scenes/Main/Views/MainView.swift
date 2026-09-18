@@ -134,9 +134,7 @@ struct MainView: View {
                 }
             }
             .onChange(of: viewModel.state.selectedTab) { _, newValue in
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                    displayedTab = newValue
-                }
+                displayedTab = newValue
             }
             .onAppear {
                 displayedTab = viewModel.state.selectedTab

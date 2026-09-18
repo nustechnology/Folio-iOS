@@ -72,7 +72,7 @@ struct FolioBottomTabBar: View {
                     .fill(Color.folioGold)
                     .frame(width: Metrics.indicatorWidth, height: Metrics.indicatorHeight)
                     .offset(x: indicatorOffsetX, y: Metrics.indicatorTopInset)
-                    .animation(.spring(response: 0.35, dampingFraction: 0.8), value: selectedTab)
+                    .animation(FolioAnimation.tabTransition, value: selectedTab)
 
                 HStack(spacing: 0) {
                     ForEach(FolioTab.allCases) { tab in
