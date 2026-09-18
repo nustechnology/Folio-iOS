@@ -65,14 +65,32 @@ final class FolioAskViewModelTests: XCTestCase {
 
     // MARK: - Stop
 
-    func testStopCancelsStreamAndFinalizesMessage() async {
+    func testStopBeforeContentGeneratedRemovesAssistantMessage() async {
         let vm = makeViewModel(
             sources: [readySource(id: "s1")],
             streamAnswer: .neverEnding)
         vm.updateSources([readySource(id: "s1")], spaceId: "sp1")
 
         vm.handle(.submit("Question"))
-        let assistantID = vm.state.messages[1].id
+        XCTAssertEqual(vm.state.messages.count, 2)
+        XCTAssertTrue(vm.isStreaming)
+
+        vm.handle(.stop)
+
+        XCTAssertFalse(vm.isStreaming)
+        XCTAssertEqual(vm.state.messages.count, 1)
+        XCTAssertEqual(vm.state.messages.first?.role, .user)
+    }
+
+    func testStopCancelsStreamAndFinalizesMessageWithContent() async {
+        let vm = makeViewModel(
+            sources: [readySource(id: "s1")],
+            streamAnswer: .partialAnswer)
+        vm.updateSources([readySource(id: "s1")], spaceId: "sp1")
+
+        vm.handle(.submit("Question"))
+        await waitUntil("partial token to arrive") { vm.state.messages.last?.content.isEmpty == false }
+        let assistantID = vm.state.messages.last?.id
         XCTAssertTrue(vm.isStreaming)
 
         vm.handle(.stop)
@@ -82,6 +100,7 @@ final class FolioAskViewModelTests: XCTestCase {
         XCTAssertNotNil(assistant)
         XCTAssertFalse(assistant!.isStreaming)
         XCTAssertTrue(assistant!.wasStopped)
+        XCTAssertEqual(assistant!.content, "Partial token")
     }
 
     // MARK: - Scope change
@@ -497,7 +516,7 @@ private struct MockFetchConversationDetail: FetchAskConversationDetailUseCasePro
 }
 
 private struct MockStreamAnswerUseCase: StreamAskAnswerUseCaseProtocol {
-    enum Kind { case empty, answer, neverEnding }
+    enum Kind { case empty, answer, neverEnding, partialAnswer }
 
     let kind: Kind
 
@@ -522,6 +541,9 @@ private struct MockStreamAnswerUseCase: StreamAskAnswerUseCaseProtocol {
             case .neverEnding:
                 // Never-yielding stream — stays open until cancelled
                 break
+            case .partialAnswer:
+                continuation.yield(.start(conversationId: "conversation-1", messageId: "server-message-1"))
+                continuation.yield(.token("Partial token"))
             }
         }
     }
