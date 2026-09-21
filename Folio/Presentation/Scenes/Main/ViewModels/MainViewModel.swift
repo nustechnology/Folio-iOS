@@ -109,12 +109,36 @@ final class MainViewModel: ViewModelProtocol {
         if let token = getStoredAuthSessionUseCase.execute() {
             state.isAuthenticated = token.isValid || !token.refreshToken.isEmpty
         }
+        observeSessionInvalidation()
 #if DEBUG
         if initialSources.isEmpty {
             state.sourceFilters = FolioDesignFixtures.filters
             state.sources = FolioDesignFixtures.sources
         }
 #endif
+    }
+
+    private var cancellables = Set<AnyCancellable>()
+
+    private func observeSessionInvalidation() {
+        NotificationCenter.default.publisher(for: .didInvalidateSession)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self, self.state.isAuthenticated else { return }
+                self.handleSessionInvalidation()
+            }
+            .store(in: &cancellables)
+    }
+
+    private func handleSessionInvalidation() {
+        invalidateProfileRequest()
+        state.isAuthenticated = false
+        state.userDisplayName = nil
+        state.userEmail = nil
+        state.selectedTab = .sources
+        state.sourcesMode = .spaces
+        state.activeReaderID = nil
+        toastMessage = .error(String(localized: "Session expired. Please sign in again."))
     }
 
     @Published private(set) var state: State = .init()
@@ -283,6 +307,7 @@ final class MainViewModel: ViewModelProtocol {
     }
 
     private func applySession(_ token: AuthToken) {
+        Logger.debug("[AUTH] Applying Session - Access Token: \(token.accessToken)")
         state.isAuthenticated = true
         state.userDisplayName = nil
         state.userEmail = nil

@@ -88,8 +88,15 @@ struct SessionAccessTokenProvider: AccessTokenProvider {
     private func removeSession() throws {
         do {
             try localStorage.remove(forKey: StorageKey.authSession)
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .didInvalidateSession, object: nil)
+            }
         } catch {
             throw AuthError.sessionRemovalFailed
         }
     }
+}
+
+extension Notification.Name {
+    static let didInvalidateSession = Notification.Name("didInvalidateSession")
 }
