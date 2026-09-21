@@ -41,7 +41,7 @@ final class MainViewModel: ViewModelProtocol {
 
     private let fetchUsersUseCase: any FetchUsersUseCaseProtocol
     private let fetchMeUseCase: any FetchMeUseCaseProtocol
-    private let localStorage: LocalStorageProtocol
+    private let getStoredAuthSessionUseCase: any GetStoredAuthSessionUseCaseProtocol
     private let signUpUseCase: any SignUpUseCaseProtocol
     private let signInUseCase: any SignInUseCaseProtocol
     private let signOutUseCase: any SignOutUseCaseProtocol
@@ -67,7 +67,7 @@ final class MainViewModel: ViewModelProtocol {
     init(
         fetchUsersUseCase: any FetchUsersUseCaseProtocol,
         fetchMeUseCase: any FetchMeUseCaseProtocol,
-        localStorage: LocalStorageProtocol,
+        getStoredAuthSessionUseCase: any GetStoredAuthSessionUseCaseProtocol,
         signUpUseCase: any SignUpUseCaseProtocol,
         signInUseCase: any SignInUseCaseProtocol,
         signOutUseCase: any SignOutUseCaseProtocol,
@@ -88,7 +88,7 @@ final class MainViewModel: ViewModelProtocol {
     ) {
         self.fetchUsersUseCase = fetchUsersUseCase
         self.fetchMeUseCase = fetchMeUseCase
-        self.localStorage = localStorage
+        self.getStoredAuthSessionUseCase = getStoredAuthSessionUseCase
         self.signUpUseCase = signUpUseCase
         self.signInUseCase = signInUseCase
         self.signOutUseCase = signOutUseCase
@@ -106,12 +106,39 @@ final class MainViewModel: ViewModelProtocol {
         self.fetchNotebookUseCase = fetchNotebookUseCase
         self.saveNotebookUseCase = saveNotebookUseCase
         state.sources = initialSources
+        if let token = getStoredAuthSessionUseCase.execute() {
+            state.isAuthenticated = token.isValid
+        }
+        observeSessionInvalidation()
 #if DEBUG
         if initialSources.isEmpty {
             state.sourceFilters = FolioDesignFixtures.filters
             state.sources = FolioDesignFixtures.sources
         }
 #endif
+    }
+
+    private var cancellables = Set<AnyCancellable>()
+
+    private func observeSessionInvalidation() {
+        NotificationCenter.default.publisher(for: .didInvalidateSession)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self, self.state.isAuthenticated else { return }
+                self.handleSessionInvalidation()
+            }
+            .store(in: &cancellables)
+    }
+
+    private func handleSessionInvalidation() {
+        invalidateProfileRequest()
+        state.isAuthenticated = false
+        state.userDisplayName = nil
+        state.userEmail = nil
+        state.selectedTab = .sources
+        state.sourcesMode = .spaces
+        state.activeReaderID = nil
+        toastMessage = .error(String(localized: "Session expired. Please sign in again."))
     }
 
     @Published private(set) var state: State = .init()
@@ -280,6 +307,7 @@ final class MainViewModel: ViewModelProtocol {
     }
 
     private func applySession(_ token: AuthToken) {
+        Logger.debug("[AUTH] Applying Session")
         state.isAuthenticated = true
         state.userDisplayName = nil
         state.userEmail = nil
@@ -344,8 +372,7 @@ final class MainViewModel: ViewModelProtocol {
 
     private func checkSession() {
         guard refreshTask == nil, signOutTask == nil, !state.authLoading else { return }
-        guard let dto: AuthTokenDTO = try? localStorage.load(forKey: StorageKey.authSession) else { return }
-        let token = dto.toDomain()
+        guard let token = getStoredAuthSessionUseCase.execute() else { return }
         if token.isValid {
             state.isAuthenticated = true
             startProfileFetch()

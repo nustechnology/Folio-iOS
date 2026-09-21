@@ -195,19 +195,14 @@ struct AskConversationListView: View {
                 .padding(.top, FolioSpacing.xl)
                 .padding(.bottom, FolioSpacing.xl)
 
-            Button {
-                showNewConversationSheet = false
-                onNewConversation()
-            } label: {
-                Text(String(localized: "New conversation"))
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(Color.folioOliveDark)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
-            .buttonStyle(.plain)
+            FolioPrimaryButton(
+                title: String(localized: "New conversation"),
+                verticalPadding: FolioSpacing.xl,
+                action: {
+                    showNewConversationSheet = false
+                    onNewConversation()
+                }
+            )
             .padding(.horizontal, FolioSpacing.xl3)
         }
         .frame(maxWidth: .infinity)
@@ -371,20 +366,15 @@ private struct RenameConversationSheet: View {
                 }
                 .buttonStyle(.plain)
 
-                Button {
-                    onSubmit(title.trimmingCharacters(in: .whitespacesAndNewlines))
-                    dismiss()
-                } label: {
-                    Text(String(localized: "Save"))
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.white.opacity(canSave ? 1 : 0.5))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(Color.folioOliveDark.opacity(canSave ? 1 : 0.35))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-                .buttonStyle(.plain)
-                .disabled(!canSave)
+                FolioPrimaryButton(
+                    title: String(localized: "Save"),
+                    isEnabled: canSave,
+                    verticalPadding: FolioSpacing.xl,
+                    action: {
+                        onSubmit(title.trimmingCharacters(in: .whitespacesAndNewlines))
+                        dismiss()
+                    }
+                )
             }
             .padding(.horizontal, FolioSpacing.xl3)
         }

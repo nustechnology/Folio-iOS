@@ -56,6 +56,10 @@ final class AppDIContainer {
         SignOutUseCase(authRepository: authRepository)
     }()
 
+    lazy var getStoredAuthSessionUseCase: any GetStoredAuthSessionUseCaseProtocol = {
+        GetStoredAuthSessionUseCase(authRepository: authRepository)
+    }()
+
     lazy var workspaceRepository: WorkspaceRepositoryProtocol = {
         RemoteWorkspaceRepository(networkService: networkService)
     }()

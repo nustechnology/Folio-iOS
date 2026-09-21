@@ -24,9 +24,15 @@ struct ToastMessage: Equatable {
 }
 
 struct ToastView: View {
+    private enum Constants {
+        static let dragDismissThreshold: CGFloat = -40
+    }
+
     let message: String
     let style: ToastStyle
     let onDismiss: () -> Void
+
+    @State private var dragOffset: CGFloat = 0
 
     private var iconName: String {
         switch style {
@@ -78,9 +84,27 @@ struct ToastView: View {
         .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 4)
         .padding(.horizontal, 16)
         .padding(.top, 8)
+        .offset(y: min(dragOffset, 0))
+        .gesture(
+            DragGesture(minimumDistance: 8)
+                .onChanged { value in
+                    dragOffset = min(value.translation.height, 0)
+                }
+                .onEnded { value in
+                    if value.translation.height < Constants.dragDismissThreshold {
+                        onDismiss()
+                    } else {
+                        withAnimation(.easeOut(duration: FolioDuration.fast)) {
+                            dragOffset = 0
+                        }
+                    }
+                }
+        )
         .task {
-            try? await Task.sleep(nanoseconds: FolioDuration.toastDismiss)
-            onDismiss()
+            do {
+                try await Task.sleep(nanoseconds: FolioDuration.toastDismiss)
+                onDismiss()
+            } catch {}
         }
     }
 }

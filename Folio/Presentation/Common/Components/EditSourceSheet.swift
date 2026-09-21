@@ -17,7 +17,7 @@ struct EditSourceSheet: View {
     @FocusState private var focusedField: Field?
 
     private enum Field: Hashable {
-        case title, author, content
+        case title, author
     }
 
     private var trimmedTitleCount: Int {
@@ -28,14 +28,9 @@ struct EditSourceSheet: View {
         author.trimmingCharacters(in: .whitespacesAndNewlines).count
     }
 
-    private var trimmedContentCount: Int {
-        content.trimmingCharacters(in: .whitespacesAndNewlines).count
-    }
-
     private var isOverLimit: Bool {
         trimmedTitleCount > maximumTitleLength
             || trimmedAuthorCount > maximumAuthorLength
-            || (sourceType == .manual && trimmedContentCount > maximumContentLength)
     }
 
     var body: some View {
@@ -51,9 +46,6 @@ struct EditSourceSheet: View {
                 VStack(alignment: .leading, spacing: FolioSpacing.xl) {
                     titleField
                     authorField
-                    if sourceType == .manual {
-                        contentField
-                    }
                     if let errorMessage {
                         Text(errorMessage)
                             .font(.system(size: FolioFontSize.small))
@@ -70,7 +62,7 @@ struct EditSourceSheet: View {
         .scrollDismissesKeyboard(.interactively)
         .presentationBackground(Color.folioHomeSheetBackground)
         .presentationCornerRadius(FolioRadius.xl2)
-        .presentationDetents(sourceType == .manual ? [.height(580)] : [.height(315)])
+        .presentationDetents([.height(315)])
         .presentationDragIndicator(.visible)
     }
 
@@ -150,42 +142,6 @@ struct EditSourceSheet: View {
                 Text("\(trimmedAuthorCount)/\(maximumAuthorLength)")
                     .font(.system(size: FolioFontSize.small))
                     .foregroundStyle(trimmedAuthorCount > maximumAuthorLength ? Color.folioDanger : Color.folioInkSoft)
-            }
-        }
-    }
-
-    private var contentField: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(String(localized: "Content"))
-                .font(.system(size: FolioFontSize.body, weight: .bold))
-                .foregroundStyle(Color.folioHomeTypeTextText)
-
-            TextEditor(text: Binding(
-                get: { content },
-                set: { content = $0 }
-            ))
-            .font(.system(size: FolioFontSize.bodyLarge, design: .default))
-            .scrollContentBackground(.hidden)
-            .padding(FolioSpacing.md)
-            .frame(minHeight: 120, maxHeight: 200)
-            .background(.white)
-            .overlay(
-                RoundedRectangle(cornerRadius: FolioRadius.lg)
-                    .stroke(trimmedContentCount > maximumContentLength ? Color.folioDanger : Color.folioFieldBorder, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: FolioRadius.lg))
-            .focused($focusedField, equals: .content)
-
-            HStack {
-                if trimmedContentCount > maximumContentLength {
-                    Text(String(localized: "Content exceeds maximum limit of \(maximumContentLength) characters."))
-                        .font(.system(size: FolioFontSize.small))
-                        .foregroundStyle(Color.folioDanger)
-                }
-                Spacer()
-                Text("\(trimmedContentCount.formatted())/\(maximumContentLength.formatted())")
-                    .font(.system(size: FolioFontSize.small))
-                    .foregroundStyle(trimmedContentCount > maximumContentLength ? Color.folioDanger : Color.folioInkSoft)
             }
         }
     }

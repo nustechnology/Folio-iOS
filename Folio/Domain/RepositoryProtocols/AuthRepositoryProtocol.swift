@@ -8,6 +8,7 @@ protocol AuthRepositoryProtocol {
     func signOut() throws
     func signOutAwaitingCancellation() async throws
     func getCurrentSession() -> AuthToken?
+    func getStoredSession() -> AuthToken?
 }
 
 extension AuthRepositoryProtocol {

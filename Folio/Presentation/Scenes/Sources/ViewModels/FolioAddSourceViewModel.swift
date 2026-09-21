@@ -39,6 +39,20 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     static let titleMax = 255
     static let authorMax = 100
 
+    static var manualContentMinError: String {
+        String.localizedStringWithFormat(
+            String(localized: "Content must be at least %lld characters long."),
+            Int64(manualContentMin)
+        )
+    }
+
+    static var manualContentMaxError: String {
+        String.localizedStringWithFormat(
+            String(localized: "Content exceeds maximum limit of %lld characters."),
+            Int64(manualContentMax)
+        )
+    }
+
     struct State {
         var selectedTab: AddSourceTab = .files
         var isSubmitting = false
@@ -124,7 +138,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
 
     var isSubmitEnabled: Bool {
         switch state.selectedTab {
-        case .files: return state.selectedFileURL != nil
+        case .files: return state.selectedFileURL != nil && state.fileError == nil
         case .web: return validWebURL
         case .text: return validManualContent
         }
@@ -197,12 +211,33 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             stopFileAccess()
             state.selectedFileURL = nil; state.selectedFileName = ""; state.selectedFileSize = 0; state.selectedFilePageCount = nil; state.fileError = nil
 
-        case .webURLChanged(let v): state.webURL = v; state.webURLError = nil
-        case .webTitleChanged(let v): if v.count <= Self.titleMax { state.webTitle = v }
-        case .webAuthorChanged(let v): if v.count <= Self.authorMax { state.webAuthor = v }
-        case .manualTitleChanged(let v): if v.count <= Self.titleMax { state.manualTitle = v }
-        case .manualAuthorChanged(let v): if v.count <= Self.authorMax { state.manualAuthor = v }
-        case .manualContentChanged(let v): if v.count <= Self.manualContentMax { state.manualContent = v }; state.manualContentError = nil
+        case .webURLChanged(let value):
+            state.webURL = value
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                state.webURLError = nil
+            } else if !validWebURL {
+                state.webURLError = String(localized: "Please enter a valid URL")
+            } else {
+                state.webURLError = nil
+            }
+
+        case .webTitleChanged(let value): if value.count <= Self.titleMax { state.webTitle = value }
+        case .webAuthorChanged(let value): if value.count <= Self.authorMax { state.webAuthor = value }
+        case .manualTitleChanged(let value): if value.count <= Self.titleMax { state.manualTitle = value }
+        case .manualAuthorChanged(let value): if value.count <= Self.authorMax { state.manualAuthor = value }
+
+        case .manualContentChanged(let value):
+            if value.count <= Self.manualContentMax {
+                state.manualContent = value
+            }
+            if state.manualContent.isEmpty {
+                state.manualContentError = nil
+            } else if state.manualContent.count < Self.manualContentMin {
+                state.manualContentError = Self.manualContentMinError
+            } else {
+                state.manualContentError = nil
+            }
 
         case .addSource:
             guard !state.isSubmitting, validateForSubmit() else { return }
@@ -295,8 +330,8 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
             return true
         case .text:
             let count = state.manualContent.count
-            guard count >= Self.manualContentMin else { state.manualContentError = String(localized: "Content must be at least 10 characters long."); return false }
-            guard count <= Self.manualContentMax else { state.manualContentError = String(localized: "Content exceeds maximum limit of 100,000 characters."); return false }
+            guard count >= Self.manualContentMin else { state.manualContentError = Self.manualContentMinError; return false }
+            guard count <= Self.manualContentMax else { state.manualContentError = Self.manualContentMaxError; return false }
             return true
         }
     }

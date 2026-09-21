@@ -16,14 +16,18 @@ struct AskMessageBubble: View {
         case .user:
             AskUserBubble(message: message, userAvatarLabel: userAvatarLabel)
         case .assistant:
-            AskAssistantBubble(
-                message: message,
-                isSavingNote: isSavingNote,
-                onCitationTap: onCitationTap,
-                onStop: onStop,
-                onSaveAsNote: onSaveAsNote,
-                onFeedback: onFeedback
-            )
+            if !message.isStreaming && message.content.isEmpty && message.limitation == nil && message.citations.isEmpty {
+                EmptyView()
+            } else {
+                AskAssistantBubble(
+                    message: message,
+                    isSavingNote: isSavingNote,
+                    onCitationTap: onCitationTap,
+                    onStop: onStop,
+                    onSaveAsNote: onSaveAsNote,
+                    onFeedback: onFeedback
+                )
+            }
         }
     }
 }

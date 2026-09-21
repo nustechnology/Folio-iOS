@@ -17,6 +17,7 @@ struct MainView: View {
     @State private var notebookViewModel: NotebookViewModel?
     @State private var askConversationListViewModel: AskConversationListViewModel?
     @State private var isAskConversationOpen = false
+    @State private var displayedTab: FolioTab = .sources
     @StateObject private var askViewModel: FolioAskViewModel
     private let fetchAskConversationsUseCase: any FetchAskConversationsUseCaseProtocol
     private let deleteConversationUseCase: any DeleteConversationUseCaseProtocol
@@ -125,12 +126,18 @@ struct MainView: View {
         return appShell
             .safeAreaInset(edge: .bottom) {
                 if Self.shouldShowBottomTabBar(showTabBar: showTabBar, isKeyboardVisible: isKeyboardVisible) {
-                    FolioBottomTabBar(selectedTab: viewModel.state.selectedTab) { tab in
+                    FolioBottomTabBar(selectedTab: displayedTab) { tab in
                         viewModel.handle(.selectTab(tab))
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 8)
                 }
+            }
+            .onChange(of: viewModel.state.selectedTab) { _, newValue in
+                displayedTab = newValue
+            }
+            .onAppear {
+                displayedTab = viewModel.state.selectedTab
             }
     }
 
@@ -382,7 +389,7 @@ struct MainView: View {
     MainView(viewModel: MainViewModel(
         fetchUsersUseCase: PreviewFetchUsersUseCase(),
         fetchMeUseCase: PreviewFetchMeUseCase(),
-        localStorage: PreviewStorage(),
+        getStoredAuthSessionUseCase: PreviewGetStoredAuthSessionUseCase(),
         signUpUseCase: PreviewSignUpUseCase(),
         signInUseCase: PreviewSignInUseCase(),
         signOutUseCase: PreviewSignOutUseCase(),
