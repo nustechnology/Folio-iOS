@@ -46,6 +46,13 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         )
     }
 
+    static var manualContentMaxError: String {
+        String.localizedStringWithFormat(
+            String(localized: "Content exceeds maximum limit of %lld characters."),
+            Int64(manualContentMax)
+        )
+    }
+
     struct State {
         var selectedTab: AddSourceTab = .files
         var isSubmitting = false
@@ -324,7 +331,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
         case .text:
             let count = state.manualContent.count
             guard count >= Self.manualContentMin else { state.manualContentError = Self.manualContentMinError; return false }
-            guard count <= Self.manualContentMax else { state.manualContentError = String(localized: "Content exceeds maximum limit of 100,000 characters."); return false }
+            guard count <= Self.manualContentMax else { state.manualContentError = Self.manualContentMaxError; return false }
             return true
         }
     }

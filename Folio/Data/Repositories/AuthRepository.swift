@@ -86,7 +86,7 @@ final class AuthRepository: AuthRepositoryProtocol {
     }
 
     private func saveSession(_ token: AuthToken) throws {
-        Logger.debug("[AUTH] Saved Session - Access Token: \(token.accessToken) | Refresh Token: \(token.refreshToken)")
+        Logger.debug("[AUTH] Saved Session")
         do {
             try localStorage.save(token.toDTO(), forKey: StorageKey.authSession)
         } catch {

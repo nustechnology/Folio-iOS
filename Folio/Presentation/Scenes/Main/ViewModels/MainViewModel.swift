@@ -107,7 +107,7 @@ final class MainViewModel: ViewModelProtocol {
         self.saveNotebookUseCase = saveNotebookUseCase
         state.sources = initialSources
         if let token = getStoredAuthSessionUseCase.execute() {
-            state.isAuthenticated = token.isValid || !token.refreshToken.isEmpty
+            state.isAuthenticated = token.isValid
         }
         observeSessionInvalidation()
 #if DEBUG
@@ -307,7 +307,7 @@ final class MainViewModel: ViewModelProtocol {
     }
 
     private func applySession(_ token: AuthToken) {
-        Logger.debug("[AUTH] Applying Session - Access Token: \(token.accessToken)")
+        Logger.debug("[AUTH] Applying Session")
         state.isAuthenticated = true
         state.userDisplayName = nil
         state.userEmail = nil
