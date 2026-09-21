@@ -278,7 +278,7 @@ struct FolioNotebookView: View {
                 selectedRange: $viewModel.selectedRange,
                 typingAttributes: $viewModel.typingAttributes,
                 onTextChange: { viewModel.handle(.textChanged($0)) },
-                textContainerBottomInset: 96,
+                textContainerBottomInset: 24,
                 canUndo: viewModel.canUndo,
                 canRedo: viewModel.canRedo,
                 onBlockquoteShortcut: { viewModel.handle(.blockquote) },
@@ -292,10 +292,6 @@ struct FolioNotebookView: View {
 
             if viewModel.attributedText.string.isEmpty {
                 emptyPlaceholder
-            }
-
-            if !isKeyboardVisible {
-                quickNotesButton
             }
         }
     }
@@ -317,34 +313,6 @@ struct FolioNotebookView: View {
             Spacer()
         }
         .allowsHitTesting(false)
-    }
-
-    private var quickNotesButton: some View {
-        VStack {
-            Spacer()
-
-            Button(action: { viewModel.handle(.toggleQuickNotes) }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "note.text")
-                        .font(.system(size: 14, weight: .medium))
-
-                    Text(String(localized: "View notes"))
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                .foregroundStyle(Color.folioGold)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(Color.folioOliveDark)
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.folioGold.opacity(0.4), lineWidth: 1)
-                )
-                .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
-            }
-            .buttonStyle(.plain)
-            .padding(.bottom, 16)
-        }
     }
 
     private var notebookSkeleton: some View {
