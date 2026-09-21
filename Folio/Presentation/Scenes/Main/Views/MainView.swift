@@ -389,7 +389,7 @@ struct MainView: View {
     MainView(viewModel: MainViewModel(
         fetchUsersUseCase: PreviewFetchUsersUseCase(),
         fetchMeUseCase: PreviewFetchMeUseCase(),
-        localStorage: PreviewStorage(),
+        getStoredAuthSessionUseCase: PreviewGetStoredAuthSessionUseCase(),
         signUpUseCase: PreviewSignUpUseCase(),
         signInUseCase: PreviewSignInUseCase(),
         signOutUseCase: PreviewSignOutUseCase(),

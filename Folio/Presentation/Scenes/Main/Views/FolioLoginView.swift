@@ -153,7 +153,7 @@ struct FolioLoginView: View {
             FolioLoginView(viewModel: MainViewModel(
                 fetchUsersUseCase: PreviewFetchUsersUseCase(),
                 fetchMeUseCase: PreviewFetchMeUseCase(),
-                localStorage: UserDefaultsStorage(),
+                getStoredAuthSessionUseCase: PreviewGetStoredAuthSessionUseCase(),
                 signUpUseCase: PreviewSignUpUseCase(),
                 signInUseCase: PreviewSignInUseCase(),
                 signOutUseCase: PreviewSignOutUseCase(),

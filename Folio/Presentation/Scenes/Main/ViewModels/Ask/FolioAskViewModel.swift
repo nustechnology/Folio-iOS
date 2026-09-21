@@ -332,13 +332,17 @@ final class FolioAskViewModel: ViewModelProtocol {
             updateMessage(id: messageID) { $0.citations = citations.map(Self.mapCitation) }
         case .done(let serverMessageID, let content, let citations, let limitation, let stopped):
             let (cleanContent, finalLimitation) = Self.extractLimitation(from: content, existingLimitation: limitation)
-            updateMessage(id: messageID) {
-                $0.serverMessageID = serverMessageID
-                $0.content = cleanContent
-                $0.citations = citations.map(Self.mapCitation)
-                $0.limitation = finalLimitation
-                $0.isStreaming = false
-                $0.wasStopped = stopped
+            if stopped && cleanContent.isEmpty && finalLimitation == nil && citations.isEmpty {
+                state.messages.removeAll(where: { $0.id == messageID })
+            } else {
+                updateMessage(id: messageID) {
+                    $0.serverMessageID = serverMessageID
+                    $0.content = cleanContent
+                    $0.citations = citations.map(Self.mapCitation)
+                    $0.limitation = finalLimitation
+                    $0.isStreaming = false
+                    $0.wasStopped = stopped
+                }
             }
         case .error(let message):
             Logger.error("Ask stream reported error: \(message)")
@@ -391,11 +395,15 @@ final class FolioAskViewModel: ViewModelProtocol {
         streamTask = nil
         guard let last = state.messages.last, last.role == .assistant, last.isStreaming else { return }
         let (cleanContent, finalLimitation) = Self.extractLimitation(from: last.content, existingLimitation: last.limitation)
-        updateMessage(id: last.id) {
-            $0.content = cleanContent
-            $0.limitation = finalLimitation
-            $0.isStreaming = false
-            $0.wasStopped = true
+        if cleanContent.isEmpty && finalLimitation == nil && last.citations.isEmpty {
+            state.messages.removeAll(where: { $0.id == last.id })
+        } else {
+            updateMessage(id: last.id) {
+                $0.content = cleanContent
+                $0.limitation = finalLimitation
+                $0.isStreaming = false
+                $0.wasStopped = true
+            }
         }
     }
 
@@ -478,12 +486,16 @@ final class FolioAskViewModel: ViewModelProtocol {
 
     private func setFeedback(messageID: String, useful: Bool) {
         updateMessage(id: messageID) { $0.feedback = useful ? .useful : .notUseful }
-        guard let spaceId, let conversationId else { return }
+        guard
+            let serverMessageID = state.messages.first(where: { $0.id == messageID })?.serverMessageID,
+            let spaceId,
+            let conversationId
+        else { return }
         let rating = useful ? "useful" : "not_useful"
         Task {
             do {
                 try await sendFeedbackUseCase.execute(
-                    spaceId: spaceId, conversationId: conversationId, messageId: messageID, rating: rating)
+                    spaceId: spaceId, conversationId: conversationId, messageId: serverMessageID, rating: rating)
                 toastMessage = .success(String(localized: "Feedback recorded"))
             } catch {
                 Logger.error("Failed to send feedback: \(error)")
