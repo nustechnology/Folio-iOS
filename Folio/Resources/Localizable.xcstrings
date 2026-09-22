@@ -1384,7 +1384,6 @@
       }
     },
     "Content exceeds maximum limit of 100,000 characters." : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
