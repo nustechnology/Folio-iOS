@@ -394,7 +394,6 @@ struct MainView: View {
         signInUseCase: PreviewSignInUseCase(),
         signOutUseCase: PreviewSignOutUseCase(),
         refreshTokenUseCase: PreviewRefreshTokenUseCase(),
-        passwordResetUseCase: PreviewPasswordResetUseCase(),
         fetchWorkspacesUseCase: FetchWorkspacesUseCase(repository: PreviewWorkspaceRepository()),
         createWorkspaceUseCase: CreateWorkspaceUseCase(repository: PreviewWorkspaceRepository()),
         updateWorkspaceUseCase: UpdateWorkspaceUseCase(repository: PreviewWorkspaceRepository()),
@@ -512,10 +511,6 @@ private struct PreviewRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
     func execute(refreshToken: String) async throws -> AuthToken {
         AuthToken(accessToken: "", refreshToken: "", expiresAt: Date())
     }
-}
-
-private struct PreviewPasswordResetUseCase: RequestPasswordResetUseCaseProtocol {
-    func execute(email: String) async throws {}
 }
 
 private struct PreviewUploadSourceUseCase: UploadSourceUseCaseProtocol {

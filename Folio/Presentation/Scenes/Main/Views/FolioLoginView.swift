@@ -8,7 +8,6 @@ struct FolioLoginView: View {
     @State private var emailError: String? = nil
     @State private var passwordError: String? = nil
     @State private var showCreateAccount = false
-    @State private var showForgotPassword = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -58,16 +57,6 @@ struct FolioLoginView: View {
                             fieldBackground: Color.folioLoginBackground
                         )
 
-                        HStack {
-                            Spacer()
-                            Button(action: { showForgotPassword = true }) {
-                                Text(String(localized: "Forgot password?"))
-                                    .font(.system(size: 13, weight: .regular))
-                                    .foregroundStyle(Color.folioInkMuted)
-                            }
-                            .buttonStyle(.plain)
-                        }
-
                         FolioPrimaryButton(
                             title: String(localized: "Sign in"),
                             isLoading: viewModel.state.authLoading,
@@ -112,12 +101,6 @@ struct FolioLoginView: View {
                 }
                 .folioToast(message: $viewModel.toastMessage)
         }
-        .fullScreenCover(isPresented: $showForgotPassword) {
-            FolioBackdrop()
-                .overlay {
-                    FolioForgotPasswordView()
-                }
-        }
         .folioToast(message: $viewModel.toastMessage)
     }
 
@@ -158,7 +141,6 @@ struct FolioLoginView: View {
                 signInUseCase: PreviewSignInUseCase(),
                 signOutUseCase: PreviewSignOutUseCase(),
                 refreshTokenUseCase: PreviewRefreshTokenUseCase(),
-                passwordResetUseCase: PreviewPasswordResetUseCase(),
                 fetchWorkspacesUseCase: FetchWorkspacesUseCase(repository: PreviewWorkspaceRepository()),
                 createWorkspaceUseCase: CreateWorkspaceUseCase(repository: PreviewWorkspaceRepository()),
                 updateWorkspaceUseCase: UpdateWorkspaceUseCase(repository: PreviewWorkspaceRepository()),
@@ -202,10 +184,6 @@ private struct PreviewRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
     func execute(refreshToken: String) async throws -> AuthToken {
         AuthToken(accessToken: "", refreshToken: "", expiresAt: Date())
     }
-}
-
-private struct PreviewPasswordResetUseCase: RequestPasswordResetUseCaseProtocol {
-    func execute(email: String) async throws {}
 }
 
 private struct PreviewUploadSourceUseCase: UploadSourceUseCaseProtocol {

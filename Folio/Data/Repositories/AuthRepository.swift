@@ -48,14 +48,6 @@ final class AuthRepository: AuthRepositoryProtocol {
         }
     }
 
-    func requestPasswordReset(email: String) async throws {
-        do {
-            try await networkService.requestVoid(AuthEndpoint.requestPasswordReset(email: email))
-        } catch let error as NetworkError {
-            throw mapAuthError(error)
-        }
-    }
-
     func signOut() throws {
         do {
             try localStorage.remove(forKey: StorageKey.authSession)
