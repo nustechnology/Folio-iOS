@@ -89,14 +89,7 @@ struct FolioCreateAccountView: View {
                             action: { submitSignUp() }
                         )
 
-                        #if DEBUG
-                        FolioSecondaryButton(
-                            title: String(localized: "Continue with Apple"),
-                            iconName: "applelogo",
-                            action: { viewModel.handle(.signInWithApple) }
-                        )
-                        #endif
-                    }
+                        }
                     .padding(.top, 28)
 
                     Spacer(minLength: 28)
@@ -189,7 +182,6 @@ struct FolioCreateAccountView: View {
                 signInUseCase: PreviewAuthSignInUseCase(),
                 signOutUseCase: PreviewAuthSignOutUseCase(),
                 refreshTokenUseCase: PreviewAuthRefreshTokenUseCase(),
-                passwordResetUseCase: PreviewAuthPasswordResetUseCase(),
                 fetchWorkspacesUseCase: FetchWorkspacesUseCase(repository: PreviewWorkspaceRepository()),
                 createWorkspaceUseCase: CreateWorkspaceUseCase(repository: PreviewWorkspaceRepository()),
                 updateWorkspaceUseCase: UpdateWorkspaceUseCase(repository: PreviewWorkspaceRepository()),
@@ -233,10 +225,6 @@ private struct PreviewAuthRefreshTokenUseCase: RefreshTokenUseCaseProtocol {
     func execute(refreshToken: String) async throws -> AuthToken {
         AuthToken(accessToken: "", refreshToken: "", expiresAt: Date())
     }
-}
-
-private struct PreviewAuthPasswordResetUseCase: RequestPasswordResetUseCaseProtocol {
-    func execute(email: String) async throws {}
 }
 
 private struct PreviewAuthUploadSourceUseCase: UploadSourceUseCaseProtocol {

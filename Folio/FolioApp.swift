@@ -20,7 +20,6 @@ struct FolioApp: App {
                 signInUseCase: diContainer.signInUseCase,
                 signOutUseCase: diContainer.signOutUseCase,
                 refreshTokenUseCase: diContainer.refreshTokenUseCase,
-                passwordResetUseCase: diContainer.passwordResetUseCase,
                 fetchWorkspacesUseCase: diContainer.fetchWorkspacesUseCase,
                 createWorkspaceUseCase: diContainer.createWorkspaceUseCase,
                 updateWorkspaceUseCase: diContainer.updateWorkspaceUseCase,

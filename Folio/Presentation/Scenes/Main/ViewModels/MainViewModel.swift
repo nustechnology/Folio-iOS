@@ -23,7 +23,6 @@ final class MainViewModel: ViewModelProtocol {
         case onAppear
         case signIn(email: String, password: String)
         case signUp(name: String, email: String, password: String)
-        case signInWithApple
         case signOut
         case selectTab(FolioTab)
         case showSpaces
@@ -46,7 +45,6 @@ final class MainViewModel: ViewModelProtocol {
     private let signInUseCase: any SignInUseCaseProtocol
     private let signOutUseCase: any SignOutUseCaseProtocol
     private let refreshTokenUseCase: any RefreshTokenUseCaseProtocol
-    let passwordResetUseCase: any RequestPasswordResetUseCaseProtocol
     let fetchWorkspacesUseCase: any FetchWorkspacesUseCaseProtocol
     let createWorkspaceUseCase: any CreateWorkspaceUseCaseProtocol
     let updateWorkspaceUseCase: any UpdateWorkspaceUseCaseProtocol
@@ -72,7 +70,6 @@ final class MainViewModel: ViewModelProtocol {
         signInUseCase: any SignInUseCaseProtocol,
         signOutUseCase: any SignOutUseCaseProtocol,
         refreshTokenUseCase: any RefreshTokenUseCaseProtocol,
-        passwordResetUseCase: any RequestPasswordResetUseCaseProtocol,
         fetchWorkspacesUseCase: any FetchWorkspacesUseCaseProtocol,
         createWorkspaceUseCase: any CreateWorkspaceUseCaseProtocol,
         updateWorkspaceUseCase: any UpdateWorkspaceUseCaseProtocol,
@@ -93,7 +90,6 @@ final class MainViewModel: ViewModelProtocol {
         self.signInUseCase = signInUseCase
         self.signOutUseCase = signOutUseCase
         self.refreshTokenUseCase = refreshTokenUseCase
-        self.passwordResetUseCase = passwordResetUseCase
         self.fetchWorkspacesUseCase = fetchWorkspacesUseCase
         self.createWorkspaceUseCase = createWorkspaceUseCase
         self.updateWorkspaceUseCase = updateWorkspaceUseCase
@@ -171,13 +167,6 @@ final class MainViewModel: ViewModelProtocol {
             Task { await performSignIn(email: email, password: password) }
         case .signUp(let name, let email, let password):
             Task { await performSignUp(name: name, email: email, password: password) }
-        case .signInWithApple:
-#if DEBUG
-            state.isAuthenticated = true
-            state.selectedTab = .sources
-            state.sourcesMode = .spaces
-            state.activeReaderID = nil
-#endif
         case .signOut:
             guard signOutTask == nil else { return }
             sessionGeneration += 1
