@@ -10,7 +10,6 @@ final class NotebookViewModel: ViewModelProtocol {
         var plainText: String = ""
         var saveStatus: RichTextToolbar.SaveStatus = .saved
         var showExportSheet: Bool = false
-        var showQuickNotesSheet: Bool = false
         var showNewNoteSheet: Bool = false
         var isLoading: Bool = true
         var loadFailed: Bool = false
@@ -81,10 +80,6 @@ final class NotebookViewModel: ViewModelProtocol {
         self.spaceName = spaceName
     }
 
-    func dismissQuickNotes() {
-        state.showQuickNotesSheet = false
-    }
-
     func handle(_ action: Action) {
         switch action {
         case .onAppear:
@@ -115,8 +110,6 @@ final class NotebookViewModel: ViewModelProtocol {
             copyToClipboard()
         case .toggleExportSheet:
             state.showExportSheet.toggle()
-        case .toggleQuickNotes:
-            state.showQuickNotesSheet.toggle()
         case .toggleNewNote:
             state.showNewNoteSheet.toggle()
         case .setNewNotePresented(let isPresented):
@@ -143,7 +136,6 @@ final class NotebookViewModel: ViewModelProtocol {
         case redo
         case copyNotebook
         case toggleExportSheet
-        case toggleQuickNotes
         case toggleNewNote
         case setNewNotePresented(Bool)
         case closeNewNote

@@ -12,8 +12,6 @@ struct FolioNotebookView: View {
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var pendingExportAction: PendingExportAction?
-    @State private var pendingQuickNotesAction: PendingQuickNotesAction?
-    @State private var pendingNote: NoteSummary?
     @State private var pendingSourceID: String?
     @State private var shareURL: ShareableURL?
     @State private var isPrintPresented = false
@@ -25,14 +23,8 @@ struct FolioNotebookView: View {
         case print
     }
 
-    private enum PendingQuickNotesAction {
-        case newNote
-        case manageNotes
-    }
-
     private enum ActiveSheet: Identifiable {
         case export
-        case quickNotes
         case share(ShareableURL)
         case print
         case noteDetail(Note)
@@ -41,7 +33,6 @@ struct FolioNotebookView: View {
         var id: String {
             switch self {
             case .export: return "export"
-            case .quickNotes: return "quickNotes"
             case .share: return "share"
             case .print: return "print"
             case .noteDetail: return "noteDetail"
@@ -97,7 +88,6 @@ struct FolioNotebookView: View {
         }
         .sheet(item: activeSheetBinding, onDismiss: {
             runPendingExport()
-            runPendingQuickNotes()
             openPendingSource()
         }, content: { sheet in
             switch sheet {
@@ -108,26 +98,6 @@ struct FolioNotebookView: View {
                     onPrint: { requestExport(.print) },
                     onDismiss: { viewModel.handle(.toggleExportSheet) }
                 )
-            case .quickNotes:
-                if let noteListViewModel {
-                    QuickNotesPanel(
-                        noteListViewModel: noteListViewModel,
-                        spaceName: workspaceTitle,
-                        onNoteTap: { note in
-                            pendingNote = note
-                            viewModel.dismissQuickNotes()
-                        },
-                        onNewNote: {
-                            pendingQuickNotesAction = .newNote
-                            viewModel.dismissQuickNotes()
-                        },
-                        onManageNotes: {
-                            pendingQuickNotesAction = .manageNotes
-                            viewModel.dismissQuickNotes()
-                        },
-                        onDismiss: { viewModel.handle(.toggleQuickNotes) }
-                    )
-                }
             case .share(let shareable):
                 FolioShareSheet(items: [shareable.url])
             case .print:
@@ -158,12 +128,6 @@ struct FolioNotebookView: View {
                 }
             }
         })
-        .onChange(of: viewModel.state.showQuickNotesSheet) { _, isPresented in
-            if isPresented {
-                noteDetailToPresent = nil
-                noteListViewModel?.handle(.refresh)
-            }
-        }
         .onReceive(
             noteListViewModel?.objectWillChange.eraseToAnyPublisher()
                 ?? Empty<Void, Never>().eraseToAnyPublisher()
@@ -186,14 +150,8 @@ struct FolioNotebookView: View {
         .folioToast(message: $viewModel.toastMessage)
     }
 
-    private var detailNote: Note? {
-        if case .detail(let note)? = noteListViewModel?.state.sheet { return note }
-        return nil
-    }
-
     private var activeSheet: ActiveSheet? {
         if viewModel.state.showExportSheet { return .export }
-        if viewModel.state.showQuickNotesSheet { return .quickNotes }
         if let url = shareURL { return .share(url) }
         if isPrintPresented { return .print }
         if let note = noteDetailToPresent { return .noteDetail(note) }
@@ -214,8 +172,6 @@ struct FolioNotebookView: View {
         switch activeSheet {
         case .export:
             if viewModel.state.showExportSheet { viewModel.handle(.toggleExportSheet) }
-        case .quickNotes:
-            if viewModel.state.showQuickNotesSheet { viewModel.handle(.toggleQuickNotes) }
         case .share:
             shareURL = nil
         case .print:
@@ -376,47 +332,6 @@ struct FolioNotebookView: View {
         case .none:
             break
         }
-    }
-
-    private func runPendingQuickNotes() {
-        defer {
-            pendingNote = nil
-            pendingQuickNotesAction = nil
-        }
-        if let note = pendingNote {
-            noteListViewModel?.handle(.noteSelected(note))
-            return
-        }
-        switch pendingQuickNotesAction {
-        case .newNote:
-            noteListViewModel?.handle(.newTapped)
-            viewModel.handle(.toggleNewNote)
-        case .manageNotes:
-            onNavigateToNotes()
-        case .none:
-            break
-        }
-    }
-}
-
-private struct QuickNotesPanel: View {
-    @ObservedObject var noteListViewModel: NoteListViewModel
-    let spaceName: String
-    let onNoteTap: (NoteSummary) -> Void
-    let onNewNote: () -> Void
-    let onManageNotes: () -> Void
-    let onDismiss: () -> Void
-
-    var body: some View {
-        FolioQuickNotesSheet(
-            spaceName: spaceName,
-            notes: noteListViewModel.state.notes,
-            isLoading: noteListViewModel.state.isLoading,
-            onNoteTap: onNoteTap,
-            onNewNote: onNewNote,
-            onManageNotes: onManageNotes,
-            onDismiss: onDismiss
-        )
     }
 }
 
