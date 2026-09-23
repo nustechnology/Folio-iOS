@@ -201,6 +201,9 @@ struct FolioRichTextEditor: UIViewRepresentable {
                 if attributes[.font] == nil {
                     attributes[.font] = UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize)
                 }
+                let style = (attributes[.paragraphStyle] as? NSParagraphStyle)?.mutableCopy() as? NSMutableParagraphStyle ?? NSMutableParagraphStyle()
+                style.paragraphSpacing = FolioRichTextFormat.paragraphSpacing
+                attributes[.paragraphStyle] = style
                 let newline = NSAttributedString(string: "\n", attributes: attributes)
                 textView.textStorage.replaceCharacters(in: range, with: newline)
                 textView.selectedRange = NSRange(location: range.location + newline.length, length: 0)
@@ -366,9 +369,14 @@ extension FolioRichTextEditor {
 
     static func attributedTextFromHTML(_ html: String) -> NSAttributedString {
         if !html.contains("<") {
+            let style = NSMutableParagraphStyle()
+            style.paragraphSpacing = FolioRichTextFormat.paragraphSpacing
             return NSAttributedString(
                 string: html,
-                attributes: [.font: makeBodyFont(bold: false, italic: false)]
+                attributes: [
+                    .font: makeBodyFont(bold: false, italic: false),
+                    .paragraphStyle: style
+                ]
             )
         }
         if containsOnlySupportedSemanticTags(in: html), let parsed = parseSemanticHTML(html) {
@@ -387,6 +395,7 @@ extension FolioRichTextEditor {
             let mutable = NSMutableAttributedString(attributedString: attributed)
             migrateFonts(in: mutable)
             removeUnsupportedLinks(from: mutable)
+            RichTextFormattingController().reconcileListParagraphSpacing(in: mutable)
             return mutable
         }
         return NSAttributedString(string: html)
@@ -596,6 +605,7 @@ extension FolioRichTextEditor {
         if result.string.hasSuffix("\n") {
             result.deleteCharacters(in: NSRange(location: result.length - 1, length: 1))
         }
+        RichTextFormattingController().reconcileListParagraphSpacing(in: result)
         return result
     }
 
@@ -971,6 +981,7 @@ private final class SemanticHTMLParser: NSObject, XMLParserDelegate {
             let style = NSMutableParagraphStyle()
             style.headIndent = FolioRichTextFormat.blockquoteIndent
             style.firstLineHeadIndent = FolioRichTextFormat.blockquoteIndent
+            style.paragraphSpacing = FolioRichTextFormat.paragraphSpacing
             result.addAttribute(.paragraphStyle, value: style, range: affectedRange)
             result.addAttribute(.foregroundColor, value: UIColor(Color.folioInkMuted), range: affectedRange)
         case .listItem:
@@ -981,7 +992,11 @@ private final class SemanticHTMLParser: NSObject, XMLParserDelegate {
             style.firstLineHeadIndent = 0
             result.addAttribute(.paragraphStyle, value: style, range: range)
         case .heading, .paragraph:
-            break
+            guard block.startLocation < result.length else { return }
+            let range = NSRange(location: block.startLocation, length: result.length - block.startLocation)
+            let style = NSMutableParagraphStyle()
+            style.paragraphSpacing = FolioRichTextFormat.paragraphSpacing
+            result.addAttribute(.paragraphStyle, value: style, range: range)
         }
     }
 

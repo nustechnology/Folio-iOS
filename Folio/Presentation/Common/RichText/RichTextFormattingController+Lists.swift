@@ -223,12 +223,10 @@ extension RichTextFormattingController {
         style.headIndent = FolioRichTextFormat.listIndent
         style.firstLineHeadIndent = 0
         mutable.addAttribute(.paragraphStyle, value: style, range: paragraph)
+        reconcileListParagraphSpacing(in: mutable)
     }
 
     private func applyListMarkers(to paragraphs: [NSRange], ordered: Bool, in mutable: NSMutableAttributedString) {
-        let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.headIndent = FolioRichTextFormat.listIndent
-        paragraphStyle.firstLineHeadIndent = 0
         let bodyFont = UIFont.systemFont(ofSize: FolioRichTextFormat.bodyFontSize)
 
         for (index, paragraph) in paragraphs.enumerated().reversed() {
@@ -244,14 +242,19 @@ extension RichTextFormattingController {
             let markerRange = NSRange(location: currentParagraph.location, length: (prefix as NSString).length)
             mutable.addAttribute(.font, value: bodyFont, range: markerRange)
             let updatedParagraph = (mutable.string as NSString).paragraphRange(for: NSRange(location: currentParagraph.location, length: 0))
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.headIndent = FolioRichTextFormat.listIndent
+            paragraphStyle.firstLineHeadIndent = 0
             mutable.addAttribute(.paragraphStyle, value: paragraphStyle, range: updatedParagraph)
         }
+        reconcileListParagraphSpacing(in: mutable)
     }
 
     private func removeListMarkers(from paragraphs: [NSRange], in mutable: NSMutableAttributedString) {
         let plainStyle = NSMutableParagraphStyle()
         plainStyle.headIndent = 0
         plainStyle.firstLineHeadIndent = 0
+        plainStyle.paragraphSpacing = FolioRichTextFormat.paragraphSpacing
 
         for paragraph in paragraphs.reversed() {
             let nsString = mutable.string as NSString
@@ -260,6 +263,34 @@ extension RichTextFormattingController {
             }
             let currentParagraph = (mutable.string as NSString).paragraphRange(for: NSRange(location: paragraph.location, length: 0))
             mutable.addAttribute(.paragraphStyle, value: plainStyle, range: currentParagraph)
+        }
+        reconcileListParagraphSpacing(in: mutable)
+    }
+
+    func reconcileListParagraphSpacing(in mutable: NSMutableAttributedString) {
+        let string = mutable.string as NSString
+        let paragraphs = allParagraphRanges(in: string)
+        for (index, paragraph) in paragraphs.enumerated() {
+            guard paragraph.length > 0 else { continue }
+            let style = (mutable.attribute(.paragraphStyle, at: paragraph.location, effectiveRange: nil) as? NSParagraphStyle)
+                ?? NSParagraphStyle.default
+            let isListItem = listMarker(in: paragraph, in: string) != nil
+            if isListItem {
+                let isLastInList = index + 1 == paragraphs.count || listMarker(in: paragraphs[index + 1], in: string) == nil
+                let targetSpacing = isLastInList ? FolioRichTextFormat.paragraphSpacing : 0
+                if style.paragraphSpacing != targetSpacing {
+                    let mutableStyle = style.mutableCopy() as? NSMutableParagraphStyle ?? NSMutableParagraphStyle()
+                    mutableStyle.paragraphSpacing = targetSpacing
+                    mutable.addAttribute(.paragraphStyle, value: mutableStyle, range: paragraph)
+                }
+            } else {
+                let isBlockquote = style.headIndent == FolioRichTextFormat.blockquoteIndent
+                if !isBlockquote && style.paragraphSpacing != FolioRichTextFormat.paragraphSpacing {
+                    let mutableStyle = style.mutableCopy() as? NSMutableParagraphStyle ?? NSMutableParagraphStyle()
+                    mutableStyle.paragraphSpacing = FolioRichTextFormat.paragraphSpacing
+                    mutable.addAttribute(.paragraphStyle, value: mutableStyle, range: paragraph)
+                }
+            }
         }
     }
 

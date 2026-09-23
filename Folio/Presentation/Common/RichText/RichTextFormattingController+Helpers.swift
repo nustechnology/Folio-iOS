@@ -43,6 +43,7 @@ extension RichTextFormattingController {
         let style = NSMutableParagraphStyle()
         style.headIndent = 0
         style.firstLineHeadIndent = 0
+        style.paragraphSpacing = FolioRichTextFormat.paragraphSpacing
         mutable.addAttribute(.paragraphStyle, value: style, range: paragraph)
     }
 }

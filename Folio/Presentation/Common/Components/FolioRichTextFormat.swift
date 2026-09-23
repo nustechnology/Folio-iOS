@@ -3,6 +3,7 @@ import UIKit
 enum FolioRichTextFormat {
     static let inlineBoldAttribute = NSAttributedString.Key("FolioInlineBold")
     static let bodyFontSize: CGFloat = 16
+    static let paragraphSpacing: CGFloat = 12
     static let heading1FontSize: CGFloat = 28
     static let heading2FontSize: CGFloat = 24
     static let heading3FontSize: CGFloat = 20

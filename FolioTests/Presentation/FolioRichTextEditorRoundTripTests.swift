@@ -805,6 +805,27 @@ final class FolioRichTextEditorRoundTripTests: XCTestCase {
         XCTAssertTrue(font?.fontDescriptor.symbolicTraits.contains(.traitBold) == true)
     }
 
+    func testAttributedTextFromHTMLAppliesParagraphSpacingToParagraphsAndListBoundaries() {
+        let html = "<ol><li>One</li><li>Two</li></ol>\n<p>Paragraph 1</p>\n<p>Paragraph 2</p>"
+        let parsed = FolioRichTextEditor.attributedTextFromHTML(html)
+        let string = parsed.string as NSString
+
+        let item1Range = string.range(of: "One")
+        let item2Range = string.range(of: "Two")
+        let p1Range = string.range(of: "Paragraph 1")
+        let p2Range = string.range(of: "Paragraph 2")
+
+        let style1 = parsed.attribute(.paragraphStyle, at: item1Range.location, effectiveRange: nil) as? NSParagraphStyle
+        let style2 = parsed.attribute(.paragraphStyle, at: item2Range.location, effectiveRange: nil) as? NSParagraphStyle
+        let styleP1 = parsed.attribute(.paragraphStyle, at: p1Range.location, effectiveRange: nil) as? NSParagraphStyle
+        let styleP2 = parsed.attribute(.paragraphStyle, at: p2Range.location, effectiveRange: nil) as? NSParagraphStyle
+
+        XCTAssertEqual(style1?.paragraphSpacing, 0)
+        XCTAssertEqual(style2?.paragraphSpacing, FolioRichTextFormat.paragraphSpacing)
+        XCTAssertEqual(styleP1?.paragraphSpacing, FolioRichTextFormat.paragraphSpacing)
+        XCTAssertEqual(styleP2?.paragraphSpacing, FolioRichTextFormat.paragraphSpacing)
+    }
+
     // MARK: shouldAllowTextEdit
 
     func testCaretInsertInsideMarkerIsRejected() {
