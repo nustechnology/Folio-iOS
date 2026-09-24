@@ -240,10 +240,14 @@ private struct FormatButton: View {
                 }
             }
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(isActive ? Color.folioGold : Color.folioInk)
+                .foregroundStyle(isActive ? Color.folioAmber : Color.folioInk)
                 .frame(width: 36, height: 36)
-                .background(isActive ? Color.folioOliveDark : Color.folioCanvas.opacity(0.4))
+                .background(isActive ? Color.folioAmberBg.opacity(0.85) : Color.folioCanvas.opacity(0.4))
                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .stroke(isActive ? Color.folioFieldBorder : Color.clear, lineWidth: 1)
+                )
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityText)

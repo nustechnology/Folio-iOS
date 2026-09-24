@@ -225,6 +225,7 @@ extension RichTextFormattingController {
         let style = NSMutableParagraphStyle()
         style.headIndent = FolioRichTextFormat.blockquoteIndent
         style.firstLineHeadIndent = FolioRichTextFormat.blockquoteIndent
+        style.paragraphSpacing = FolioRichTextFormat.paragraphSpacing
         mutable.addAttribute(.paragraphStyle, value: style, range: paragraph)
     }
 
