@@ -178,6 +178,7 @@ extension RichTextFormattingController {
         let mutable = NSMutableAttributedString(attributedString: attributedText)
         mutable.replaceCharacters(in: marker.range, with: "")
         applyPlainParagraphStyle(at: paragraph.location, in: mutable)
+        reconcileListParagraphSpacing(in: mutable)
 
         let nextLocation = paragraph.location + max(0, paragraph.length - marker.range.length)
         let caretLocation = marker.isOrdered
@@ -207,6 +208,7 @@ extension RichTextFormattingController {
         let mutable = NSMutableAttributedString(attributedString: attributedText)
         mutable.replaceCharacters(in: editRange, with: replacementText)
         applyPlainParagraphStyle(at: paragraph.location, in: mutable)
+        reconcileListParagraphSpacing(in: mutable)
 
         let caretLocation = paragraph.location + (replacementText as NSString).length
         return Result(
@@ -274,9 +276,13 @@ extension RichTextFormattingController {
             guard paragraph.length > 0 else { continue }
             let style = (mutable.attribute(.paragraphStyle, at: paragraph.location, effectiveRange: nil) as? NSParagraphStyle)
                 ?? NSParagraphStyle.default
-            let isListItem = listMarker(in: paragraph, in: string) != nil
+            let marker = listMarker(in: paragraph, in: string)
+            let isListItem = marker != nil
             if isListItem {
-                let isLastInList = index + 1 == paragraphs.count || listMarker(in: paragraphs[index + 1], in: string) == nil
+                let nextMarker = index + 1 < paragraphs.count
+                    ? listMarker(in: paragraphs[index + 1], in: string)
+                    : nil
+                let isLastInList = nextMarker?.isOrdered != marker?.isOrdered
                 let targetSpacing = isLastInList ? FolioRichTextFormat.paragraphSpacing : 0
                 if style.paragraphSpacing != targetSpacing {
                     let mutableStyle = style.mutableCopy() as? NSMutableParagraphStyle ?? NSMutableParagraphStyle()
