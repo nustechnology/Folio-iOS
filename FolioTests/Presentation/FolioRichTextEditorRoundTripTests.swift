@@ -899,6 +899,8 @@ final class FolioRichTextEditorRoundTripTests: XCTestCase {
         let firstStyle = result.attributedText.attribute(.paragraphStyle, at: firstRange.location, effectiveRange: nil) as? NSParagraphStyle
 
         XCTAssertEqual(firstStyle?.paragraphSpacing, FolioRichTextFormat.paragraphSpacing)
+        XCTAssertEqual(firstStyle?.headIndent, 0)
+        XCTAssertEqual(firstStyle?.firstLineHeadIndent, 0)
     }
 
     // MARK: shouldAllowTextEdit
