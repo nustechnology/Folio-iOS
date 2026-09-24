@@ -826,6 +826,81 @@ final class FolioRichTextEditorRoundTripTests: XCTestCase {
         XCTAssertEqual(styleP2?.paragraphSpacing, FolioRichTextFormat.paragraphSpacing)
     }
 
+    @MainActor
+    func testApplyBulletListToPlainTextAppliesParagraphSpacing() {
+        let controller = RichTextFormattingController()
+        let text = NSAttributedString(string: "First line\nSecond line\nThird line")
+        let result = controller.applyListStyle(
+            ordered: false,
+            in: text,
+            selectedRange: NSRange(location: 0, length: text.length)
+        )
+
+        guard let result else {
+            XCTFail("Expected a result")
+            return
+        }
+
+        let string = result.attributedText.string as NSString
+        let firstRange = string.range(of: "First line")
+        let lastRange = string.range(of: "Third line")
+
+        let firstStyle = result.attributedText.attribute(.paragraphStyle, at: firstRange.location, effectiveRange: nil) as? NSParagraphStyle
+        let lastStyle = result.attributedText.attribute(.paragraphStyle, at: lastRange.location, effectiveRange: nil) as? NSParagraphStyle
+
+        XCTAssertEqual(firstStyle?.paragraphSpacing, 0)
+        XCTAssertEqual(lastStyle?.paragraphSpacing, FolioRichTextFormat.paragraphSpacing)
+    }
+
+    @MainActor
+    func testApplyOrderedListToggleRemovesListAndRestoresSpacing() {
+        let controller = RichTextFormattingController()
+        let text = NSAttributedString(string: "1.\tFirst\n2.\tSecond")
+        let result = controller.applyListStyle(
+            ordered: true,
+            in: text,
+            selectedRange: NSRange(location: 0, length: text.length)
+        )
+
+        guard let result else {
+            XCTFail("Expected a result")
+            return
+        }
+
+        let string = result.attributedText.string as NSString
+        let firstRange = string.range(of: "First")
+        let secondRange = string.range(of: "Second")
+
+        let firstStyle = result.attributedText.attribute(.paragraphStyle, at: firstRange.location, effectiveRange: nil) as? NSParagraphStyle
+        let secondStyle = result.attributedText.attribute(.paragraphStyle, at: secondRange.location, effectiveRange: nil) as? NSParagraphStyle
+
+        XCTAssertEqual(firstStyle?.paragraphSpacing, FolioRichTextFormat.paragraphSpacing)
+        XCTAssertEqual(secondStyle?.paragraphSpacing, FolioRichTextFormat.paragraphSpacing)
+    }
+
+    @MainActor
+    func testRemoveListMarkerRestoresSpacingOnPrecedingItem() {
+        let controller = RichTextFormattingController()
+        let text = NSAttributedString(string: "1.\tFirst\n2.\tSecond")
+        let result = controller.applyListEdit(
+            replacementText: "",
+            in: text,
+            selectedRange: NSRange(location: 0, length: 2)
+        )
+
+        guard let result else {
+            XCTFail("Expected a result")
+            return
+        }
+
+        let string = result.attributedText.string as NSString
+        let firstRange = string.range(of: "First")
+
+        let firstStyle = result.attributedText.attribute(.paragraphStyle, at: firstRange.location, effectiveRange: nil) as? NSParagraphStyle
+
+        XCTAssertEqual(firstStyle?.paragraphSpacing, FolioRichTextFormat.paragraphSpacing)
+    }
+
     // MARK: shouldAllowTextEdit
 
     func testCaretInsertInsideMarkerIsRejected() {

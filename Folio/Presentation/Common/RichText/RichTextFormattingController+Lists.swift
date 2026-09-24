@@ -253,18 +253,13 @@ extension RichTextFormattingController {
     }
 
     private func removeListMarkers(from paragraphs: [NSRange], in mutable: NSMutableAttributedString) {
-        let plainStyle = NSMutableParagraphStyle()
-        plainStyle.headIndent = 0
-        plainStyle.firstLineHeadIndent = 0
-        plainStyle.paragraphSpacing = FolioRichTextFormat.paragraphSpacing
-
         for paragraph in paragraphs.reversed() {
             let nsString = mutable.string as NSString
             if let marker = listMarker(in: paragraph, in: nsString) {
                 mutable.replaceCharacters(in: marker.range, with: "")
             }
             let currentParagraph = (mutable.string as NSString).paragraphRange(for: NSRange(location: paragraph.location, length: 0))
-            mutable.addAttribute(.paragraphStyle, value: plainStyle, range: currentParagraph)
+            applyPlainParagraphStyle(at: currentParagraph.location, in: mutable)
         }
         reconcileListParagraphSpacing(in: mutable)
     }
@@ -284,20 +279,21 @@ extension RichTextFormattingController {
                     : nil
                 let isLastInList = nextMarker?.isOrdered != marker?.isOrdered
                 let targetSpacing = isLastInList ? FolioRichTextFormat.paragraphSpacing : 0
-                if style.paragraphSpacing != targetSpacing {
-                    let mutableStyle = style.mutableCopy() as? NSMutableParagraphStyle ?? NSMutableParagraphStyle()
-                    mutableStyle.paragraphSpacing = targetSpacing
-                    mutable.addAttribute(.paragraphStyle, value: mutableStyle, range: paragraph)
-                }
+                applyParagraphSpacing(targetSpacing, at: paragraph, style: style, in: mutable)
             } else {
                 let isBlockquote = style.headIndent == FolioRichTextFormat.blockquoteIndent
-                if !isBlockquote && style.paragraphSpacing != FolioRichTextFormat.paragraphSpacing {
-                    let mutableStyle = style.mutableCopy() as? NSMutableParagraphStyle ?? NSMutableParagraphStyle()
-                    mutableStyle.paragraphSpacing = FolioRichTextFormat.paragraphSpacing
-                    mutable.addAttribute(.paragraphStyle, value: mutableStyle, range: paragraph)
+                if !isBlockquote {
+                    applyParagraphSpacing(FolioRichTextFormat.paragraphSpacing, at: paragraph, style: style, in: mutable)
                 }
             }
         }
+    }
+
+    private func applyParagraphSpacing(_ spacing: CGFloat, at paragraph: NSRange, style: NSParagraphStyle, in mutable: NSMutableAttributedString) {
+        guard style.paragraphSpacing != spacing else { return }
+        let mutableStyle = style.mutableCopy() as? NSMutableParagraphStyle ?? NSMutableParagraphStyle()
+        mutableStyle.paragraphSpacing = spacing
+        mutable.addAttribute(.paragraphStyle, value: mutableStyle, range: paragraph)
     }
 
     func renumberOrderedList(containing location: Int, in mutable: NSMutableAttributedString, caretLocation: Int) -> Int {
