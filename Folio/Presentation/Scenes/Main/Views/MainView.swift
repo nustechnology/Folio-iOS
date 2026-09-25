@@ -231,25 +231,13 @@ struct MainView: View {
                             isAskConversationOpen = true
                         }
                     )
-                } else {
-                    let activeSourceListVM: SourceListViewModel = {
-                        if let vm = sourceListViewModel { return vm }
-                        let vm = SourceListViewModel(
-                            spaceId: selectedWorkspace?.id ?? "",
-                            fetchSourcesUseCase: viewModel.fetchSourcesUseCase,
-                            updateSourceUseCase: viewModel.updateSourceUseCase,
-                            uploadSourceUseCase: viewModel.uploadSourceUseCase
-                        )
-                        vm.send(.appeared)
-                        sourceListViewModel = vm
-                        return vm
-                    }()
+                } else if let sourceListViewModel, let workspace = selectedWorkspace {
                     FolioAskView(
                         viewModel: askViewModel,
-                        sourceListViewModel: activeSourceListVM,
-                        sources: viewModel.state.sources.filter { $0.workspaceID == selectedWorkspace?.id },
-                        workspaceID: selectedWorkspace?.id,
-                        workspaceTitle: selectedWorkspace?.name,
+                        sourceListViewModel: sourceListViewModel,
+                        sources: viewModel.state.sources.filter { $0.workspaceID == workspace.id },
+                        workspaceID: workspace.id,
+                        workspaceTitle: workspace.name,
                         onBackToSpaces: {
                             viewModel.handle(.clearAskScope)
                             isAskConversationOpen = false
@@ -267,8 +255,8 @@ struct MainView: View {
                             }
                         },
                         onSourceAdded: { source in
-                            viewModel.handle(.addNewSource(source: source, workspaceID: selectedWorkspace?.id))
-                            Task { await sourceListViewModel?.refresh() }
+                            viewModel.handle(.addNewSource(source: source, workspaceID: workspace.id))
+                            Task { await sourceListViewModel.refresh() }
                         },
                         uploadSourceUseCase: uploadSourceUseCase,
                         userDisplayName: viewModel.state.userDisplayName,
