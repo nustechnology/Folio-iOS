@@ -73,9 +73,18 @@ struct FolioAskView: View {
         }
         .background(Color.folioCanvas)
         .folioToast(message: $viewModel.toastMessage)
-        .onAppear { viewModel.updateSources(sources, spaceId: spaceId) }
+        .onAppear {
+            viewModel.updateSources(sources, spaceId: spaceId)
+            ensureAddSourceViewModel()
+        }
         .onChange(of: sources) { _, newSources in viewModel.updateSources(newSources, spaceId: spaceId) }
-        .onChange(of: spaceId) { _, newSpaceId in viewModel.updateSources(sources, spaceId: newSpaceId) }
+        .onChange(of: spaceId) { _, newSpaceId in
+            viewModel.updateSources(sources, spaceId: newSpaceId)
+            ensureAddSourceViewModel()
+        }
+        .onChange(of: showAddSourceSheet) { _, isPresented in
+            if isPresented { ensureAddSourceViewModel() }
+        }
         .sheet(isPresented: $showConversationSheet) {
             ConversationMenuSheet(
                 onNewConversation: {
@@ -130,7 +139,12 @@ struct FolioAskView: View {
     }
 
     private var askAddSourceSheet: some View {
-        if let vm = addSourceViewModel {
+        let vm = addSourceViewModel ?? {
+            guard let uploadSourceUseCase, let spaceId, !spaceId.isEmpty else { return nil }
+            return FolioAddSourceViewModel(uploadUseCase: uploadSourceUseCase, spaceId: spaceId)
+        }()
+        
+        if let vm {
             return AnyView(FolioAddSourceSheet(
                 viewModel: vm,
                 onSourceOpened: { source in onSourceAdded?(source) },
@@ -138,17 +152,33 @@ struct FolioAskView: View {
                 onProcessingComplete: { source in onSourceAdded?(source) }
             ))
         } else {
-            return AnyView(EmptyView())
+            return AnyView(
+                VStack(spacing: 16) {
+                    Spacer()
+                    Text(String(localized: "Unable to add source"))
+                        .font(.headline)
+                        .foregroundStyle(Color.folioInk)
+                    Text(String(localized: "Please select a space first."))
+                        .font(.subheadline)
+                        .foregroundStyle(Color.folioInkSoft)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.folioHomeSheetBackground)
+                .presentationDetents([.height(200)])
+            )
         }
     }
 
     private func ensureAddSourceViewModel() {
-        guard addSourceViewModel == nil, let uploadSourceUseCase, let spaceId else { return }
-        let vm = FolioAddSourceViewModel(uploadUseCase: uploadSourceUseCase, spaceId: spaceId)
-        vm.onProcessingComplete = { [onSourceAdded] source in
-            onSourceAdded?(source)
+        guard let uploadSourceUseCase, let spaceId, !spaceId.isEmpty else { return }
+        if addSourceViewModel?.spaceId != spaceId {
+            let vm = FolioAddSourceViewModel(uploadUseCase: uploadSourceUseCase, spaceId: spaceId)
+            vm.onProcessingComplete = { [onSourceAdded] source in
+                onSourceAdded?(source)
+            }
+            addSourceViewModel = vm
         }
-        addSourceViewModel = vm
     }
 
     @ViewBuilder
@@ -159,10 +189,12 @@ struct FolioAskView: View {
 
         VStack(spacing: 0) {
             if !hasEvidence {
-                AskNoEvidenceBanner(onAddSource: {
-                    ensureAddSourceViewModel()
-                    showAddSourceSheet = true
-                })
+                AskNoEvidenceBanner(
+                    onAddSource: {
+                        ensureAddSourceViewModel()
+                        showAddSourceSheet = true
+                    }
+                )
                     .padding(.top, 16)
                     .padding(.horizontal, 20)
             }
@@ -238,7 +270,8 @@ struct FolioAskView: View {
                 isStreaming: isStreaming,
                 scopeChipLabel: viewModel.scopeChipLabel,
                 onScopeTap: { showScopeSheet = true },
-                onSubmit: { submit(query) }
+                onSubmit: { submit(query) },
+                isScopeEnabled: viewModel.readySourceCount > 0 || !sources.isEmpty
             )
             .padding(.horizontal, 20)
             .padding(.top, 8)

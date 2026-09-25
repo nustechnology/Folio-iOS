@@ -131,6 +131,17 @@ final class FolioAskViewModel: ViewModelProtocol {
     func updateSources(_ sources: [FolioSource], spaceId: String?) {
         self.sources = sources
         self.spaceId = spaceId
+        if state.scope == .currentSource {
+            if let selectedID = state.selectedSourceID {
+                let selectedSource = sources.first { $0.id == selectedID }
+                if selectedSource == nil || selectedSource?.status != .ready {
+                    state.scope = .entireSpace
+                    state.selectedSourceID = nil
+                }
+            } else {
+                state.scope = .entireSpace
+            }
+        }
         refreshSuggestions()
     }
 
@@ -241,8 +252,17 @@ final class FolioAskViewModel: ViewModelProtocol {
     /// messages/conversationId the way user-driven `applyScope(sourceID:)` does.
     private func applyScope(fromDetail scope: AskConversationScope) {
         if scope.type == "source", let sourceId = scope.sourceId {
-            state.scope = .currentSource
-            state.selectedSourceID = sourceId
+            let source = sources.first { $0.id == sourceId }
+            if source == nil && !sources.isEmpty {
+                state.scope = .entireSpace
+                state.selectedSourceID = nil
+            } else if let source, source.status != .ready {
+                state.scope = .entireSpace
+                state.selectedSourceID = nil
+            } else {
+                state.scope = .currentSource
+                state.selectedSourceID = sourceId
+            }
         } else {
             state.scope = .entireSpace
             state.selectedSourceID = nil
