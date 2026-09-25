@@ -5,7 +5,7 @@ import SwiftUI
 
 struct FolioAskView: View {
     let sources: [FolioSource]
-    let spaceId: String?
+    let workspaceID: String?
     let workspaceTitle: String?
     let onBackToSpaces: () -> Void
     let onOpenSource: (FolioSource) -> Void
@@ -20,16 +20,26 @@ struct FolioAskView: View {
     /// @StateObject and clear askMessages, unlike HomeViewModel's single long-lived
     /// state on Android.
     @ObservedObject private var viewModel: FolioAskViewModel
+    @ObservedObject private var sourceListViewModel: SourceListViewModel
     @State private var query = ""
     @State private var showScopeSheet = false
     @State private var showConversationSheet = false
     @State private var showAddSourceSheet = false
     @State private var addSourceViewModel: FolioAddSourceViewModel?
 
+    private var effectiveSources: [FolioSource] {
+        let loaded = sourceListViewModel.state.allSources.map {
+            FolioSource(from: $0, workspaceID: workspaceID)
+        }
+        if !loaded.isEmpty { return loaded }
+        return sources
+    }
+
     init(
         viewModel: FolioAskViewModel,
+        sourceListViewModel: SourceListViewModel,
         sources: [FolioSource],
-        spaceId: String? = nil,
+        workspaceID: String? = nil,
         workspaceTitle: String? = nil,
         onBackToSpaces: @escaping () -> Void,
         onOpenSource: @escaping (FolioSource) -> Void,
@@ -39,8 +49,9 @@ struct FolioAskView: View {
         userEmail: String? = nil
     ) {
         self.viewModel = viewModel
+        self.sourceListViewModel = sourceListViewModel
         self.sources = sources
-        self.spaceId = spaceId
+        self.workspaceID = workspaceID
         self.workspaceTitle = workspaceTitle
         self.onBackToSpaces = onBackToSpaces
         self.onOpenSource = onOpenSource
@@ -74,12 +85,12 @@ struct FolioAskView: View {
         .background(Color.folioCanvas)
         .folioToast(message: $viewModel.toastMessage)
         .onAppear {
-            viewModel.updateSources(sources, spaceId: spaceId)
+            viewModel.updateSources(effectiveSources, spaceId: workspaceID)
             ensureAddSourceViewModel()
         }
-        .onChange(of: sources) { _, newSources in viewModel.updateSources(newSources, spaceId: spaceId) }
-        .onChange(of: spaceId) { _, newSpaceId in
-            viewModel.updateSources(sources, spaceId: newSpaceId)
+        .onChange(of: effectiveSources) { _, newSources in viewModel.updateSources(newSources, spaceId: workspaceID) }
+        .onChange(of: workspaceID) { _, newSpaceId in
+            viewModel.updateSources(effectiveSources, spaceId: newSpaceId)
             ensureAddSourceViewModel()
         }
         .onChange(of: showAddSourceSheet) { _, isPresented in
@@ -101,7 +112,7 @@ struct FolioAskView: View {
             AnswerScopeSheet(
                 selectedScope: viewModel.state.scope,
                 selectedSourceID: viewModel.state.selectedSourceID,
-                sources: sources,
+                sources: effectiveSources,
                 readySourceCount: viewModel.readySourceCount,
                 onSelect: { sourceID in
                     viewModel.handle(.scopeOptionSelected(sourceID: sourceID))
@@ -166,9 +177,9 @@ struct FolioAskView: View {
     }
 
     private func ensureAddSourceViewModel() {
-        guard let uploadSourceUseCase, let spaceId, !spaceId.isEmpty else { return }
-        if addSourceViewModel?.spaceId != spaceId {
-            let vm = FolioAddSourceViewModel(uploadUseCase: uploadSourceUseCase, spaceId: spaceId)
+        guard let uploadSourceUseCase, let workspaceID, !workspaceID.isEmpty else { return }
+        if addSourceViewModel?.spaceId != workspaceID {
+            let vm = FolioAddSourceViewModel(uploadUseCase: uploadSourceUseCase, spaceId: workspaceID)
             vm.onProcessingComplete = { [onSourceAdded] source in
                 onSourceAdded?(source)
             }
@@ -266,7 +277,7 @@ struct FolioAskView: View {
                 scopeChipLabel: viewModel.scopeChipLabel,
                 onScopeTap: { showScopeSheet = true },
                 onSubmit: { submit(query) },
-                isScopeEnabled: viewModel.readySourceCount > 0 || !sources.isEmpty
+                isScopeEnabled: viewModel.readySourceCount > 0 || !effectiveSources.isEmpty
             )
             .padding(.horizontal, 20)
             .padding(.top, 8)
@@ -284,6 +295,12 @@ struct FolioAskView: View {
 }
 
 #Preview {
+    let sourceListVM = SourceListViewModel(
+        spaceId: "preview",
+        fetchSourcesUseCase: PreviewFetchSourcesUseCase(),
+        updateSourceUseCase: PreviewUpdateSourceUseCase(),
+        uploadSourceUseCase: PreviewUploadSourceUseCase()
+    )
     FolioAskView(
         viewModel: FolioAskViewModel(
             fetchAskSuggestionsUseCase: PreviewFetchAskSuggestionsUseCase(),
@@ -292,7 +309,9 @@ struct FolioAskView: View {
             sendFeedbackUseCase: PreviewSendFeedbackUseCase(),
             createSavedAnswerNoteUseCase: PreviewCreateSavedAnswerNoteUseCase()
         ),
-        sources: FolioDesignFixtures.sources,
+        sourceListViewModel: sourceListVM,
+        sources: [],
+        workspaceID: "preview",
         onBackToSpaces: {},
         onOpenSource: { _ in },
         userDisplayName: "Ada Lovelace",
@@ -334,5 +353,36 @@ private struct PreviewCreateSavedAnswerNoteUseCase: CreateSavedAnswerNoteUseCase
     ) async throws -> Note {
         Note(id: "preview", researchSpaceId: spaceId, title: title, originType: .savedAssistantAnswer,
              content: content, createdAt: Date(), updatedAt: Date(), citationCount: citationCount)
+    }
+}
+
+private struct PreviewFetchSourcesUseCase: FetchSourcesUseCaseProtocol {
+    func execute(query: SourceListQuery) async throws -> SourceListResult {
+        SourceListResult(sources: [], pagination: nil)
+    }
+}
+
+private struct PreviewUpdateSourceUseCase: UpdateSourceUseCaseProtocol {
+    func execute(id: String, title: String, author: String, content: String?) async throws -> Source {
+        Source(id: id, researchSpaceId: "", sourceType: .file, title: title, author: author, sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: content ?? "", structuredContent: nil, processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
+    }
+}
+
+private struct PreviewUploadSourceUseCase: UploadSourceUseCaseProtocol {
+    func uploadFile(spaceId: String, fileURL: URL, title: String?, author: String?) async throws -> Source {
+        Source(id: "preview", researchSpaceId: spaceId, sourceType: .file, title: title ?? "", author: author ?? "", sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", structuredContent: nil, processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
+    }
+    func uploadWeb(spaceId: String, url: String, title: String?, author: String?) async throws -> Source {
+        Source(id: "preview", researchSpaceId: spaceId, sourceType: .web, title: title ?? "", author: author ?? "", sourceUrl: url, fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", structuredContent: nil, processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
+    }
+    func uploadManual(spaceId: String, content: String, title: String?, author: String?) async throws -> Source {
+        Source(id: "preview", researchSpaceId: spaceId, sourceType: .manual, title: title ?? "", author: author ?? "", sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: content, structuredContent: nil, processingState: .ready, processingError: "", createdAt: Date(), updatedAt: Date())
+    }
+    func deleteSource(id: String) async throws {}
+    func retrySource(id: String) async throws -> Source {
+        Source(id: id, researchSpaceId: "", sourceType: .file, title: "", author: "", sourceUrl: "", fileName: "", fileSize: 0, fileType: "", pageCount: 0, characterCount: 0, content: "", structuredContent: nil, processingState: .added, processingError: "", createdAt: Date(), updatedAt: Date())
+    }
+    func sourceStatusStream() -> AsyncThrowingStream<SourceStatusEvent, Error> {
+        AsyncThrowingStream { $0.finish() }
     }
 }

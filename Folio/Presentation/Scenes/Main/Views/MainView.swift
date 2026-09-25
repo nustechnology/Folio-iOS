@@ -1,5 +1,4 @@
 import SwiftUI
-import Combine
 
 struct MainView: View {
     @StateObject var viewModel: MainViewModel
@@ -233,41 +232,37 @@ struct MainView: View {
                         }
                     )
                 } else {
-                    let workspaceSources: [FolioSource] = {
-                        if let sourceListViewModel {
-                            return sourceListViewModel.state.allSources.map { FolioSource(from: $0, workspaceID: selectedWorkspace?.id) }
-                        }
-                        return viewModel.state.sources.filter { $0.workspaceID == selectedWorkspace?.id }
-                    }()
-                    FolioAskView(
-                        viewModel: askViewModel,
-                        sources: workspaceSources,
-                        spaceId: selectedWorkspace?.id,
-                        workspaceTitle: selectedWorkspace?.name,
-                        onBackToSpaces: {
-                            viewModel.handle(.clearAskScope)
-                            isAskConversationOpen = false
-                            askConversationListViewModel?.handle(.refresh)
-                        },
-                        onOpenSource: { folioSource in
-                            Task {
-                                do {
-                                    let source = try await viewModel.fetchSourceDetailUseCase.execute(id: folioSource.id)
-                                    viewModel.handle(.openReader(source))
-                                } catch {
-                                    Logger.error("Failed to open source from citation: \(error)")
-                                    viewModel.toastMessage = .error(String(localized: "Unable to open source. Please try again."))
+                    if let sourceListViewModel {
+                        FolioAskView(
+                            viewModel: askViewModel,
+                            sourceListViewModel: sourceListViewModel,
+                            sources: viewModel.state.sources.filter { $0.workspaceID == selectedWorkspace?.id },
+                            workspaceID: selectedWorkspace?.id,
+                            workspaceTitle: selectedWorkspace?.name,
+                            onBackToSpaces: {
+                                viewModel.handle(.clearAskScope)
+                                isAskConversationOpen = false
+                                askConversationListViewModel?.handle(.refresh)
+                            },
+                            onOpenSource: { folioSource in
+                                Task {
+                                    do {
+                                        let source = try await viewModel.fetchSourceDetailUseCase.execute(id: folioSource.id)
+                                        viewModel.handle(.openReader(source))
+                                    } catch {
+                                        Logger.error("Failed to open source from citation: \(error)")
+                                        viewModel.toastMessage = .error(String(localized: "Unable to open source. Please try again."))
+                                    }
                                 }
-                            }
-                        },
-                        onSourceAdded: { source in
-                            viewModel.handle(.addNewSource(source: source, workspaceID: selectedWorkspace?.id))
-                        },
-                        uploadSourceUseCase: uploadSourceUseCase,
-                        userDisplayName: viewModel.state.userDisplayName,
-                        userEmail: viewModel.state.userEmail
-                    )
-                    .onReceive(sourceListViewModel?.objectWillChange.eraseToAnyPublisher() ?? Empty<Void, Never>().eraseToAnyPublisher()) { _ in }
+                            },
+                            onSourceAdded: { source in
+                                viewModel.handle(.addNewSource(source: source, workspaceID: selectedWorkspace?.id))
+                            },
+                            uploadSourceUseCase: uploadSourceUseCase,
+                            userDisplayName: viewModel.state.userDisplayName,
+                            userEmail: viewModel.state.userEmail
+                        )
+                    }
                 }
             case .notes:
                 if let workspace = selectedWorkspace, let noteVM = noteListViewModel {
