@@ -136,7 +136,7 @@ struct NoteListView: View {
         } else if Self.showsFullError(errorMessage: viewModel.state.errorMessage, notes: viewModel.state.notes),
                   let error = viewModel.state.errorMessage {
             ErrorView(message: error, retryAction: { viewModel.handle(.retry) })
-        } else if viewModel.state.notes.isEmpty && viewModel.state.searchQuery.isEmpty {
+        } else if viewModel.state.notes.isEmpty && viewModel.state.searchQuery.isEmpty && viewModel.state.filter == .all {
             VStack(spacing: FolioSpacing.xl) {
                 Image(systemName: "doc.fill")
                     .font(.system(size: FolioFontSize.subheadline, weight: .medium))

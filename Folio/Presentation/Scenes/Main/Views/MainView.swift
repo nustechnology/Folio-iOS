@@ -233,8 +233,8 @@ struct MainView: View {
                     )
                 } else {
                     let workspaceSources: [FolioSource] = {
-                        if let loadedSources = sourceListViewModel?.state.allSources, !loadedSources.isEmpty {
-                            return loadedSources.map { FolioSource(from: $0, workspaceID: selectedWorkspace?.id) }
+                        if let sourceListViewModel {
+                            return sourceListViewModel.state.allSources.map { FolioSource(from: $0, workspaceID: selectedWorkspace?.id) }
                         }
                         return viewModel.state.sources.filter { $0.workspaceID == selectedWorkspace?.id }
                     }()

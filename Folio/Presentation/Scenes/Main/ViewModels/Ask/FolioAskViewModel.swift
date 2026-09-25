@@ -132,7 +132,10 @@ final class FolioAskViewModel: ViewModelProtocol {
         self.sources = sources
         self.spaceId = spaceId
         if state.scope == .currentSource {
-            if let selectedID = state.selectedSourceID {
+            if sources.isEmpty {
+                state.scope = .entireSpace
+                state.selectedSourceID = nil
+            } else if let selectedID = state.selectedSourceID {
                 let selectedSource = sources.first { $0.id == selectedID }
                 if selectedSource == nil || selectedSource?.status != .ready {
                     state.scope = .entireSpace
@@ -256,9 +259,11 @@ final class FolioAskViewModel: ViewModelProtocol {
             if source == nil && !sources.isEmpty {
                 state.scope = .entireSpace
                 state.selectedSourceID = nil
+                conversationId = nil
             } else if let source, source.status != .ready {
                 state.scope = .entireSpace
                 state.selectedSourceID = nil
+                conversationId = nil
             } else {
                 state.scope = .currentSource
                 state.selectedSourceID = sourceId

@@ -139,12 +139,7 @@ struct FolioAskView: View {
     }
 
     private var askAddSourceSheet: some View {
-        let vm = addSourceViewModel ?? {
-            guard let uploadSourceUseCase, let spaceId, !spaceId.isEmpty else { return nil }
-            return FolioAddSourceViewModel(uploadUseCase: uploadSourceUseCase, spaceId: spaceId)
-        }()
-        
-        if let vm {
+        if let vm = addSourceViewModel {
             return AnyView(FolioAddSourceSheet(
                 viewModel: vm,
                 onSourceOpened: { source in onSourceAdded?(source) },
