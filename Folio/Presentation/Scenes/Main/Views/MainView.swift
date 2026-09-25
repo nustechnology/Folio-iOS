@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct MainView: View {
     @StateObject var viewModel: MainViewModel
@@ -266,6 +267,7 @@ struct MainView: View {
                         userDisplayName: viewModel.state.userDisplayName,
                         userEmail: viewModel.state.userEmail
                     )
+                    .onReceive(sourceListViewModel?.objectWillChange.eraseToAnyPublisher() ?? Empty<Void, Never>().eraseToAnyPublisher()) { _ in }
                 }
             case .notes:
                 if let workspace = selectedWorkspace, let noteVM = noteListViewModel {
