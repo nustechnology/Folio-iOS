@@ -174,7 +174,7 @@ struct FolioPrimaryButton: View {
     let title: String
     var isLoading: Bool = false
     var isEnabled: Bool = true
-    var verticalPadding: CGFloat = 15
+    var verticalPadding: CGFloat = 17
     let action: () -> Void
     
     private var isDisabled: Bool { isLoading || !isEnabled }
@@ -189,7 +189,7 @@ struct FolioPrimaryButton: View {
                         .scaleEffect(0.8)
                 }
                 Text(title)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: 16, weight: .semibold))
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, verticalPadding)
@@ -218,13 +218,13 @@ struct FolioSecondaryButton: View {
             HStack(spacing: 10) {
                 if let iconName {
                     Image(systemName: iconName)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold))
                 }
                 Text(title)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: 16, weight: .semibold))
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
+            .padding(.vertical, 17)
             .foregroundStyle(Color.folioInk)
             .background(Color.folioSurfaceStrong)
             .overlay(
@@ -255,9 +255,9 @@ struct FolioDangerButton: View {
                     Text(title)
                 }
             }
-            .font(.system(size: 15, weight: .medium))
+            .font(.system(size: 16, weight: .semibold))
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .padding(.vertical, 17)
             .foregroundStyle(Color.folioDanger)
             .background(Color.folioDanger.opacity(0.16))
             .clipShape(RoundedRectangle(cornerRadius: FolioRadius.sm, style: .continuous))
@@ -333,7 +333,7 @@ struct FolioTextField: View {
         VStack(alignment: .leading, spacing: 6) {
             if let label = label {
                 Text(label)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(Color.folioHomeTypeTextText)
             }
             
@@ -343,7 +343,7 @@ struct FolioTextField: View {
                 HStack {
                     Spacer()
                     Text("\(text.count)/\(maxLength)")
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
                         .foregroundStyle(text.count >= maxLength ? Color.folioDanger : Color.folioInkSoft)
                 }
                 .padding(.horizontal, 4)
@@ -351,7 +351,7 @@ struct FolioTextField: View {
             
             if let error {
                 Text(error)
-                    .font(.system(size: 11, weight: .regular))
+                    .font(.system(size: 12, weight: .regular))
                     .foregroundStyle(Color.folioDanger)
                     .padding(.leading, 4)
             }
@@ -379,7 +379,7 @@ struct FolioTextField: View {
             PlaceholderUITextField(
                 placeholder: placeholder,
                 placeholderColor: UIColor(Color.folioInkSoft),
-                font: .systemFont(ofSize: 14, weight: .regular),
+                font: .systemFont(ofSize: 15, weight: .regular),
                 textColor: UIColor(Color.folioInk),
                 keyboardType: keyboardType,
                 isSecureTextEntry: isSecure && !isPasswordVisible,
@@ -393,7 +393,7 @@ struct FolioTextField: View {
                     isPasswordVisible.toggle()
                 } label: {
                     Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
-                        .font(.system(size: 14, weight: .regular))
+                        .font(.system(size: 15, weight: .regular))
                         .foregroundStyle(Color.folioInkSoft)
                 }
                 .buttonStyle(.plain)
@@ -412,7 +412,7 @@ struct FolioTextField: View {
     private func multilineField(minHeight: CGFloat, maxHeight: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
             TextEditor(text: $text)
-                .font(.system(size: 14, weight: .regular))
+                .font(.system(size: 15, weight: .regular))
                 .foregroundStyle(Color.folioInk)
                 .scrollContentBackground(.hidden)
                 .frame(minHeight: minHeight, maxHeight: maxHeight)
@@ -421,7 +421,7 @@ struct FolioTextField: View {
             
             if text.isEmpty {
                 Text(placeholder)
-                    .font(.system(size: 14))
+                    .font(.system(size: 15))
                     .foregroundStyle(Color.folioInkSoft.opacity(0.6))
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)

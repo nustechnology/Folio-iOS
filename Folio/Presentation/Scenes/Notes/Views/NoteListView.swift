@@ -16,9 +16,7 @@ struct NoteListView: View {
             searchHeader
             ScrollView {
                 VStack(alignment: .leading, spacing: 8) {
-                    if !viewModel.state.notes.isEmpty || !viewModel.state.searchQuery.isEmpty || viewModel.state.filter != .all {
-                        filterBar
-                    }
+                    filterBar
                     Spacer(minLength: 4)
                     content
                 }
@@ -155,7 +153,7 @@ struct NoteListView: View {
                     Text(String(localized: "No notes yet"))
                         .font(.system(size: FolioFontSize.headline, weight: .semibold))
                         .foregroundStyle(Color.folioInk)
-                    Text(String(localized: "Create a note or save an answer from the chat."))
+                    Text(String(localized: "Create a note to start capturing ideas."))
                         .font(.system(size: FolioFontSize.body, weight: .regular))
                         .foregroundStyle(Color.folioInkSoft)
                         .multilineTextAlignment(.center)

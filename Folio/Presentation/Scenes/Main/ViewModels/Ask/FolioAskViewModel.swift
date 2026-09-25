@@ -53,6 +53,7 @@ final class FolioAskViewModel: ViewModelProtocol {
     private var spaceId: String?
     private var loadedSuggestionsSpaceId: String?
     private var conversationId: String?
+    private var restoredConversationId: String?
     private var lastFailedConversation: AskConversation?
     private var lastFailedSpaceId: String?
     private let fetchAskSuggestionsUseCase: any FetchAskSuggestionsUseCaseProtocol
@@ -131,6 +132,20 @@ final class FolioAskViewModel: ViewModelProtocol {
     func updateSources(_ sources: [FolioSource], spaceId: String?) {
         self.sources = sources
         self.spaceId = spaceId
+        if state.scope == .currentSource {
+            if sources.isEmpty {
+                state.scope = .entireSpace
+                state.selectedSourceID = nil
+            } else if let selectedID = state.selectedSourceID {
+                let selectedSource = sources.first { $0.id == selectedID }
+                if selectedSource == nil || selectedSource?.status != .ready {
+                    state.scope = .entireSpace
+                    state.selectedSourceID = nil
+                }
+            } else {
+                state.scope = .entireSpace
+            }
+        }
         refreshSuggestions()
     }
 
@@ -172,6 +187,7 @@ final class FolioAskViewModel: ViewModelProtocol {
         state.conversationEpoch += 1
         state.isLoadingConversation = false
         conversationId = nil
+        restoredConversationId = nil
         saveDraft = nil
         saveError = nil
         previewCitation = nil
@@ -201,6 +217,7 @@ final class FolioAskViewModel: ViewModelProtocol {
         state.savingMessageID = nil
         state.conversationEpoch += 1
         conversationId = conversation.id
+        restoredConversationId = nil
         saveDraft = nil
         saveError = nil
         previewCitation = nil
@@ -220,6 +237,9 @@ final class FolioAskViewModel: ViewModelProtocol {
                 spaceId: spaceId, conversationId: conversationId)
             guard !Task.isCancelled, epoch == state.conversationEpoch else { return }
             applyScope(fromDetail: detail.scope)
+            if self.conversationId == nil {
+                self.restoredConversationId = conversationId
+            }
             state.messages = detail.messages.map(Self.mapMessage)
             state.isLoadingConversation = false
             state.conversationLoadError = nil
@@ -241,8 +261,19 @@ final class FolioAskViewModel: ViewModelProtocol {
     /// messages/conversationId the way user-driven `applyScope(sourceID:)` does.
     private func applyScope(fromDetail scope: AskConversationScope) {
         if scope.type == "source", let sourceId = scope.sourceId {
-            state.scope = .currentSource
-            state.selectedSourceID = sourceId
+            let source = sources.first { $0.id == sourceId }
+            if source == nil && !sources.isEmpty {
+                state.scope = .entireSpace
+                state.selectedSourceID = nil
+                conversationId = nil
+            } else if let source, source.status != .ready {
+                state.scope = .entireSpace
+                state.selectedSourceID = nil
+                conversationId = nil
+            } else {
+                state.scope = .currentSource
+                state.selectedSourceID = sourceId
+            }
         } else {
             state.scope = .entireSpace
             state.selectedSourceID = nil
@@ -324,6 +355,7 @@ final class FolioAskViewModel: ViewModelProtocol {
         case .start(let conversationId, let serverMessageID):
             let isNew = self.conversationId == nil
             self.conversationId = conversationId
+            self.restoredConversationId = nil
             updateMessage(id: messageID) { $0.serverMessageID = serverMessageID }
             if isNew { onConversationCreated?() }
         case .token(let text):
@@ -442,7 +474,7 @@ final class FolioAskViewModel: ViewModelProtocol {
     /// Saves the answer as a note via the Notes API. Mirrors `HomeAskDelegate.onAskSaveAsNoteConfirm`.
     private func confirmSaveAsNote(title: String, content: String) {
         guard let draft = saveDraft, state.savingMessageID == nil else { return }
-        guard let spaceId, let conversationId, let serverMessageID = draft.serverMessageID else {
+        guard let spaceId, let effectiveConversationId = conversationId ?? restoredConversationId, let serverMessageID = draft.serverMessageID else {
             saveError = String(localized: "Failed to save as note. Please try again.")
             return
         }
@@ -466,7 +498,7 @@ final class FolioAskViewModel: ViewModelProtocol {
                     title: finalTitle,
                     content: content,
                     project: nil,
-                    originConversationId: conversationId,
+                    originConversationId: effectiveConversationId,
                     originMessageId: serverMessageID,
                     citationCount: draft.citations.count,
                     citations: nil)
@@ -489,13 +521,13 @@ final class FolioAskViewModel: ViewModelProtocol {
         guard
             let serverMessageID = state.messages.first(where: { $0.id == messageID })?.serverMessageID,
             let spaceId,
-            let conversationId
+            let effectiveConversationId = conversationId ?? restoredConversationId
         else { return }
         let rating = useful ? "useful" : "not_useful"
         Task {
             do {
                 try await sendFeedbackUseCase.execute(
-                    spaceId: spaceId, conversationId: conversationId, messageId: serverMessageID, rating: rating)
+                    spaceId: spaceId, conversationId: effectiveConversationId, messageId: serverMessageID, rating: rating)
                 toastMessage = .success(String(localized: "Feedback recorded"))
             } catch {
                 Logger.error("Failed to send feedback: \(error)")
@@ -513,6 +545,7 @@ final class FolioAskViewModel: ViewModelProtocol {
         state.messages = []
         state.conversationEpoch += 1
         conversationId = nil
+        restoredConversationId = nil
         saveError = nil
         refreshSuggestions()
     }

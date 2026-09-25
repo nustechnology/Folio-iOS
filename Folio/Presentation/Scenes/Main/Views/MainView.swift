@@ -233,15 +233,21 @@ struct MainView: View {
                     )
                 } else {
                     let workspaceSources: [FolioSource] = {
-                        if let loadedSources = sourceListViewModel?.state.allSources, !loadedSources.isEmpty {
-                            return loadedSources.map { FolioSource(from: $0, workspaceID: selectedWorkspace?.id) }
+                        if let sourceListViewModel {
+                            return sourceListViewModel.state.allSources.map { FolioSource(from: $0, workspaceID: selectedWorkspace?.id) }
                         }
                         return viewModel.state.sources.filter { $0.workspaceID == selectedWorkspace?.id }
                     }()
                     FolioAskView(
                         viewModel: askViewModel,
+                        sourceListViewModel: sourceListViewModel ?? SourceListViewModel(
+                            spaceId: selectedWorkspace?.id ?? "",
+                            fetchSourcesUseCase: viewModel.fetchSourcesUseCase,
+                            updateSourceUseCase: viewModel.updateSourceUseCase,
+                            uploadSourceUseCase: viewModel.uploadSourceUseCase
+                        ),
                         sources: workspaceSources,
-                        spaceId: selectedWorkspace?.id,
+                        workspaceID: selectedWorkspace?.id,
                         workspaceTitle: selectedWorkspace?.name,
                         onBackToSpaces: {
                             viewModel.handle(.clearAskScope)
@@ -261,6 +267,9 @@ struct MainView: View {
                         },
                         onSourceAdded: { source in
                             viewModel.handle(.addNewSource(source: source, workspaceID: selectedWorkspace?.id))
+                            if let sourceListViewModel {
+                                Task { await sourceListViewModel.refresh() }
+                            }
                         },
                         uploadSourceUseCase: uploadSourceUseCase,
                         userDisplayName: viewModel.state.userDisplayName,

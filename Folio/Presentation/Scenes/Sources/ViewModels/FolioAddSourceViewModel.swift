@@ -107,7 +107,7 @@ final class FolioAddSourceViewModel: ViewModelProtocol {
     var onSourceOperationFailed: ((String) -> Void)?
 
     private let uploadUseCase: any UploadSourceUseCaseProtocol
-    private let spaceId: String
+    let spaceId: String
     private var uploadTask: Task<Void, Never>?
     private var statusStreamTask: Task<Void, Never>?
     private var activeSessionID: UUID?

@@ -10,6 +10,8 @@ struct AskInputPanel: View {
     let onScopeTap: () -> Void
     let onSubmit: () -> Void
 
+    var isScopeEnabled: Bool = true
+
     private var inputEnabled: Bool { hasEvidence && !isStreaming }
     private var canSubmit: Bool { inputEnabled && !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
@@ -31,6 +33,7 @@ struct AskInputPanel: View {
                             .allowsHitTesting(false)
                     }
                 }
+                .opacity(inputEnabled ? 1 : 0.55)
 
             HStack {
                 Button(action: onScopeTap) {
@@ -49,8 +52,8 @@ struct AskInputPanel: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.plain)
-                .disabled(!hasEvidence)
-                .opacity(hasEvidence ? 1 : 0.55)
+                .disabled(!isScopeEnabled || isStreaming)
+                .opacity(isScopeEnabled && !isStreaming ? 1 : 0.55)
 
                 Spacer()
 

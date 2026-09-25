@@ -71,15 +71,16 @@ struct AskSuggestionCardSkeleton: View {
 }
 
 struct AskNoEvidenceBanner: View {
+    var message: String? = nil
     let onAddSource: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("No evidence available. Add a source before asking this question.")
+            Text(message ?? String(localized: "No evidence available. Add a source before asking this question."))
                 .font(.system(size: 14, weight: .regular))
                 .foregroundStyle(Color.folioInkMuted)
             Button(action: onAddSource) {
-                Text("Add a source")
+                Text(String(localized: "Add a source"))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.folioOliveDark)
             }
