@@ -28,6 +28,7 @@ struct FolioAskView: View {
     @State private var addSourceViewModel: FolioAddSourceViewModel?
 
     private var effectiveSources: [FolioSource] {
+        if sourceListViewModel.state.isLoading { return sources }
         let loaded = sourceListViewModel.state.allSources.map {
             FolioSource(from: $0, workspaceID: workspaceID)
         }
@@ -310,7 +311,7 @@ struct FolioAskView: View {
             createSavedAnswerNoteUseCase: PreviewCreateSavedAnswerNoteUseCase()
         ),
         sourceListViewModel: sourceListVM,
-        sources: [],
+        sources: FolioDesignFixtures.sources,
         workspaceID: "preview",
         onBackToSpaces: {},
         onOpenSource: { _ in },

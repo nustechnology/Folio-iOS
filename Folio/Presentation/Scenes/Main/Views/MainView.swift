@@ -232,37 +232,48 @@ struct MainView: View {
                         }
                     )
                 } else {
-                    if let sourceListViewModel {
-                        FolioAskView(
-                            viewModel: askViewModel,
-                            sourceListViewModel: sourceListViewModel,
-                            sources: viewModel.state.sources.filter { $0.workspaceID == selectedWorkspace?.id },
-                            workspaceID: selectedWorkspace?.id,
-                            workspaceTitle: selectedWorkspace?.name,
-                            onBackToSpaces: {
-                                viewModel.handle(.clearAskScope)
-                                isAskConversationOpen = false
-                                askConversationListViewModel?.handle(.refresh)
-                            },
-                            onOpenSource: { folioSource in
-                                Task {
-                                    do {
-                                        let source = try await viewModel.fetchSourceDetailUseCase.execute(id: folioSource.id)
-                                        viewModel.handle(.openReader(source))
-                                    } catch {
-                                        Logger.error("Failed to open source from citation: \(error)")
-                                        viewModel.toastMessage = .error(String(localized: "Unable to open source. Please try again."))
-                                    }
-                                }
-                            },
-                            onSourceAdded: { source in
-                                viewModel.handle(.addNewSource(source: source, workspaceID: selectedWorkspace?.id))
-                            },
-                            uploadSourceUseCase: uploadSourceUseCase,
-                            userDisplayName: viewModel.state.userDisplayName,
-                            userEmail: viewModel.state.userEmail
+                    let activeSourceListVM: SourceListViewModel = {
+                        if let vm = sourceListViewModel { return vm }
+                        let vm = SourceListViewModel(
+                            spaceId: selectedWorkspace?.id ?? "",
+                            fetchSourcesUseCase: viewModel.fetchSourcesUseCase,
+                            updateSourceUseCase: viewModel.updateSourceUseCase,
+                            uploadSourceUseCase: viewModel.uploadSourceUseCase
                         )
-                    }
+                        vm.send(.appeared)
+                        sourceListViewModel = vm
+                        return vm
+                    }()
+                    FolioAskView(
+                        viewModel: askViewModel,
+                        sourceListViewModel: activeSourceListVM,
+                        sources: viewModel.state.sources.filter { $0.workspaceID == selectedWorkspace?.id },
+                        workspaceID: selectedWorkspace?.id,
+                        workspaceTitle: selectedWorkspace?.name,
+                        onBackToSpaces: {
+                            viewModel.handle(.clearAskScope)
+                            isAskConversationOpen = false
+                            askConversationListViewModel?.handle(.refresh)
+                        },
+                        onOpenSource: { folioSource in
+                            Task {
+                                do {
+                                    let source = try await viewModel.fetchSourceDetailUseCase.execute(id: folioSource.id)
+                                    viewModel.handle(.openReader(source))
+                                } catch {
+                                    Logger.error("Failed to open source from citation: \(error)")
+                                    viewModel.toastMessage = .error(String(localized: "Unable to open source. Please try again."))
+                                }
+                            }
+                        },
+                        onSourceAdded: { source in
+                            viewModel.handle(.addNewSource(source: source, workspaceID: selectedWorkspace?.id))
+                            Task { await sourceListViewModel?.refresh() }
+                        },
+                        uploadSourceUseCase: uploadSourceUseCase,
+                        userDisplayName: viewModel.state.userDisplayName,
+                        userEmail: viewModel.state.userEmail
+                    )
                 }
             case .notes:
                 if let workspace = selectedWorkspace, let noteVM = noteListViewModel {
