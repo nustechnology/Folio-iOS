@@ -120,11 +120,11 @@ struct NoteEditView: View {
         HStack(alignment: .top, spacing: FolioSpacing.md) {
             VStack(alignment: .leading, spacing: FolioSpacing.sm) {
                 Text(String(localized: "Edit note"))
-                    .font(.custom("CormorantGaramond-Medium", size: FolioFontSize.heading))
+                    .font(.custom("CormorantGaramond-Medium", size: 28))
                     .foregroundStyle(Color.folioInk)
 
                 Text(String(localized: "Update the title and content for this note."))
-                    .font(.system(size: FolioFontSize.bodySmall, weight: .regular))
+                    .font(.system(size: 15, weight: .regular))
                     .foregroundStyle(Color.folioInkMuted)
             }
 
@@ -166,7 +166,7 @@ struct NoteEditView: View {
             )
         }
         .padding(.top, FolioSpacing.sm)
-        .padding(.bottom, FolioSpacing.xl)
+        .padding(.bottom, FolioSpacing.xl4)
         .background(Color.folioHomeSheetBackground)
     }
 

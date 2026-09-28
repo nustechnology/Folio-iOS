@@ -30,6 +30,7 @@ struct NoteCreateView: View {
             onSave: { _ in viewModel.handle(.createSaveTapped) },
             onCancel: { viewModel.handle(.createCancelTapped) },
             onDiscardConfirmed: { viewModel.handle(.createDiscardConfirmed) },
+            usesDynamicSheetHeight: true,
             showsValidationErrors: viewModel.state.createTitleError != nil
                 || viewModel.state.createContentError != nil
         )

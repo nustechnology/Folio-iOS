@@ -83,7 +83,7 @@ struct WorkspaceEditorSheet: View {
             if let message { nameError = message }
         }
         .presentationBackground(Color.folioSurfaceStrong)
-        .presentationDetents([.height(460)])
+        .presentationDetents([.height(570)])
     }
     
     private var dragHandle: some View {
@@ -98,7 +98,7 @@ struct WorkspaceEditorSheet: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(title)
-                    .font(.custom("CormorantGaramond-Medium", size: FolioFontSize.heading))
+                    .font(.custom("CormorantGaramond-Medium", size: 26))
                     .foregroundStyle(Color.folioInk)
                 Spacer()
                 Button(action: onCancel) {
@@ -111,7 +111,7 @@ struct WorkspaceEditorSheet: View {
                 .accessibilityLabel(String(localized: "Close"))
             }
             Text(subtitle)
-                .font(.system(size: 14))
+                .font(.system(size: 15))
                 .foregroundStyle(Color.folioInkSoft)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -138,7 +138,7 @@ struct WorkspaceEditorSheet: View {
                     label: String(localized: "Research objective"),
                     placeholder: String(localized: "What should this space help you understand?"),
                     text: $objective,
-                    style: .multiline(),
+                    style: .multiline(minHeight: 180, maxHeight: 220),
                     maxLength: WorkspaceEditorDraft.objectiveMaxLength
                 )
             }
@@ -151,9 +151,9 @@ struct WorkspaceEditorSheet: View {
         HStack(spacing: 12) {
             Button(action: onCancel) {
                 Text(String(localized: "Cancel"))
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 17)
                     .foregroundStyle(Color.folioInk)
                     .background(Color.folioSurfaceStrong)
                     .overlay(
@@ -168,12 +168,13 @@ struct WorkspaceEditorSheet: View {
                 title: submitTitle,
                 isLoading: isMutating,
                 isEnabled: !isSubmitDisabled,
-                verticalPadding: 15,
+                verticalPadding: 17,
                 action: submitForm
             )
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+        .padding(.top, 16)
+        .padding(.bottom, 24)
         .background(Color.folioSurfaceStrong)
     }
     
