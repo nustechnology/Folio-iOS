@@ -209,13 +209,13 @@ final class AskAnswerSSEClient {
             return .token(dto.text)
         case "citations":
             let dto = try decoder.decode(AskStreamCitationsDTO.self, from: data)
-            return .citations(dto.citations.enumerated().map { $1.toDomain(position: $0) })
+            return .citations(dto.citations.enumerated().map { $1.toDomain(position: $0 + 1) })
         case "done":
             let dto = try decoder.decode(AskStreamDoneDTO.self, from: data)
             return .done(
                 messageId: dto.messageId,
                 content: dto.content,
-                citations: dto.citations.enumerated().map { $1.toDomain(position: $0) },
+                citations: dto.citations.enumerated().map { $1.toDomain(position: $0 + 1) },
                 limitation: dto.limitation,
                 stopped: dto.stopped
             )

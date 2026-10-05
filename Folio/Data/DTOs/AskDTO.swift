@@ -134,7 +134,7 @@ struct AskConversationMessageDTO: Decodable {
       content: content,
       stopped: stopped ?? false,
       citations: (citations ?? []).enumerated().map { position, citation in
-        citation.toDomain(position: position)
+        citation.toDomain(position: position + 1)
       },
       limitation: limitation,
       feedback: feedback == "useful" ? .useful : (feedback == "not_useful" ? .notUseful : nil),
@@ -255,8 +255,14 @@ struct AskStreamCitationDTO: Decodable {
   }
 
   func toDomain(position: Int) -> AskAnswerCitation {
-    AskAnswerCitation(
-      index: index ?? position,
+    let resolvedIndex: Int
+    if let index = index, index > 0 {
+      resolvedIndex = index
+    } else {
+      resolvedIndex = position
+    }
+    return AskAnswerCitation(
+      index: resolvedIndex,
       sourceId: sourceId ?? "",
       sourceTitle: sourceTitle ?? "",
       sourceKind: sourceKind ?? sourceType ?? "file",
