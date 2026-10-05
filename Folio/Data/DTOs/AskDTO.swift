@@ -256,8 +256,8 @@ struct AskStreamCitationDTO: Decodable {
 
   func toDomain(position: Int) -> AskAnswerCitation {
     let resolvedIndex: Int
-    if let index = index, index > 0 {
-      resolvedIndex = index
+    if let index = index, index >= 0 {
+      resolvedIndex = index + 1
     } else {
       resolvedIndex = position
     }
