@@ -38,8 +38,22 @@ final class AskAnswerSSEClientDecodeEventTests: XCTestCase {
         let event = try AskAnswerSSEClient.decodeEvent(name: "citations", data: data, decoder: decoder)
         if case .citations(let citations) = event {
             XCTAssertEqual(citations.count, 1)
+            XCTAssertEqual(citations[0].index, 1)
             XCTAssertEqual(citations[0].sourceId, "s1")
             XCTAssertEqual(citations[0].evidenceText, "quote")
+        } else {
+            XCTFail("Expected .citations")
+        }
+    }
+
+    func testDecodeCitationsEventZeroBasedIndicesResolveToOneBased() throws {
+        let json = "{\"citations\":[{\"index\":0,\"source_id\":\"s1\"},{\"index\":1,\"source_id\":\"s2\"}]}"
+        let data = json.data(using: .utf8)!
+        let event = try AskAnswerSSEClient.decodeEvent(name: "citations", data: data, decoder: decoder)
+        if case .citations(let citations) = event {
+            XCTAssertEqual(citations.count, 2)
+            XCTAssertEqual(citations[0].index, 1)
+            XCTAssertEqual(citations[1].index, 2)
         } else {
             XCTFail("Expected .citations")
         }
